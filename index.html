@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supercopa — Painel Admin</title>
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    a { text-decoration: none; }
+    li { list-style: none; }
+
+    :root {
+      --poppins: 'Poppins', sans-serif;
+      --lato: 'Lato', sans-serif;
+      --light: #F9F9F9;
+      --blue: #1565C0;
+      --gold: #F9A825;
+      --light-blue: #E3F0FF;
+      --grey: #EEEEEE;
+      --dark-grey: #AAAAAA;
+      --dark: #1A1A2E;
+      --red: #C62828;
+      --green: #2E7D32;
+      --light-green: #E8F5E9;
+      --orange: #E65100;
+      --light-orange: #FFF3E0;
+      --purple: #4A148C;
+      --light-purple: #F3E5F5;
+    }
+
+    html { overflow-x: hidden; }
+
+    body.dark {
+      --light: #0f0f1f;
+      --grey: #080816;
+      --dark: #F0F0F0;
+      --light-blue: #0d1f3c;
+      --light-green: #0d2a0f;
+      --light-orange: #2a1800;
+      --light-purple: #1e0a2e;
+    }
+
+    body { background: var(--grey); overflow-x: hidden; font-family: var(--lato); }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 230px; height: 100%;
+      background: var(--light);
+      z-index: 2000;
+      font-family: var(--lato);
+      transition: .3s ease;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      display: flex; flex-direction: column;
+    }
+    #sidebar::-webkit-scrollbar { display: none; }
+    #sidebar.hide { width: 60px; }
+
+    .sidebar-brand {
+      height: 64px;
+      display: flex; align-items: center;
+      padding: 0 12px;
+      background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+      color: #fff;
+      font-size: 17px; font-weight: 700;
+      letter-spacing: .5px;
+      white-space: nowrap; overflow: hidden;
+      flex-shrink: 0;
+    }
+    .sidebar-brand i { font-size: 26px; min-width: 36px; margin-right: 10px; }
+    #sidebar.hide .sidebar-brand span { display: none; }
+
+    .side-menu { width: 100%; padding: 8px 0; flex: 1; overflow-y: auto; }
+    .side-menu li {
+      height: 48px;
+      margin: 2px 6px;
+      border-radius: 48px 0 0 48px;
+      padding: 4px;
+    }
+    .side-menu li.active { background: var(--grey); position: relative; }
+    .side-menu li.active::before {
+      content: ''; position: absolute;
+      width: 40px; height: 40px; border-radius: 50%;
+      top: -40px; right: 0;
+      box-shadow: 20px 20px 0 var(--grey); z-index: -1;
+    }
+    .side-menu li.active::after {
+      content: ''; position: absolute;
+      width: 40px; height: 40px; border-radius: 50%;
+      bottom: -40px; right: 0;
+      box-shadow: 20px -20px 0 var(--grey); z-index: -1;
+    }
+    .side-menu li a {
+      width: 100%; height: 100%;
+      background: var(--light);
+      display: flex; align-items: center;
+      border-radius: 48px;
+      font-size: 14px; color: var(--dark);
+      white-space: nowrap; overflow: hidden;
+      cursor: pointer;
+    }
+    .side-menu li.active a { color: var(--blue); }
+    #sidebar.hide .side-menu li a { width: calc(48px - 8px); }
+    .side-menu li a:hover { color: var(--blue); }
+    .side-menu li a i { min-width: calc(60px - 16px); display: flex; justify-content: center; font-size: 20px; }
+    .side-menu li a span { font-size: 14px; }
+
+    .side-bottom {
+      padding: 8px 6px 16px;
+      border-top: 1px solid var(--grey);
+      flex-shrink: 0;
+    }
+    .side-bottom a {
+      display: flex; align-items: center;
+      height: 44px; border-radius: 44px;
+      color: var(--dark-grey); font-size: 14px;
+      padding: 0 4px; white-space: nowrap; overflow: hidden;
+    }
+    .side-bottom a:hover { color: var(--blue); }
+    .side-bottom a i { min-width: 36px; display: flex; justify-content: center; font-size: 20px; }
+
+    /* ── CONTENT ── */
+    #content {
+      position: relative;
+      width: calc(100% - 230px);
+      left: 230px;
+      transition: .3s ease;
+      min-height: 100vh;
+    }
+    #sidebar.hide ~ #content { width: calc(100% - 60px); left: 60px; }
+
+    /* ── NAV ── */
+    #content nav {
+      height: 56px; background: var(--light);
+      padding: 0 24px;
+      display: flex; align-items: center; gap: 16px;
+      position: sticky; top: 0; left: 0; z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    #content nav .bx-menu { cursor: pointer; color: var(--dark); font-size: 22px; }
+    #content nav .nav-label { font-size: 15px; font-weight: 600; color: var(--blue); margin-right: auto; }
+
+    .form-input { display: flex; align-items: center; height: 34px; }
+    .form-input input {
+      padding: 0 14px; height: 100%; border: none;
+      background: var(--grey); border-radius: 34px 0 0 34px;
+      outline: none; width: 200px; color: var(--dark);
+    }
+    .form-input button {
+      width: 34px; height: 100%;
+      display: flex; justify-content: center; align-items: center;
+      background: var(--blue); color: #fff;
+      border: none; border-radius: 0 34px 34px 0; cursor: pointer;
+    }
+
+    .swith-lm {
+      background: var(--grey); border-radius: 50px;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: space-between; padding: 3px;
+      height: 22px; width: 46px; transform: scale(1.3);
+      position: relative;
+    }
+    .swith-lm .ball {
+      background: var(--blue); border-radius: 50%;
+      position: absolute; top: 2px; left: 2px;
+      height: 18px; width: 18px;
+      transform: translateX(0); transition: .2s linear;
+    }
+    .checkbox { display: none; }
+    .checkbox:checked + .swith-lm .ball { transform: translateX(22px); }
+    .bxs-moon { color: var(--gold); font-size: 13px; }
+    .bx-sun { color: var(--orange); font-size: 13px; }
+
+    .notif-wrap { position: relative; }
+    #content nav .notification { font-size: 22px; color: var(--dark); position: relative; }
+    #content nav .notification .num {
+      position: absolute; top: -5px; right: -5px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--red); color: #fff;
+      font-size: 10px; font-weight: 700;
+      display: flex; justify-content: center; align-items: center;
+      border: 2px solid var(--light);
+    }
+    .notif-dropdown {
+      display: none; position: absolute; top: 44px; right: 0;
+      background: var(--light); border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.12);
+      width: 260px; z-index: 9999;
+    }
+    .notif-dropdown.show { display: block; }
+    .notif-dropdown ul { padding: 8px; }
+    .notif-dropdown li { padding: 10px 12px; border-radius: 8px; color: var(--dark); font-size: 13px; cursor: pointer; }
+    .notif-dropdown li:hover { background: var(--light-blue); }
+
+    .profile-wrap { position: relative; }
+    #content nav .profile img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--blue); }
+    .profile-dropdown {
+      display: none; position: absolute; top: 44px; right: 0;
+      background: var(--light); border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.12);
+      width: 180px; z-index: 9999;
+    }
+    .profile-dropdown.show { display: block; }
+    .profile-dropdown ul { padding: 8px; }
+    .profile-dropdown li { padding: 10px 12px; border-radius: 8px; }
+    .profile-dropdown li:hover { background: var(--light-blue); }
+    .profile-dropdown li a { color: var(--dark); font-size: 14px; display: block; }
+
+    /* ── MAIN ── */
+    #content main {
+      padding: 30px 24px;
+      font-family: var(--poppins);
+      min-height: calc(100vh - 56px);
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .page-header h1 { font-size: 26px; font-weight: 700; color: var(--dark); }
+    .breadcrumb { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .breadcrumb span { font-size: 13px; color: var(--dark-grey); }
+    .breadcrumb span.cur { color: var(--blue); }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--light); border-radius: 18px;
+      padding: 22px; margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 16px; font-weight: 600; color: var(--dark);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .card-title i { color: var(--blue); }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 8px 20px; border-radius: 30px; border: none;
+      font-family: var(--poppins); font-size: 13px; font-weight: 600;
+      cursor: pointer; background: var(--grey); color: var(--dark-grey);
+      transition: .2s;
+    }
+    .tab-btn.active { background: var(--blue); color: #fff; }
+
+    /* ── JOGOS TABLE ── */
+    .jogos-grid { display: grid; gap: 14px; }
+
+    .jogo-card {
+      background: var(--light); border-radius: 14px;
+      border: 2px solid var(--grey);
+      overflow: hidden; transition: .2s;
+    }
+    .jogo-card:hover { border-color: var(--blue); box-shadow: 0 4px 16px rgba(21,101,192,.1); }
+
+    .jogo-header {
+      background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+      color: #fff; padding: 10px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px; font-weight: 600; letter-spacing: .5px;
+    }
+    .jogo-sport-badge {
+      padding: 2px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(255,255,255,.2);
+    }
+
+    .jogo-body { padding: 14px 16px; }
+    .jogo-equipes {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px;
+    }
+    .equipe-name { font-size: 15px; font-weight: 700; color: var(--dark); text-align: center; flex: 1; }
+    .jogo-vs { font-size: 20px; font-weight: 900; color: var(--blue); padding: 0 8px; }
+
+    .placar-section { margin-top: 14px; }
+    .placar-title { font-size: 11px; color: var(--dark-grey); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+
+    /* Vôlei sets */
+    .sets-grid { display: flex; gap: 8px; }
+    .set-col { flex: 1; }
+    .set-label { font-size: 11px; color: var(--dark-grey); text-align: center; margin-bottom: 4px; }
+    .set-inputs { display: flex; gap: 4px; }
+    .set-input {
+      flex: 1; padding: 6px 4px; text-align: center;
+      border: 1.5px solid var(--grey); border-radius: 8px;
+      font-size: 18px; font-weight: 700; color: var(--dark);
+      background: var(--grey); outline: none; width: 100%;
+    }
+    .set-input:focus { border-color: var(--blue); background: var(--light-blue); }
+
+    /* Basquete quarters */
+    .quarters-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .quarter-col { text-align: center; }
+    .quarter-label { font-size: 10px; color: var(--dark-grey); margin-bottom: 4px; }
+    .quarter-inputs { display: flex; flex-direction: column; gap: 4px; }
+    .quarter-input {
+      padding: 5px 4px; text-align: center;
+      border: 1.5px solid var(--grey); border-radius: 8px;
+      font-size: 15px; font-weight: 700; color: var(--dark);
+      background: var(--grey); outline: none; width: 100%;
+    }
+    .quarter-input:focus { border-color: var(--gold); background: var(--light-orange); }
+
+    .total-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 10px; padding: 8px 12px;
+      background: var(--grey); border-radius: 10px;
+    }
+    .total-label { font-size: 12px; color: var(--dark-grey); }
+    .total-scores { display: flex; gap: 16px; }
+    .total-score { font-size: 22px; font-weight: 800; color: var(--blue); }
+
+    .jogo-footer {
+      padding: 10px 16px; border-top: 1px solid var(--grey);
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+    .btn { 
+      padding: 7px 18px; border-radius: 30px; border: none;
+      font-family: var(--poppins); font-size: 13px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 6px; transition: .2s;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #0D47A1; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-success:hover { background: #1B5E20; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-danger:hover { background: #B71C1C; }
+    .btn-secondary { background: var(--grey); color: var(--dark); }
+    .btn-secondary:hover { background: var(--dark-grey); color: #fff; }
+    .btn-gold { background: var(--gold); color: var(--dark); }
+    .btn-gold:hover { background: #F57F17; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .status-live { background: #FFEBEE; color: var(--red); }
+    .status-done { background: var(--light-blue); color: var(--blue); }
+    .status-upcoming { background: var(--light-green); color: var(--green); }
+
+    /* ── ATLETA DESTAQUE ── */
+    .destaques-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+    .destaque-card {
+      background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+      border-radius: 16px; padding: 20px; color: #fff;
+      position: relative; overflow: hidden;
+    }
+    .destaque-card::before {
+      content: '★';
+      position: absolute; right: 16px; top: 10px;
+      font-size: 60px; opacity: .1;
+    }
+    .destaque-jogo { font-size: 11px; font-weight: 700; letter-spacing: .8px; opacity: .7; margin-bottom: 6px; }
+    .destaque-nome { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+    .destaque-equipe { font-size: 13px; opacity: .8; display: flex; align-items: center; gap: 4px; }
+    .destaque-empty {
+      background: var(--grey); color: var(--dark-grey);
+      border: 2px dashed var(--dark-grey);
+    }
+    .destaque-empty::before { content: ''; }
+    .destaque-empty .destaque-nome { color: var(--dark-grey); font-size: 14px; }
+
+    .destaque-form { display: flex; flex-direction: column; gap: 12px; }
+    .form-group label { font-size: 12px; color: var(--dark-grey); font-weight: 600; margin-bottom: 4px; display: block; }
+    .form-control {
+      padding: 10px 14px; border: 1.5px solid var(--grey);
+      border-radius: 10px; font-size: 14px; color: var(--dark);
+      background: var(--grey); outline: none; width: 100%;
+      font-family: var(--poppins); transition: .2s;
+    }
+    .form-control:focus { border-color: var(--blue); background: var(--light-blue); }
+    body.dark .form-control { background: #1a1a2e; border-color: #333; }
+    body.dark .form-control:focus { background: #0d1f3c; }
+
+    /* ── SOCIAL ── */
+    .ranking-table { width: 100%; border-collapse: collapse; }
+    .ranking-table th {
+      padding: 12px 14px; text-align: left;
+      font-size: 12px; color: var(--dark-grey); font-weight: 600;
+      text-transform: uppercase; letter-spacing: .5px;
+      border-bottom: 2px solid var(--grey);
+    }
+    .ranking-table td {
+      padding: 12px 14px; font-size: 14px; color: var(--dark);
+      border-bottom: 1px solid var(--grey);
+    }
+    .ranking-table tr:hover td { background: var(--grey); }
+    .rank-pos {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px;
+    }
+    .rank-1 { background: var(--gold); color: #5a3e00; }
+    .rank-2 { background: #9E9E9E; color: #fff; }
+    .rank-3 { background: #795548; color: #fff; }
+    .rank-n { background: var(--grey); color: var(--dark-grey); }
+    .pts-badge {
+      background: var(--light-blue); color: var(--blue);
+      padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 13px;
+    }
+
+    /* ── NOTICIAS ── */
+    .noticias-list { display: grid; gap: 14px; }
+    .noticia-card {
+      background: var(--light); border-radius: 14px; overflow: hidden;
+      border: 2px solid var(--grey); transition: .2s;
+      display: flex; gap: 0;
+    }
+    .noticia-card:hover { border-color: var(--blue); }
+    .noticia-stripe { width: 6px; background: var(--blue); flex-shrink: 0; }
+    .noticia-body { padding: 14px 16px; flex: 1; }
+    .noticia-meta { font-size: 11px; color: var(--dark-grey); margin-bottom: 4px; display: flex; gap: 12px; }
+    .noticia-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+    .noticia-preview { font-size: 13px; color: var(--dark-grey); }
+    .noticia-actions { display: flex; align-items: center; gap: 8px; padding: 14px 12px; }
+
+    /* ── NOTIFICACOES ── */
+    .notif-composer {
+      background: var(--light); border-radius: 18px; padding: 24px; margin-bottom: 20px;
+    }
+    .notif-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .notif-type-btn {
+      padding: 10px 8px; border-radius: 12px; border: 2px solid var(--grey);
+      background: var(--grey); cursor: pointer; text-align: center;
+      font-family: var(--poppins); font-size: 12px; font-weight: 600; color: var(--dark-grey);
+      transition: .2s;
+    }
+    .notif-type-btn.selected { border-color: var(--blue); background: var(--light-blue); color: var(--blue); }
+    .notif-type-btn i { font-size: 20px; display: block; margin-bottom: 4px; }
+
+    .notif-log { display: grid; gap: 10px; }
+    .notif-log-item {
+      background: var(--light); border-radius: 12px;
+      padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px;
+      border-left: 4px solid var(--blue);
+    }
+    .notif-log-icon { font-size: 22px; color: var(--blue); flex-shrink: 0; }
+    .notif-log-content { flex: 1; }
+    .notif-log-title { font-size: 14px; font-weight: 700; color: var(--dark); }
+    .notif-log-body { font-size: 13px; color: var(--dark-grey); margin-top: 2px; }
+    .notif-log-meta { font-size: 11px; color: var(--dark-grey); margin-top: 4px; }
+    .notif-sent-count { font-size: 12px; background: var(--light-green); color: var(--green); padding: 2px 10px; border-radius: 20px; font-weight: 700; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: var(--dark); color: #fff;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      display: flex; align-items: center; gap: 10px;
+      transform: translateY(80px); opacity: 0;
+      transition: .3s ease;
+      max-width: 320px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-left: 4px solid var(--green); }
+    #toast.error { border-left: 4px solid var(--red); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 3000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--light); border-radius: 20px;
+      padding: 28px; width: 90%; max-width: 520px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-title { font-size: 18px; font-weight: 700; color: var(--dark); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    .modal-title i { color: var(--blue); }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      #sidebar { width: 200px; }
+      #content { width: calc(100% - 60px); left: 200px; }
+    }
+    @media (max-width: 576px) {
+      #sidebar { width: 60px; }
+      #sidebar.show { width: 200px; }
+      #content { width: 100%; left: 60px; }
+      #content main { padding: 20px 12px; }
+      .form-input input { display: none; }
+      .destaques-grid { grid-template-columns: 1fr; }
+    }
+
+    /* dark overrides */
+    body.dark .card,
+    body.dark .jogo-card,
+    body.dark .notif-composer,
+    body.dark .notif-log-item,
+    body.dark .noticia-card,
+    body.dark .modal,
+    body.dark #sidebar,
+    body.dark #content nav,
+    body.dark .notif-dropdown,
+    body.dark .profile-dropdown { background: var(--light); }
+    body.dark .side-menu li.active { background: var(--grey); }
+    body.dark .ranking-table tr:hover td { background: var(--grey); }
+    body.dark .set-input,
+    body.dark .quarter-input,
+    body.dark .total-row { background: #1a1a2e; border-color: #333; }
+
+    /* empty state */
+    .empty-state { text-align: center; padding: 40px; color: var(--dark-grey); }
+    .empty-state i { font-size: 48px; margin-bottom: 12px; display: block; }
+    .empty-state p { font-size: 14px; }
+
+    /* section divider */
+    .section-divider { height: 1px; background: var(--grey); margin: 20px 0; }
+
+    /* volei/basquete color accent */
+    .sport-volei .jogo-header { background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%); }
+    .sport-basquete .jogo-header { background: linear-gradient(135deg, #E65100 0%, #BF360C 100%); }
+    .sport-basquete .set-input:focus, .sport-basquete .quarter-input:focus { border-color: var(--orange); }
+    .sport-basquete .total-score { color: var(--orange); }
+    .sport-basquete .jogo-vs { color: var(--orange); }
+  </style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<section id="sidebar">
+  <div class="sidebar-brand">
+    <i class='bx bxs-trophy'></i>
+    <span>Supercopa Admin</span>
+  </div>
+
+  <ul class="side-menu top">
+    <li class="active">
+      <a href="#" onclick="navTo('dashboard',this)">
+        <i class='bx bxs-dashboard'></i>
+        <span>Dashboard</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" onclick="navTo('volei',this)">
+        <i class='bx bx-run'></i>
+        <span>Vôlei</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" onclick="navTo('basquete',this)">
+        <i class='bx bxs-basketball'></i>
+        <span>Basquete</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" onclick="navTo('destaque',this)">
+        <i class='bx bxs-star'></i>
+        <span>Atleta Destaque</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" onclick="navTo('social',this)">
+        <i class='bx bxs-bar-chart-alt-2'></i>
+        <span>Social</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" onclick="navTo('noticias',this)">
+        <i class='bx bxs-news'></i>
+        <span>Notícias</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" onclick="navTo('notificacoes',this)">
+        <i class='bx bxs-bell'></i>
+        <span>Notificações</span>
+      </a>
+    </li>
+  </ul>
+
+  <div class="side-bottom">
+    <a href="#"><i class='bx bxs-cog'></i><span>Configurações</span></a>
+    <a href="#" style="color:var(--red)"><i class='bx bx-power-off'></i><span>Sair</span></a>
+  </div>
+</section>
+
+<!-- ══ CONTENT ══ -->
+<section id="content">
+
+  <!-- NAV -->
+  <nav>
+    <i class='bx bx-menu' id="menuToggle"></i>
+    <span class="nav-label" id="navLabel">Dashboard</span>
+
+    <div class="form-input" style="margin-left:auto;margin-right:8px;max-width:220px;">
+      <input type="search" placeholder="Buscar...">
+      <button><i class='bx bx-search'></i></button>
+    </div>
+
+    <input type="checkbox" class="checkbox" id="switch-mode" hidden>
+    <label class="swith-lm" for="switch-mode">
+      <i class="bx bxs-moon"></i>
+      <i class="bx bx-sun"></i>
+      <div class="ball"></div>
+    </label>
+
+    <div class="notif-wrap">
+      <a href="#" class="notification" id="notifIcon">
+        <i class='bx bxs-bell'></i>
+        <span class="num" id="notifCount">3</span>
+      </a>
+      <div class="notif-dropdown" id="notifMenu">
+        <ul>
+          <li><i class='bx bxs-circle' style="color:var(--red);font-size:8px;margin-right:6px"></i> Novo jogo cadastrado</li>
+          <li><i class='bx bxs-circle' style="color:var(--red);font-size:8px;margin-right:6px"></i> Placar atualizado – Vôlei</li>
+          <li><i class='bx bxs-circle' style="color:var(--red);font-size:8px;margin-right:6px"></i> Destaque pendente: Jogo 3</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="profile-wrap">
+      <a href="#" class="profile" id="profileIcon">
+        <img src="https://placehold.co/60x60/1565C0/fff?text=ADM" alt="Admin">
+      </a>
+      <div class="profile-dropdown" id="profileMenu">
+        <ul>
+          <li><a href="#">Meu Perfil</a></li>
+          <li><a href="#">Configurações</a></li>
+          <li><a href="#" style="color:var(--red)">Sair</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <main>
+
+    <!-- ─── DASHBOARD ─── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <div class="breadcrumb"><span>Supercopa</span><span>›</span><span class="cur">Início</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:60px;height:60px;border-radius:14px;background:var(--light-blue);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--blue);">
+            <i class='bx bxs-trophy'></i></div>
+          <div><div style="font-size:24px;font-weight:800;color:var(--dark)" id="stat-jogos">0</div><div style="font-size:13px;color:var(--dark-grey)">Jogos cadastrados</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:60px;height:60px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--green);">
+            <i class='bx bxs-star'></i></div>
+          <div><div style="font-size:24px;font-weight:800;color:var(--dark)" id="stat-destaques">0</div><div style="font-size:13px;color:var(--dark-grey)">Destaques definidos</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:60px;height:60px;border-radius:14px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--orange);">
+            <i class='bx bxs-news'></i></div>
+          <div><div style="font-size:24px;font-weight:800;color:var(--dark)" id="stat-noticias">0</div><div style="font-size:13px;color:var(--dark-grey)">Notícias publicadas</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:60px;height:60px;border-radius:14px;background:var(--light-purple);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--purple);">
+            <i class='bx bxs-bell'></i></div>
+          <div><div style="font-size:24px;font-weight:800;color:var(--dark)" id="stat-notifs">0</div><div style="font-size:13px;color:var(--dark-grey)">Notificações enviadas</div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap;">
+        <div class="card" style="margin:0;">
+          <div class="card-title"><i class='bx bx-run'></i> Próximos Jogos</div>
+          <div id="dash-jogos-list">
+            <div class="empty-state"><i class='bx bx-calendar'></i><p>Nenhum jogo cadastrado ainda.</p></div>
+          </div>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title"><i class='bx bxs-star'></i> Últimos Destaques</div>
+          <div id="dash-destaques-list">
+            <div class="empty-state"><i class='bx bxs-star'></i><p>Nenhum destaque registrado ainda.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── VÔLEI ─── -->
+    <div class="page" id="page-volei">
+      <div class="page-header">
+        <div>
+          <h1>Vôlei</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Vôlei</span></div>
+        </div>
+        <button class="btn btn-primary" onclick="openModalJogo('volei')">
+          <i class='bx bx-plus'></i> Novo Jogo
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class='bx bx-run'></i> Tabela de Jogos — Vôlei (melhor de 3 sets)</div>
+        <div class="jogos-grid" id="volei-jogos-grid">
+          <div class="empty-state"><i class='bx bx-run'></i><p>Nenhum jogo de vôlei cadastrado. Clique em "Novo Jogo" para começar.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── BASQUETE ─── -->
+    <div class="page" id="page-basquete">
+      <div class="page-header">
+        <div>
+          <h1>Basquete</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Basquete</span></div>
+        </div>
+        <button class="btn btn-gold" onclick="openModalJogo('basquete')">
+          <i class='bx bx-plus'></i> Novo Jogo
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="color:var(--orange)"><i class='bx bxs-basketball'></i> Tabela de Jogos — Basquete (4 quartos)</div>
+        <div class="jogos-grid" id="basquete-jogos-grid">
+          <div class="empty-state"><i class='bx bxs-basketball'></i><p>Nenhum jogo de basquete cadastrado. Clique em "Novo Jogo" para começar.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ATLETA DESTAQUE ─── -->
+    <div class="page" id="page-destaque">
+      <div class="page-header">
+        <div>
+          <h1>Atleta Destaque</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Destaque</span></div>
+        </div>
+        <button class="btn btn-gold" onclick="openModalDestaque()">
+          <i class='bx bx-plus'></i> Registrar Destaque
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class='bx bxs-star'></i> Destaques por Jogo</div>
+        <div class="destaques-grid" id="destaques-grid">
+          <div class="empty-state" style="grid-column:1/-1"><i class='bx bxs-star'></i><p>Nenhum destaque registrado ainda.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SOCIAL ─── -->
+    <div class="page" id="page-social">
+      <div class="page-header">
+        <div>
+          <h1>Social</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Social</span></div>
+        </div>
+        <button class="btn btn-primary" onclick="openModalRanking()">
+          <i class='bx bx-plus'></i> Adicionar Participante
+        </button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('bolao')">🏆 Bolão</button>
+        <button class="tab-btn" onclick="switchTab('quiz')">❓ Quiz</button>
+      </div>
+
+      <div id="tab-bolao">
+        <div class="card">
+          <div class="card-title"><i class='bx bxs-bar-chart-alt-2'></i> Ranking do Bolão</div>
+          <table class="ranking-table" id="bolao-table">
+            <thead>
+              <tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="bolao-tbody">
+              <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Sem participantes ainda.</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-quiz" style="display:none">
+        <div class="card">
+          <div class="card-title"><i class='bx bxs-brain'></i> Ranking do Quiz</div>
+          <table class="ranking-table" id="quiz-table">
+            <thead>
+              <tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="quiz-tbody">
+              <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-brain'></i><p>Sem participantes ainda.</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── NOTÍCIAS ─── -->
+    <div class="page" id="page-noticias">
+      <div class="page-header">
+        <div>
+          <h1>Notícias</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Notícias</span></div>
+        </div>
+        <button class="btn btn-primary" onclick="openModalNoticia()">
+          <i class='bx bx-plus'></i> Nova Notícia
+        </button>
+      </div>
+
+      <div class="noticias-list" id="noticias-list">
+        <div class="empty-state"><i class='bx bxs-news'></i><p>Nenhuma notícia publicada. Clique em "Nova Notícia" para criar.</p></div>
+      </div>
+    </div>
+
+    <!-- ─── NOTIFICAÇÕES ─── -->
+    <div class="page" id="page-notificacoes">
+      <div class="page-header">
+        <div>
+          <h1>Notificações Push</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Notificações</span></div>
+        </div>
+      </div>
+
+      <div class="notif-composer card">
+        <div class="card-title"><i class='bx bxs-bell'></i> Enviar Notificação Push</div>
+
+        <div style="margin-bottom:14px;">
+          <label class="form-group" style="font-size:12px;color:var(--dark-grey);font-weight:600;margin-bottom:6px;display:block;">Tipo</label>
+          <div class="notif-type-grid">
+            <div class="notif-type-btn selected" onclick="selectNotifType(this,'geral')"><i class='bx bxs-megaphone'></i>Geral</div>
+            <div class="notif-type-btn" onclick="selectNotifType(this,'placar')"><i class='bx bxs-sport'></i>Placar</div>
+            <div class="notif-type-btn" onclick="selectNotifType(this,'noticia')"><i class='bx bxs-news'></i>Notícia</div>
+            <div class="notif-type-btn" onclick="selectNotifType(this,'destaque')"><i class='bx bxs-star'></i>Destaque</div>
+            <div class="notif-type-btn" onclick="selectNotifType(this,'urgente')"><i class='bx bxs-error'></i>Urgente</div>
+          </div>
+        </div>
+
+        <div class="destaque-form">
+          <div class="form-group">
+            <label>Título da Notificação *</label>
+            <input type="text" class="form-control" id="push-titulo" placeholder="Ex: Resultado do Jogo 2 disponível!">
+          </div>
+          <div class="form-group">
+            <label>Mensagem *</label>
+            <textarea class="form-control" id="push-body" rows="3" placeholder="Ex: O time A venceu o time B por 3x1 no vôlei. Confira todos os detalhes no app!"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label>Link (opcional)</label>
+              <input type="url" class="form-control" id="push-link" placeholder="https://...">
+            </div>
+            <div class="form-group">
+              <label>Público-alvo</label>
+              <select class="form-control" id="push-target">
+                <option value="all">Todos os usuários</option>
+                <option value="volei">Seguidores de Vôlei</option>
+                <option value="basquete">Seguidores de Basquete</option>
+                <option value="bolao">Participantes do Bolão</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-secondary" onclick="clearPush()">Limpar</button>
+            <button class="btn btn-primary" onclick="sendPush()"><i class='bx bxs-send'></i> Enviar Push</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class='bx bx-history'></i> Histórico de Envios</div>
+        <div class="notif-log" id="notif-log">
+          <div class="empty-state"><i class='bx bxs-bell-off'></i><p>Nenhuma notificação enviada ainda.</p></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</section>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Modal: Novo Jogo -->
+<div class="modal-overlay" id="modal-jogo">
+  <div class="modal">
+    <div class="modal-title"><i class='bx bxs-trophy'></i> <span id="modal-jogo-title">Novo Jogo</span></div>
+    <input type="hidden" id="jogo-sport">
+    <input type="hidden" id="jogo-edit-id" value="">
+    <div class="destaque-form">
+      <div class="form-group">
+        <label>Equipe A *</label>
+        <input type="text" class="form-control" id="jogo-equipe-a" placeholder="Nome da equipe A">
+      </div>
+      <div class="form-group">
+        <label>Equipe B *</label>
+        <input type="text" class="form-control" id="jogo-equipe-b" placeholder="Nome da equipe B">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>Data do Jogo</label>
+          <input type="date" class="form-control" id="jogo-data">
+        </div>
+        <div class="form-group">
+          <label>Horário</label>
+          <input type="time" class="form-control" id="jogo-hora">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Rodada / Fase</label>
+        <input type="text" class="form-control" id="jogo-rodada" placeholder="Ex: Semifinal, Jogo 1...">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select class="form-control" id="jogo-status">
+          <option value="upcoming">Agendado</option>
+          <option value="live">Ao Vivo</option>
+          <option value="done">Encerrado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>URL da Planilha Google (POST)</label>
+        <input type="url" class="form-control" id="jogo-sheet-url" placeholder="https://script.google.com/macros/s/...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-jogo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarJogo()"><i class='bx bx-save'></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Atleta Destaque -->
+<div class="modal-overlay" id="modal-destaque">
+  <div class="modal">
+    <div class="modal-title"><i class='bx bxs-star'></i> Registrar Atleta Destaque</div>
+    <div class="destaque-form">
+      <div class="form-group">
+        <label>Jogo / Rodada *</label>
+        <input type="text" class="form-control" id="dest-jogo" placeholder="Ex: Vôlei – Jogo 1, Semifinal Basquete...">
+      </div>
+      <div class="form-group">
+        <label>Nome do Atleta *</label>
+        <input type="text" class="form-control" id="dest-nome" placeholder="Nome completo">
+      </div>
+      <div class="form-group">
+        <label>Equipe *</label>
+        <input type="text" class="form-control" id="dest-equipe" placeholder="Nome da equipe">
+      </div>
+      <div class="form-group">
+        <label>Modalidade</label>
+        <select class="form-control" id="dest-modalidade">
+          <option value="Vôlei">Vôlei</option>
+          <option value="Basquete">Basquete</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Observação (opcional)</label>
+        <input type="text" class="form-control" id="dest-obs" placeholder="Ex: 18 pontos, 5 aces...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-destaque')">Cancelar</button>
+      <button class="btn btn-gold" onclick="salvarDestaque()"><i class='bx bxs-star'></i> Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ranking -->
+<div class="modal-overlay" id="modal-ranking">
+  <div class="modal">
+    <div class="modal-title"><i class='bx bxs-bar-chart-alt-2'></i> Adicionar / Editar Participante</div>
+    <input type="hidden" id="rank-edit-id" value="">
+    <input type="hidden" id="rank-tipo" value="bolao">
+    <div class="destaque-form">
+      <div class="form-group">
+        <label>Participante *</label>
+        <input type="text" class="form-control" id="rank-nome" placeholder="Nome">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>Acertos</label>
+          <input type="number" class="form-control" id="rank-acertos" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label>Pontos</label>
+          <input type="number" class="form-control" id="rank-pontos" min="0" value="0">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ranking')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarRanking()"><i class='bx bx-save'></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Notícia -->
+<div class="modal-overlay" id="modal-noticia">
+  <div class="modal">
+    <div class="modal-title"><i class='bx bxs-news'></i> <span id="modal-noticia-title">Nova Notícia</span></div>
+    <input type="hidden" id="noticia-edit-id" value="">
+    <div class="destaque-form">
+      <div class="form-group">
+        <label>Título *</label>
+        <input type="text" class="form-control" id="noticia-titulo" placeholder="Título da notícia">
+      </div>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select class="form-control" id="noticia-cat">
+          <option>Vôlei</option>
+          <option>Basquete</option>
+          <option>Geral</option>
+          <option>Resultado</option>
+          <option>Destaque</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Conteúdo *</label>
+        <textarea class="form-control" id="noticia-corpo" rows="5" placeholder="Escreva o conteúdo completo da notícia..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>URL da Planilha Google (POST)</label>
+        <input type="url" class="form-control" id="noticia-sheet-url" placeholder="https://script.google.com/macros/s/...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-noticia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNoticia()"><i class='bx bxs-send'></i> Publicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"><i class='bx bx-check-circle' id="toast-icon"></i><span id="toast-msg"></span></div>
+
+<!-- ══ SCRIPT ══ -->
+<script>
+// ── STATE ──
+const state = {
+  jogos: { volei: [], basquete: [] },
+  destaques: [],
+  bolao: [],
+  quiz: [],
+  noticias: [],
+  pushLog: [],
+  pushType: 'geral'
+};
+
+// ── NAV ──
+function navTo(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
+  if (el) el.parentElement.classList.add('active');
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push'};
+  document.getElementById('navLabel').textContent = labels[page] || page;
+  return false;
+}
+
+// ── SIDEBAR TOGGLE ──
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('hide');
+});
+function adjustSidebar() {
+  const sb = document.getElementById('sidebar');
+  window.innerWidth <= 576 ? sb.classList.add('hide') : sb.classList.remove('hide');
+}
+window.addEventListener('load', adjustSidebar);
+window.addEventListener('resize', adjustSidebar);
+
+// ── DARK MODE ──
+document.getElementById('switch-mode').addEventListener('change', function () {
+  document.body.classList.toggle('dark', this.checked);
+});
+
+// ── DROPDOWNS ──
+document.getElementById('notifIcon').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('notifMenu').classList.toggle('show');
+  document.getElementById('profileMenu').classList.remove('show');
+});
+document.getElementById('profileIcon').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('profileMenu').classList.toggle('show');
+  document.getElementById('notifMenu').classList.remove('show');
+});
+window.addEventListener('click', e => {
+  if (!e.target.closest('.notif-wrap')) document.getElementById('notifMenu').classList.remove('show');
+  if (!e.target.closest('.profile-wrap')) document.getElementById('profileMenu').classList.remove('show');
+});
+
+// ── MODAL HELPERS ──
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); });
+});
+
+// ── TOAST ──
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  document.getElementById('toast-icon').className = type === 'success' ? 'bx bx-check-circle' : 'bx bx-error-circle';
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ── TABS (Social) ──
+function switchTab(tab) {
+  document.getElementById('tab-bolao').style.display = tab === 'bolao' ? '' : 'none';
+  document.getElementById('tab-quiz').style.display = tab === 'quiz' ? '' : 'none';
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', (i===0&&tab==='bolao')||(i===1&&tab==='quiz')));
+}
+
+// ── GOOGLE SHEETS POST ──
+async function postToSheet(url, data) {
+  if (!url || url.trim() === '') return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch(e) { console.warn('Sheet post error:', e); }
+}
+
+// ═══════════════════════════════
+// ── JOGOS ──
+// ═══════════════════════════════
+function openModalJogo(sport) {
+  document.getElementById('jogo-sport').value = sport;
+  document.getElementById('jogo-edit-id').value = '';
+  document.getElementById('modal-jogo-title').textContent = 'Novo Jogo — ' + (sport === 'volei' ? 'Vôlei' : 'Basquete');
+  ['jogo-equipe-a','jogo-equipe-b','jogo-rodada','jogo-sheet-url'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('jogo-data').value = '';
+  document.getElementById('jogo-hora').value = '';
+  document.getElementById('jogo-status').value = 'upcoming';
+  openModal('modal-jogo');
+}
+
+function salvarJogo() {
+  const sport = document.getElementById('jogo-sport').value;
+  const ea = document.getElementById('jogo-equipe-a').value.trim();
+  const eb = document.getElementById('jogo-equipe-b').value.trim();
+  if (!ea || !eb) { showToast('Preencha as duas equipes.','error'); return; }
+
+  const editId = document.getElementById('jogo-edit-id').value;
+  const jogo = {
+    id: editId || Date.now().toString(),
+    sport,
+    equipeA: ea, equipeB: eb,
+    data: document.getElementById('jogo-data').value,
+    hora: document.getElementById('jogo-hora').value,
+    rodada: document.getElementById('jogo-rodada').value,
+    status: document.getElementById('jogo-status').value,
+    sheetUrl: document.getElementById('jogo-sheet-url').value,
+    placar: sport === 'volei'
+      ? { sets: [{a:'',b:''},{a:'',b:''},{a:'',b:''}] }
+      : { quarters: [{a:'',b:''},{a:'',b:''},{a:'',b:''},{a:'',b:''}] }
+  };
+
+  if (editId) {
+    const idx = state.jogos[sport].findIndex(j => j.id === editId);
+    if (idx > -1) state.jogos[sport][idx] = {...state.jogos[sport][idx], ...jogo, placar: state.jogos[sport][idx].placar};
+  } else {
+    state.jogos[sport].push(jogo);
+  }
+
+  renderJogos(sport);
+  updateStats();
+  updateDashboard();
+  closeModal('modal-jogo');
+  showToast('Jogo salvo com sucesso!');
+  postToSheet(jogo.sheetUrl, { action: 'novo_jogo', ...jogo });
+}
+
+function renderJogos(sport) {
+  const container = document.getElementById(sport + '-jogos-grid');
+  if (!state.jogos[sport].length) {
+    container.innerHTML = `<div class="empty-state"><i class='bx bx-${sport==="volei"?"run":"basketball"}'></i><p>Nenhum jogo cadastrado.</p></div>`;
+    return;
+  }
+  container.innerHTML = state.jogos[sport].map(j => renderJogoCard(j)).join('');
+}
+
+function renderJogoCard(j) {
+  const statusMap = { upcoming: '<span class="status-badge status-upcoming"><i class="bx bx-time"></i> Agendado</span>', live: '<span class="status-badge status-live"><i class="bx bx-radio-circle-marked"></i> Ao Vivo</span>', done: '<span class="status-badge status-done"><i class="bx bx-check-circle"></i> Encerrado</span>' };
+  const dataFmt = j.data ? new Date(j.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+
+  if (j.sport === 'volei') {
+    const sets = j.placar.sets;
+    const setsHtml = sets.map((s,i) => `
+      <div class="set-col">
+        <div class="set-label">SET ${i+1}</div>
+        <div class="set-inputs">
+          <input class="set-input" type="number" min="0" max="99" value="${s.a}" placeholder="0" onchange="updateSetA('${j.id}',${i},this.value)">
+          <input class="set-input" type="number" min="0" max="99" value="${s.b}" placeholder="0" onchange="updateSetB('${j.id}',${i},this.value)">
+        </div>
+      </div>`).join('');
+    const totA = sets.filter(s=>parseInt(s.a||0)>parseInt(s.b||0)).length;
+    const totB = sets.filter(s=>parseInt(s.b||0)>parseInt(s.a||0)).length;
+    return `
+      <div class="jogo-card sport-volei" id="jogo-${j.id}">
+        <div class="jogo-header">
+          <span>${j.rodada || 'Rodada'} · ${dataFmt} ${j.hora||''}</span>
+          <span class="jogo-sport-badge">🏐 Vôlei</span>
+        </div>
+        <div class="jogo-body">
+          <div class="jogo-equipes">
+            <div class="equipe-name">${j.equipeA}</div>
+            <div class="jogo-vs">VS</div>
+            <div class="equipe-name">${j.equipeB}</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;">
+            ${statusMap[j.status]||''}
+          </div>
+          <div class="placar-section">
+            <div class="placar-title">Placar por set — Equipe A | Equipe B</div>
+            <div class="sets-grid">${setsHtml}</div>
+            <div class="total-row">
+              <span class="total-label">Sets vencidos</span>
+              <div class="total-scores">
+                <span class="total-score">${totA}</span>
+                <span style="color:var(--dark-grey);font-size:16px;align-self:center">×</span>
+                <span class="total-score">${totB}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="jogo-footer">
+          <button class="btn btn-secondary btn-sm" style="padding:5px 12px;font-size:12px" onclick="editJogo('${j.id}','volei')"><i class='bx bx-edit'></i> Editar</button>
+          <button class="btn btn-success btn-sm" style="padding:5px 12px;font-size:12px" onclick="salvarPlacarVolei('${j.id}')"><i class='bx bxs-cloud-upload'></i> Enviar Placar</button>
+          <button class="btn btn-danger btn-sm" style="padding:5px 12px;font-size:12px" onclick="excluirJogo('${j.id}','volei')"><i class='bx bx-trash'></i></button>
+        </div>
+      </div>`;
+  } else {
+    const qs = j.placar.quarters;
+    const qHtml = qs.map((q,i) => `
+      <div class="quarter-col">
+        <div class="quarter-label">Q${i+1}</div>
+        <div class="quarter-inputs">
+          <input class="quarter-input" type="number" min="0" value="${q.a}" placeholder="0" onchange="updateQuarterA('${j.id}',${i},this.value)">
+          <input class="quarter-input" type="number" min="0" value="${q.b}" placeholder="0" onchange="updateQuarterB('${j.id}',${i},this.value)">
+        </div>
+      </div>`).join('');
+    const totA = qs.reduce((s,q)=>s+parseInt(q.a||0),0);
+    const totB = qs.reduce((s,q)=>s+parseInt(q.b||0),0);
+    return `
+      <div class="jogo-card sport-basquete" id="jogo-${j.id}">
+        <div class="jogo-header">
+          <span>${j.rodada || 'Rodada'} · ${dataFmt} ${j.hora||''}</span>
+          <span class="jogo-sport-badge">🏀 Basquete</span>
+        </div>
+        <div class="jogo-body">
+          <div class="jogo-equipes">
+            <div class="equipe-name">${j.equipeA}</div>
+            <div class="jogo-vs" style="color:var(--orange)">VS</div>
+            <div class="equipe-name">${j.equipeB}</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;">
+            ${statusMap[j.status]||''}
+          </div>
+          <div class="placar-section">
+            <div class="placar-title">Pontos por quarto — Equipe A | Equipe B</div>
+            <div class="quarters-grid">${qHtml}</div>
+            <div class="total-row">
+              <span class="total-label">Total</span>
+              <div class="total-scores">
+                <span class="total-score" style="color:var(--orange)">${totA}</span>
+                <span style="color:var(--dark-grey);font-size:16px;align-self:center">×</span>
+                <span class="total-score" style="color:var(--orange)">${totB}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="jogo-footer">
+          <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px" onclick="editJogo('${j.id}','basquete')"><i class='bx bx-edit'></i> Editar</button>
+          <button class="btn btn-success" style="padding:5px 12px;font-size:12px" onclick="salvarPlacarBasquete('${j.id}')"><i class='bx bxs-cloud-upload'></i> Enviar Placar</button>
+          <button class="btn btn-danger" style="padding:5px 12px;font-size:12px" onclick="excluirJogo('${j.id}','basquete')"><i class='bx bx-trash'></i></button>
+        </div>
+      </div>`;
+  }
+}
+
+function updateSetA(id, setIdx, val) {
+  const j = state.jogos.volei.find(x=>x.id===id);
+  if(j) { j.placar.sets[setIdx].a = val; rerenderJogoTotals(id,'volei'); }
+}
+function updateSetB(id, setIdx, val) {
+  const j = state.jogos.volei.find(x=>x.id===id);
+  if(j) { j.placar.sets[setIdx].b = val; rerenderJogoTotals(id,'volei'); }
+}
+function updateQuarterA(id, qi, val) {
+  const j = state.jogos.basquete.find(x=>x.id===id);
+  if(j) { j.placar.quarters[qi].a = val; rerenderJogoTotals(id,'basquete'); }
+}
+function updateQuarterB(id, qi, val) {
+  const j = state.jogos.basquete.find(x=>x.id===id);
+  if(j) { j.placar.quarters[qi].b = val; rerenderJogoTotals(id,'basquete'); }
+}
+
+function rerenderJogoTotals(id, sport) {
+  // update only totals in the DOM to avoid re-rendering (losing focus)
+  const j = state.jogos[sport].find(x=>x.id===id);
+  if (!j) return;
+  const card = document.getElementById('jogo-' + id);
+  if (!card) return;
+  const totals = card.querySelectorAll('.total-score');
+  if (sport === 'volei') {
+    const totA = j.placar.sets.filter(s=>parseInt(s.a||0)>parseInt(s.b||0)).length;
+    const totB = j.placar.sets.filter(s=>parseInt(s.b||0)>parseInt(s.a||0)).length;
+    if(totals[0]) totals[0].textContent = totA;
+    if(totals[1]) totals[1].textContent = totB;
+  } else {
+    const totA = j.placar.quarters.reduce((s,q)=>s+parseInt(q.a||0),0);
+    const totB = j.placar.quarters.reduce((s,q)=>s+parseInt(q.b||0),0);
+    if(totals[0]) totals[0].textContent = totA;
+    if(totals[1]) totals[1].textContent = totB;
+  }
+}
+
+function salvarPlacarVolei(id) {
+  const j = state.jogos.volei.find(x=>x.id===id);
+  if (!j) return;
+  postToSheet(j.sheetUrl, { action: 'placar_volei', id, equipeA: j.equipeA, equipeB: j.equipeB, sets: j.placar.sets });
+  showToast('Placar de vôlei enviado para a planilha!');
+}
+function salvarPlacarBasquete(id) {
+  const j = state.jogos.basquete.find(x=>x.id===id);
+  if (!j) return;
+  postToSheet(j.sheetUrl, { action: 'placar_basquete', id, equipeA: j.equipeA, equipeB: j.equipeB, quarters: j.placar.quarters });
+  showToast('Placar de basquete enviado para a planilha!');
+}
+
+function editJogo(id, sport) {
+  const j = state.jogos[sport].find(x=>x.id===id);
+  if (!j) return;
+  document.getElementById('jogo-sport').value = sport;
+  document.getElementById('jogo-edit-id').value = id;
+  document.getElementById('modal-jogo-title').textContent = 'Editar Jogo — ' + (sport==='volei'?'Vôlei':'Basquete');
+  document.getElementById('jogo-equipe-a').value = j.equipeA;
+  document.getElementById('jogo-equipe-b').value = j.equipeB;
+  document.getElementById('jogo-data').value = j.data;
+  document.getElementById('jogo-hora').value = j.hora;
+  document.getElementById('jogo-rodada').value = j.rodada;
+  document.getElementById('jogo-status').value = j.status;
+  document.getElementById('jogo-sheet-url').value = j.sheetUrl || '';
+  openModal('modal-jogo');
+}
+
+function excluirJogo(id, sport) {
+  if (!confirm('Excluir este jogo?')) return;
+  state.jogos[sport] = state.jogos[sport].filter(j=>j.id!==id);
+  renderJogos(sport);
+  updateStats();
+  updateDashboard();
+  showToast('Jogo excluído.');
+}
+
+// ═══════════════════════════════
+// ── DESTAQUE ──
+// ═══════════════════════════════
+function openModalDestaque() {
+  ['dest-jogo','dest-nome','dest-equipe','dest-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('dest-modalidade').value = 'Vôlei';
+  openModal('modal-destaque');
+}
+
+function salvarDestaque() {
+  const nome = document.getElementById('dest-nome').value.trim();
+  const equipe = document.getElementById('dest-equipe').value.trim();
+  const jogo = document.getElementById('dest-jogo').value.trim();
+  if (!nome || !equipe || !jogo) { showToast('Preencha todos os campos obrigatórios.','error'); return; }
+
+  const d = {
+    id: Date.now().toString(),
+    jogo, nome, equipe,
+    modalidade: document.getElementById('dest-modalidade').value,
+    obs: document.getElementById('dest-obs').value
+  };
+  state.destaques.push(d);
+  renderDestaques();
+  updateStats();
+  updateDashboard();
+  closeModal('modal-destaque');
+  showToast('Atleta destaque registrado!');
+}
+
+function renderDestaques() {
+  const c = document.getElementById('destaques-grid');
+  if (!state.destaques.length) {
+    c.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class='bx bxs-star'></i><p>Nenhum destaque registrado.</p></div>`;
+    return;
+  }
+  c.innerHTML = state.destaques.map(d => `
+    <div class="destaque-card">
+      <div class="destaque-jogo">${d.modalidade.toUpperCase()} · ${d.jogo}</div>
+      <div class="destaque-nome">⭐ ${d.nome}</div>
+      <div class="destaque-equipe"><i class='bx bxs-shield'></i>${d.equipe}${d.obs?' · <em style="opacity:.7">'+d.obs+'</em>':''}</div>
+      <button class="btn btn-danger" style="position:absolute;top:10px;right:10px;padding:3px 8px;font-size:11px;" onclick="excluirDestaque('${d.id}')"><i class='bx bx-trash'></i></button>
+    </div>`).join('');
+}
+
+function excluirDestaque(id) {
+  if (!confirm('Excluir este destaque?')) return;
+  state.destaques = state.destaques.filter(d=>d.id!==id);
+  renderDestaques(); updateStats(); updateDashboard();
+  showToast('Destaque removido.');
+}
+
+// ═══════════════════════════════
+// ── SOCIAL / RANKING ──
+// ═══════════════════════════════
+let rankingMode = 'bolao';
+
+function openModalRanking() {
+  rankingMode = document.getElementById('tab-bolao').style.display === 'none' ? 'quiz' : 'bolao';
+  document.getElementById('rank-edit-id').value = '';
+  document.getElementById('rank-tipo').value = rankingMode;
+  document.getElementById('rank-nome').value = '';
+  document.getElementById('rank-acertos').value = 0;
+  document.getElementById('rank-pontos').value = 0;
+  openModal('modal-ranking');
+}
+
+function salvarRanking() {
+  const nome = document.getElementById('rank-nome').value.trim();
+  if (!nome) { showToast('Digite o nome do participante.','error'); return; }
+  const tipo = document.getElementById('rank-tipo').value;
+  const editId = document.getElementById('rank-edit-id').value;
+  const entry = {
+    id: editId || Date.now().toString(),
+    nome, acertos: parseInt(document.getElementById('rank-acertos').value)||0,
+    pontos: parseInt(document.getElementById('rank-pontos').value)||0
+  };
+  const list = tipo === 'bolao' ? state.bolao : state.quiz;
+  if (editId) {
+    const idx = list.findIndex(x=>x.id===editId);
+    if (idx>-1) list[idx] = entry;
+  } else { list.push(entry); }
+  renderRanking();
+  closeModal('modal-ranking');
+  showToast('Ranking atualizado!');
+}
+
+function renderRanking() {
+  renderRankingTable('bolao', state.bolao);
+  renderRankingTable('quiz', state.quiz);
+}
+
+function renderRankingTable(tipo, list) {
+  const tbody = document.getElementById(tipo + '-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Sem participantes.</p></div></td></tr>`;
+    return;
+  }
+  const sorted = [...list].sort((a,b)=>b.pontos-a.pontos);
+  tbody.innerHTML = sorted.map((p,i) => {
+    const posClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+    return `<tr>
+      <td><div class="rank-pos ${posClass}">${i+1}</div></td>
+      <td><strong>${p.nome}</strong></td>
+      <td>${p.acertos}</td>
+      <td><span class="pts-badge">${p.pontos} pts</span></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRanking('${p.id}','${tipo}')"><i class='bx bx-edit'></i></button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="excluirRanking('${p.id}','${tipo}')"><i class='bx bx-trash'></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function editRanking(id, tipo) {
+  const list = tipo === 'bolao' ? state.bolao : state.quiz;
+  const p = list.find(x=>x.id===id); if(!p) return;
+  document.getElementById('rank-edit-id').value = id;
+  document.getElementById('rank-tipo').value = tipo;
+  document.getElementById('rank-nome').value = p.nome;
+  document.getElementById('rank-acertos').value = p.acertos;
+  document.getElementById('rank-pontos').value = p.pontos;
+  openModal('modal-ranking');
+}
+function excluirRanking(id, tipo) {
+  if (!confirm('Remover participante?')) return;
+  if (tipo === 'bolao') state.bolao = state.bolao.filter(x=>x.id!==id);
+  else state.quiz = state.quiz.filter(x=>x.id!==id);
+  renderRanking(); showToast('Removido.');
+}
+
+// ═══════════════════════════════
+// ── NOTÍCIAS ──
+// ═══════════════════════════════
+function openModalNoticia() {
+  document.getElementById('noticia-edit-id').value = '';
+  document.getElementById('modal-noticia-title').textContent = 'Nova Notícia';
+  ['noticia-titulo','noticia-corpo','noticia-sheet-url'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('noticia-cat').value = 'Geral';
+  openModal('modal-noticia');
+}
+
+async function salvarNoticia() {
+  const titulo = document.getElementById('noticia-titulo').value.trim();
+  const corpo = document.getElementById('noticia-corpo').value.trim();
+  if (!titulo || !corpo) { showToast('Preencha título e conteúdo.','error'); return; }
+  const sheetUrl = document.getElementById('noticia-sheet-url').value.trim();
+  const editId = document.getElementById('noticia-edit-id').value;
+  const n = {
+    id: editId || Date.now().toString(),
+    titulo, corpo,
+    categoria: document.getElementById('noticia-cat').value,
+    data: new Date().toLocaleDateString('pt-BR'),
+    hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    sheetUrl
+  };
+  if (editId) {
+    const idx = state.noticias.findIndex(x=>x.id===editId);
+    if (idx>-1) state.noticias[idx] = n;
+  } else { state.noticias.unshift(n); }
+  renderNoticias();
+  updateStats();
+  closeModal('modal-noticia');
+  showToast('Notícia publicada!');
+  await postToSheet(sheetUrl, { action: 'nova_noticia', ...n });
+}
+
+function renderNoticias() {
+  const c = document.getElementById('noticias-list');
+  if (!state.noticias.length) {
+    c.innerHTML = `<div class="empty-state"><i class='bx bxs-news'></i><p>Nenhuma notícia publicada.</p></div>`;
+    return;
+  }
+  c.innerHTML = state.noticias.map(n => `
+    <div class="noticia-card">
+      <div class="noticia-stripe"></div>
+      <div class="noticia-body">
+        <div class="noticia-meta">
+          <span>📅 ${n.data} ${n.hora}</span>
+          <span>🏷️ ${n.categoria}</span>
+        </div>
+        <div class="noticia-title">${n.titulo}</div>
+        <div class="noticia-preview">${n.corpo.substring(0,140)}${n.corpo.length>140?'…':''}</div>
+      </div>
+      <div class="noticia-actions">
+        <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px" onclick="editNoticia('${n.id}')"><i class='bx bx-edit'></i></button>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="excluirNoticia('${n.id}')"><i class='bx bx-trash'></i></button>
+      </div>
+    </div>`).join('');
+}
+
+function editNoticia(id) {
+  const n = state.noticias.find(x=>x.id===id); if(!n) return;
+  document.getElementById('noticia-edit-id').value = id;
+  document.getElementById('modal-noticia-title').textContent = 'Editar Notícia';
+  document.getElementById('noticia-titulo').value = n.titulo;
+  document.getElementById('noticia-corpo').value = n.corpo;
+  document.getElementById('noticia-cat').value = n.categoria;
+  document.getElementById('noticia-sheet-url').value = n.sheetUrl || '';
+  openModal('modal-noticia');
+}
+function excluirNoticia(id) {
+  if (!confirm('Excluir notícia?')) return;
+  state.noticias = state.noticias.filter(x=>x.id!==id);
+  renderNoticias(); updateStats(); showToast('Notícia excluída.');
+}
+
+// ═══════════════════════════════
+// ── NOTIFICAÇÕES PUSH ──
+// ═══════════════════════════════
+function selectNotifType(el, type) {
+  document.querySelectorAll('.notif-type-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.pushType = type;
+}
+
+function clearPush() {
+  ['push-titulo','push-body','push-link'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('push-target').value = 'all';
+}
+
+function sendPush() {
+  const titulo = document.getElementById('push-titulo').value.trim();
+  const body = document.getElementById('push-body').value.trim();
+  if (!titulo || !body) { showToast('Preencha título e mensagem.','error'); return; }
+
+  const entry = {
+    id: Date.now().toString(),
+    tipo: state.pushType,
+    titulo, body,
+    link: document.getElementById('push-link').value,
+    target: document.getElementById('push-target').value,
+    enviadoEm: new Date().toLocaleString('pt-BR')
+  };
+  state.pushLog.unshift(entry);
+  updateStats();
+  renderPushLog();
+  clearPush();
+  showToast('Notificação enviada!');
+}
+
+function renderPushLog() {
+  const c = document.getElementById('notif-log');
+  if (!state.pushLog.length) {
+    c.innerHTML = `<div class="empty-state"><i class='bx bxs-bell-off'></i><p>Nenhuma notificação enviada.</p></div>`;
+    return;
+  }
+  const iconMap = {geral:'bxs-megaphone',placar:'bxs-sport',noticia:'bxs-news',destaque:'bxs-star',urgente:'bxs-error'};
+  c.innerHTML = state.pushLog.map(n => `
+    <div class="notif-log-item">
+      <i class="bx ${iconMap[n.tipo]||'bxs-bell'} notif-log-icon"></i>
+      <div class="notif-log-content">
+        <div class="notif-log-title">${n.titulo}</div>
+        <div class="notif-log-body">${n.body}</div>
+        <div class="notif-log-meta">${n.enviadoEm} · <span class="notif-sent-count">✓ Enviado · ${n.target==='all'?'Todos':n.target}</span></div>
+      </div>
+      <button class="btn btn-danger" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="excluirPush('${n.id}')"><i class='bx bx-trash'></i></button>
+    </div>`).join('');
+}
+
+function excluirPush(id) {
+  state.pushLog = state.pushLog.filter(x=>x.id!==id);
+  renderPushLog(); updateStats(); showToast('Registro removido.');
+}
+
+// ─── STATS / DASHBOARD ───
+function updateStats() {
+  document.getElementById('stat-jogos').textContent = state.jogos.volei.length + state.jogos.basquete.length;
+  document.getElementById('stat-destaques').textContent = state.destaques.length;
+  document.getElementById('stat-noticias').textContent = state.noticias.length;
+  document.getElementById('stat-notifs').textContent = state.pushLog.length;
+}
+
+function updateDashboard() {
+  // próximos jogos
+  const allJogos = [...state.jogos.volei, ...state.jogos.basquete];
+  const djl = document.getElementById('dash-jogos-list');
+  if (!allJogos.length) {
+    djl.innerHTML = `<div class="empty-state"><i class='bx bx-calendar'></i><p>Nenhum jogo cadastrado.</p></div>`;
+  } else {
+    djl.innerHTML = allJogos.slice(0,4).map(j=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grey)">
+        <span style="font-size:18px">${j.sport==='volei'?'🏐':'🏀'}</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">${j.equipeA} × ${j.equipeB}</div>
+        <div style="font-size:11px;color:var(--dark-grey)">${j.rodada||''} · ${j.data||'—'}</div></div>
+        <div class="status-badge ${j.status==='live'?'status-live':j.status==='done'?'status-done':'status-upcoming'}" style="font-size:10px;padding:2px 8px">${j.status==='live'?'Ao Vivo':j.status==='done'?'Encerrado':'Agendado'}</div>
+      </div>`).join('');
+  }
+
+  // últimos destaques
+  const ddl = document.getElementById('dash-destaques-list');
+  if (!state.destaques.length) {
+    ddl.innerHTML = `<div class="empty-state"><i class='bx bxs-star'></i><p>Nenhum destaque.</p></div>`;
+  } else {
+    ddl.innerHTML = state.destaques.slice(0,4).map(d=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grey)">
+        <span style="font-size:18px">⭐</span>
+        <div><div style="font-size:13px;font-weight:700;color:var(--dark)">${d.nome}</div>
+        <div style="font-size:11px;color:var(--dark-grey)">${d.equipe} · ${d.jogo}</div></div>
+      </div>`).join('');
+  }
+}
+
+// init
+updateStats();
+updateDashboard();
+</script>
+</body>
+</html>
