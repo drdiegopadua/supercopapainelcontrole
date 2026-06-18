@@ -1100,6 +1100,7 @@ async function loadBasqueteFromSheet(manual=false) {
         const ptsA = _cc(rows, rIdx, 2 + colOffset); // C: PTS 1 (corrigido: era 3)
         const ptsB = _cc(rows, rIdx, 4 + colOffset); // E: PTS 2 (corrigido: era 5)
 
+        console.log('LOAD BASQUETE - Grupo ' + g + ' Jogo ' + (i+1) + ':', { ea, eb, ptsA, ptsB, colOffset });
         state.jogos.basquete.push({
           id: 'basq_' + g + '_' + i,
           sport: 'basquete',
@@ -1618,6 +1619,15 @@ async function salvarPlacarBasquete(id) {
         vencedor                   // P: RESULTADO
       ];
     }
+
+    // DEBUG: Log dos dados antes de enviar
+    console.log('=== ENVIANDO PLACAR BASQUETE ===');
+    console.log('ID:', j.id);
+    console.log('Grupo:', grupo, 'JogoIdx:', jogoIdx);
+    console.log('Equipe A:', j.equipeA, 'PTS A:', ptsA);
+    console.log('Equipe B:', j.equipeB, 'PTS B:', ptsB);
+    console.log('Dados array:', dados);
+    console.log('colStart:', colStart, 'linha:', rowIndex);
 
     // Enviar para o Google Apps Script de basquete
     const res = await sheetWriteBasquete({
