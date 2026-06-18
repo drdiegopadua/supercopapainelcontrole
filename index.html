@@ -788,6 +788,7 @@ const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nn
 const QUIZ_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzg9nL9j0cqHr9PlyWAa_YMDphe6FD0Ahnhmh6nzpQXrlYZGGLAFmRlMqJey1IEiyEk/exec";
 const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/enviar";
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
+const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
 
 // ════════════════════════════════════════════════════════
 // AUTH / LOGIN
@@ -885,6 +886,18 @@ async function sheetRead(sheetId, range) {
 async function sheetWrite(payload) {
   try {
     const res = await fetch(APP_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+    try { return JSON.parse(text); } catch(e) { return { ok: false, erro: 'Resposta inválida' }; }
+  } catch(e) { return { ok: false, erro: e.message }; }
+}
+
+async function sheetWriteBasquete(payload) {
+  try {
+    const res = await fetch(BASQ_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
@@ -1605,8 +1618,8 @@ async function salvarPlacarBasquete(id) {
       ];
     }
 
-    // Enviar para o Google Apps Script
-    const res = await sheetWrite({
+    // Enviar para o Google Apps Script de basquete
+    const res = await sheetWriteBasquete({
       acao: 'atualizar_placar_basquete',
       aba: 'Fase de Grupos',
       linha: rowIndex,
