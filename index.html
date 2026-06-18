@@ -1094,12 +1094,8 @@ async function loadBasqueteFromSheet(manual=false) {
           rodada: 'Grupo ' + g + ' · Jogo ' + (i+1),
           status: 'upcoming',
           placar: {
-            quarters: [
-              {a: q1a, b: q1b},
-              {a: '', b: ''},
-              {a: '', b: ''},
-              {a: '', b: ''}
-            ]
+            ptsA: q1a,
+            ptsB: q1b
           }
         });
       });
@@ -1119,7 +1115,7 @@ async function loadBasqueteFromSheet(manual=false) {
         data: '29/11', hora: '',
         rodada: fase,
         status: 'upcoming',
-        placar: { quarters: [{a:q1a,b:q1b},{a:'',b:''},{a:'',b:''},{a:'',b:''}] }
+        placar: { ptsA: q1a, ptsB: q1b }
       });
     });
 
@@ -1415,17 +1411,8 @@ function renderJogoCard(j) {
         </div>
       </div>`;
   } else {
-    const qs = j.placar.quarters;
-    const qHtml = qs.map((q, i) => `
-      <div class="quarter-col">
-        <div class="quarter-label">Q${i+1}</div>
-        <div class="quarter-inputs">
-          <input class="quarter-input" type="number" min="0" value="${q.a}" placeholder="0" onchange="updateQuarterA('${j.id}',${i},this.value)">
-          <input class="quarter-input" type="number" min="0" value="${q.b}" placeholder="0" onchange="updateQuarterB('${j.id}',${i},this.value)">
-        </div>
-      </div>`).join('');
-    const totA = qs.reduce((s, q) => s + parseInt(q.a || 0), 0);
-    const totB = qs.reduce((s, q) => s + parseInt(q.b || 0), 0);
+    const ptsA = j.placar.ptsA || '';
+    const ptsB = j.placar.ptsB || '';
     return `
       <div class="jogo-card sport-basquete" id="jogo-${j.id}">
         <div class="jogo-header">
@@ -1440,11 +1427,24 @@ function renderJogoCard(j) {
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;">${statusMap[j.status] || ''}</div>
           <div class="placar-section">
-            <div class="placar-title">Pontos por quarto — Equipe A | Equipe B</div>
-            <div class="quarters-grid">${qHtml}</div>
+            <div class="placar-title">Placar Final — Equipe A | Equipe B</div>
+            <div class="sets-grid" style="max-width:300px;margin:0 auto;">
+              <div class="set-col">
+                <div class="set-label">PTS A</div>
+                <div class="set-inputs">
+                  <input class="set-input" type="number" min="0" max="999" value="${ptsA}" placeholder="0" onchange="updatePtsA('${j.id}',this.value)">
+                </div>
+              </div>
+              <div class="set-col">
+                <div class="set-label">PTS B</div>
+                <div class="set-inputs">
+                  <input class="set-input" type="number" min="0" max="999" value="${ptsB}" placeholder="0" onchange="updatePtsB('${j.id}',this.value)">
+                </div>
+              </div>
+            </div>
             <div class="total-row">
-              <span class="total-label">Total</span>
-              <div class="total-scores"><span class="total-score" style="color:var(--orange)">${totA}</span><span style="color:var(--dark-grey);font-size:16px;align-self:center">×</span><span class="total-score" style="color:var(--orange)">${totB}</span></div>
+              <span class="total-label">Resultado</span>
+              <div class="total-scores"><span class="total-score" style="color:var(--orange)">${ptsA || 0}</span><span style="color:var(--dark-grey);font-size:16px;align-self:center">×</span><span class="total-score" style="color:var(--orange)">${ptsB || 0}</span></div>
             </div>
           </div>
         </div>
@@ -1458,8 +1458,8 @@ function renderJogoCard(j) {
 
 function updateSetA(id, setIdx, val) { const j = state.jogos.volei.find(x => x.id === id); if (j) { j.placar.sets[setIdx].a = val; rerenderJogoTotals(id, 'volei'); } }
 function updateSetB(id, setIdx, val) { const j = state.jogos.volei.find(x => x.id === id); if (j) { j.placar.sets[setIdx].b = val; rerenderJogoTotals(id, 'volei'); } }
-function updateQuarterA(id, qi, val) { const j = state.jogos.basquete.find(x => x.id === id); if (j) { j.placar.quarters[qi].a = val; rerenderJogoTotals(id, 'basquete'); } }
-function updateQuarterB(id, qi, val) { const j = state.jogos.basquete.find(x => x.id === id); if (j) { j.placar.quarters[qi].b = val; rerenderJogoTotals(id, 'basquete'); } }
+function updatePtsA(id, val) { const j = state.jogos.basquete.find(x => x.id === id); if (j) { j.placar.ptsA = val; rerenderJogoTotals(id, 'basquete'); } }
+function updatePtsB(id, val) { const j = state.jogos.basquete.find(x => x.id === id); if (j) { j.placar.ptsB = val; rerenderJogoTotals(id, 'basquete'); } }
 
 function rerenderJogoTotals(id, sport) {
   const j = state.jogos[sport].find(x => x.id === id);
@@ -1473,8 +1473,8 @@ function rerenderJogoTotals(id, sport) {
     if (totals[0]) totals[0].textContent = totA;
     if (totals[1]) totals[1].textContent = totB;
   } else {
-    const totA = j.placar.quarters.reduce((s, q) => s + parseInt(q.a || 0), 0);
-    const totB = j.placar.quarters.reduce((s, q) => s + parseInt(q.b || 0), 0);
+    const totA = parseInt(j.placar.ptsA || 0);
+    const totB = parseInt(j.placar.ptsB || 0);
     if (totals[0]) totals[0].textContent = totA;
     if (totals[1]) totals[1].textContent = totB;
   }
@@ -1557,54 +1557,60 @@ async function salvarPlacarBasquete(id) {
   showLoading(true);
   try {
     // Mapear ID do jogo para a linha correta na planilha de basquete
+    // Grupo A: linhas 5, 6, 7 | Grupo B: linhas 5, 6, 7 (mesmas linhas, colunas diferentes)
     let rowIndex = 5;
     const match = j.id.match(/basq_([A-B])_(\d)/);
+    let grupo = 'A';
+    let jogoIdx = 0;
     if (match) {
-      const grupo = match[1];
-      const jogoIdx = parseInt(match[2]);
-      const grupoBase = { 'A': 5, 'B': 11 };
-      rowIndex = grupoBase[grupo] + jogoIdx;
+      grupo = match[1];
+      jogoIdx = parseInt(match[2]);
+      rowIndex = 5 + jogoIdx; // Grupo A e B usam as mesmas linhas 5, 6, 7
     }
 
-    const qs = j.placar.quarters;
-    const q1A = parseInt(qs[0].a || 0), q1B = parseInt(qs[0].b || 0);
-    const q2A = parseInt(qs[1].a || 0), q2B = parseInt(qs[1].b || 0);
-    const q3A = parseInt(qs[2].a || 0), q3B = parseInt(qs[2].b || 0);
-    const q4A = parseInt(qs[3].a || 0), q4B = parseInt(qs[3].b || 0);
-
-    const totA = q1A + q2A + q3A + q4A;
-    const totB = q1B + q2B + q3B + q4B;
+    const ptsA = parseInt(j.placar.ptsA || 0);
+    const ptsB = parseInt(j.placar.ptsB || 0);
 
     let vencedor = 'EMPATE';
-    if (totA > totB) vencedor = j.equipeA;
-    else if (totB > totA) vencedor = j.equipeB;
+    if (ptsA > ptsB) vencedor = j.equipeA;
+    else if (ptsB > ptsA) vencedor = j.equipeB;
 
-    // Montar array de dados na ordem das colunas da planilha de basquete
-    const dados = [
-      (rowIndex - 4).toString(),  // A: # (número do jogo)
-      j.equipeA,                  // B: EQUIPE CASA
-      q1A.toString(),             // C: Q1 A
-      q2A.toString(),             // D: Q2 A
-      q3A.toString(),             // E: Q3 A
-      q4A.toString(),             // F: Q4 A
-      totA.toString(),            // G: TOTAL A
-      'X',                        // H: separador
-      q1B.toString(),             // I: Q1 B
-      q2B.toString(),             // J: Q2 B
-      q3B.toString(),             // K: Q3 B
-      q4B.toString(),             // L: Q4 B
-      totB.toString(),            // M: TOTAL B
-      j.equipeB,                  // N: EQUIPE VISIT
-      vencedor,                    // O: VENCEDOR
-      j.data || '',               // P: DATA
-      ''                           // Q: LOCAL
-    ];
+    // Montar dados na estrutura da planilha de basquete
+    // Grupo A: colunas A-G (A=JOGO, B=EQUIPE1, C=PTS1, D=X, E=PTS2, F=EQUIPE2, G=RESULTADO)
+    // Grupo B: colunas J-P (J=JOGO, K=EQUIPE1, L=PTS1, M=X, N=PTS2, O=EQUIPE2, P=RESULTADO)
+    let dados;
+    let colStart;
+
+    if (grupo === 'A') {
+      colStart = 1; // Coluna A
+      dados = [
+        (jogoIdx + 1).toString(),  // A: JOGO #
+        j.equipeA,                 // B: EQUIPE 1
+        ptsA.toString(),           // C: PTS 1
+        'x',                       // D: X
+        ptsB.toString(),           // E: PTS 2
+        j.equipeB,                 // F: EQUIPE 2
+        vencedor                   // G: RESULTADO
+      ];
+    } else {
+      colStart = 10; // Coluna J
+      dados = [
+        (jogoIdx + 1).toString(),  // J: JOGO #
+        j.equipeA,                 // K: EQUIPE 1
+        ptsA.toString(),           // L: PTS 1
+        'x',                       // M: X
+        ptsB.toString(),           // N: PTS 2
+        j.equipeB,                 // O: EQUIPE 2
+        vencedor                   // P: RESULTADO
+      ];
+    }
 
     // Enviar para o Google Apps Script
     const res = await sheetWrite({
       acao: 'atualizar_placar_basquete',
       aba: 'Fase de Grupos',
       linha: rowIndex,
+      colStart: colStart,
       dados: dados
     });
 
@@ -1658,7 +1664,7 @@ function salvarJogo() {
     status: document.getElementById('jogo-status').value,
     placar: sport === 'volei'
       ? { sets: [{a:'',b:''},{a:'',b:''},{a:'',b:''}] }
-      : { quarters: [{a:'',b:''},{a:'',b:''},{a:'',b:''},{a:'',b:''}] }
+      : { ptsA: '', ptsB: '' }
   };
   state.jogos[sport].push(jogo);
   renderJogos(sport);
