@@ -1094,10 +1094,11 @@ async function loadBasqueteFromSheet(manual=false) {
     grupos.forEach((g, gi) => {
       const colOffset = gi * 10;
       [4,5,6].forEach((rIdx, i) => {
-        const ea = _cc(rows, rIdx, 1 + colOffset);
-        const eb = _cc(rows, rIdx, 6 + colOffset);
+        const ea = _cc(rows, rIdx, 1 + colOffset);   // B: EQUIPE 1
+        const eb = _cc(rows, rIdx, 5 + colOffset);   // F: EQUIPE 2 (corrigido: era 6)
         if (!ea && !eb) return;
-        const q1a = _cc(rows, rIdx, 3 + colOffset), q1b = _cc(rows, rIdx, 5 + colOffset);
+        const ptsA = _cc(rows, rIdx, 2 + colOffset); // C: PTS 1 (corrigido: era 3)
+        const ptsB = _cc(rows, rIdx, 4 + colOffset); // E: PTS 2 (corrigido: era 5)
 
         state.jogos.basquete.push({
           id: 'basq_' + g + '_' + i,
@@ -1107,8 +1108,8 @@ async function loadBasqueteFromSheet(manual=false) {
           rodada: 'Grupo ' + g + ' · Jogo ' + (i+1),
           status: 'upcoming',
           placar: {
-            ptsA: q1a,
-            ptsB: q1b
+            ptsA: ptsA,
+            ptsB: ptsB
           }
         });
       });
