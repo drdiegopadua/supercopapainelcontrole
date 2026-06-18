@@ -351,6 +351,7 @@
     .refresh-btn.spinning i { animation: spin 1s linear infinite; }
   </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -786,7 +787,7 @@ const GOOGLE_API_KEY = "AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw";
 const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nnl9pNkRKUDZJwkONqY7VEHOrxf7TW7QSZRn2-bTun0C_1HzPsgF_BA/exec";
 const QUIZ_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzg9nL9j0cqHr9PlyWAa_YMDphe6FD0Ahnhmh6nzpQXrlYZGGLAFmRlMqJey1IEiyEk/exec";
 const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/enviar";
-const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
+const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjnIoTY7o-Oniq7U69gED6TvlEH_MvT3OXqzQNDd5DMIX5MceV--RRcjGhXa2FJrKS/exec";
 
 // ════════════════════════════════════════════════════════
 // AUTH / LOGIN
@@ -1484,15 +1485,67 @@ async function salvarPlacarVolei(id) {
   if (!j) return;
   showLoading(true);
   try {
-    await postToBolao({
-      tipo: 'placar_volei',
-      id, equipeA: j.equipeA, equipeB: j.equipeB,
-      sets: j.placar.sets,
-      data: new Date().toLocaleString('pt-BR')
+    // Mapear ID do jogo para a linha correta na planilha
+    // IDs: volei_A_0, volei_A_1, volei_A_2, volei_B_0, etc.
+    let rowIndex = 11;
+    const match = j.id.match(/volei_([A-D])_(\d)/);
+    if (match) {
+      const grupo = match[1];
+      const jogoIdx = parseInt(match[2]);
+      const grupoBase = { 'A': 11, 'B': 23, 'C': 35, 'D': 47 };
+      rowIndex = grupoBase[grupo] + jogoIdx;
+    }
+
+    // Calcular sets vencidos
+    const sets = j.placar.sets;
+    const sA = parseInt(sets[0].a || 0), sB = parseInt(sets[0].b || 0);
+    const s2A = parseInt(sets[1].a || 0), s2B = parseInt(sets[1].b || 0);
+    const s3A = parseInt(sets[2].a || 0), s3B = parseInt(sets[2].b || 0);
+
+    const setsVencidosA = (sA > sB ? 1 : 0) + (s2A > s2B ? 1 : 0) + (s3A > s3B ? 1 : 0);
+    const setsVencidosB = (sB > sA ? 1 : 0) + (s2B > s2A ? 1 : 0) + (s3B > s3A ? 1 : 0);
+
+    let vencedor = 'EMPATE';
+    if (setsVencidosA > setsVencidosB) vencedor = j.equipeA;
+    else if (setsVencidosB > setsVencidosA) vencedor = j.equipeB;
+
+    // Montar array de dados na ordem exata das colunas da planilha
+    const dados = [
+      (rowIndex - 10).toString(),  // A: # (número do jogo na rodada)
+      j.equipeA,                   // B: EQUIPE CASA
+      sA.toString(),               // C: SET 1 A
+      s2A.toString(),              // D: SET 2 A
+      s3A.toString(),              // E: SET 3 A
+      setsVencidosA.toString(),    // F: TOTPTS A (sets vencidos)
+      'X',                         // G: separador
+      sB.toString(),               // H: SET 1 B
+      s2B.toString(),              // I: SET 2 B
+      s3B.toString(),              // J: SET 3 B
+      setsVencidosB.toString(),    // K: TOTPTS B (sets vencidos)
+      j.equipeB,                   // L: EQUIPE VISIT
+      setsVencidosA.toString(),    // M: SET SC (sets casa)
+      setsVencidosB.toString(),    // N: SET SV (sets visitante)
+      vencedor,                     // O: VENCEDOR
+      j.data || '',                // P: DATA
+      ''                            // Q: LOCAL
+    ];
+
+    // Enviar para o Google Apps Script usando a ação correta
+    const res = await sheetWrite({
+      acao: 'atualizar_placar_volei',
+      aba: 'Fase de Grupos',
+      linha: rowIndex,
+      dados: dados
     });
-    showToast('Placar de vôlei enviado para a planilha!');
+
+    if (res && res.ok) {
+      showToast('✅ Placar enviado com sucesso!');
+    } else {
+      showToast('❌ Erro ao enviar: ' + (res?.erro || 'Verifique o Apps Script'), 'error');
+    }
   } catch(e) {
-    showToast('Erro ao enviar placar', 'error');
+    console.error('Erro salvarPlacarVolei:', e);
+    showToast('❌ Erro: ' + e.message, 'error');
   } finally {
     showLoading(false);
   }
@@ -1503,15 +1556,66 @@ async function salvarPlacarBasquete(id) {
   if (!j) return;
   showLoading(true);
   try {
-    await postToBolao({
-      tipo: 'placar_basquete',
-      id, equipeA: j.equipeA, equipeB: j.equipeB,
-      quarters: j.placar.quarters,
-      data: new Date().toLocaleString('pt-BR')
+    // Mapear ID do jogo para a linha correta na planilha de basquete
+    let rowIndex = 5;
+    const match = j.id.match(/basq_([A-B])_(\d)/);
+    if (match) {
+      const grupo = match[1];
+      const jogoIdx = parseInt(match[2]);
+      const grupoBase = { 'A': 5, 'B': 11 };
+      rowIndex = grupoBase[grupo] + jogoIdx;
+    }
+
+    const qs = j.placar.quarters;
+    const q1A = parseInt(qs[0].a || 0), q1B = parseInt(qs[0].b || 0);
+    const q2A = parseInt(qs[1].a || 0), q2B = parseInt(qs[1].b || 0);
+    const q3A = parseInt(qs[2].a || 0), q3B = parseInt(qs[2].b || 0);
+    const q4A = parseInt(qs[3].a || 0), q4B = parseInt(qs[3].b || 0);
+
+    const totA = q1A + q2A + q3A + q4A;
+    const totB = q1B + q2B + q3B + q4B;
+
+    let vencedor = 'EMPATE';
+    if (totA > totB) vencedor = j.equipeA;
+    else if (totB > totA) vencedor = j.equipeB;
+
+    // Montar array de dados na ordem das colunas da planilha de basquete
+    const dados = [
+      (rowIndex - 4).toString(),  // A: # (número do jogo)
+      j.equipeA,                  // B: EQUIPE CASA
+      q1A.toString(),             // C: Q1 A
+      q2A.toString(),             // D: Q2 A
+      q3A.toString(),             // E: Q3 A
+      q4A.toString(),             // F: Q4 A
+      totA.toString(),            // G: TOTAL A
+      'X',                        // H: separador
+      q1B.toString(),             // I: Q1 B
+      q2B.toString(),             // J: Q2 B
+      q3B.toString(),             // K: Q3 B
+      q4B.toString(),             // L: Q4 B
+      totB.toString(),            // M: TOTAL B
+      j.equipeB,                  // N: EQUIPE VISIT
+      vencedor,                    // O: VENCEDOR
+      j.data || '',               // P: DATA
+      ''                           // Q: LOCAL
+    ];
+
+    // Enviar para o Google Apps Script
+    const res = await sheetWrite({
+      acao: 'atualizar_placar_basquete',
+      aba: 'Fase de Grupos',
+      linha: rowIndex,
+      dados: dados
     });
-    showToast('Placar de basquete enviado para a planilha!');
+
+    if (res && res.ok) {
+      showToast('✅ Placar de basquete enviado com sucesso!');
+    } else {
+      showToast('❌ Erro ao enviar: ' + (res?.erro || 'Verifique o Apps Script'), 'error');
+    }
   } catch(e) {
-    showToast('Erro ao enviar placar', 'error');
+    console.error('Erro salvarPlacarBasquete:', e);
+    showToast('❌ Erro: ' + e.message, 'error');
   } finally {
     showLoading(false);
   }
