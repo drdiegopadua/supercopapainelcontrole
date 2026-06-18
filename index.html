@@ -45,6 +45,247 @@
 
     body { background: var(--grey); overflow-x: hidden; font-family: var(--lato); }
 
+    /* ======== SPLASH SCREEN ======== */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+    #splash-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .splash-logo {
+      width: 100px;
+      height: 100px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+      color: #fff;
+      margin-bottom: 24px;
+      animation: splashPulse 2s ease-in-out infinite;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+    @keyframes splashPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
+      50% { transform: scale(1.05); box-shadow: 0 0 30px 10px rgba(255,255,255,0.1); }
+    }
+    .splash-title {
+      font-family: var(--poppins);
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .splash-subtitle {
+      font-family: var(--lato);
+      font-size: 15px;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .splash-loader {
+      margin-top: 40px;
+      width: 160px;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .splash-loader-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--gold);
+      border-radius: 4px;
+      animation: splashLoad 2.5s ease-in-out forwards;
+    }
+    @keyframes splashLoad {
+      0% { width: 0%; }
+      40% { width: 60%; }
+      70% { width: 85%; }
+      100% { width: 100%; }
+    }
+    .splash-version {
+      position: absolute;
+      bottom: 24px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      font-family: var(--lato);
+    }
+
+    /* ======== LOGIN SCREEN ======== */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(135deg, #0D47A1 0%, #1565C0 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    #login-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .login-container {
+      background: var(--light);
+      border-radius: 24px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: loginSlideUp 0.6s ease-out;
+    }
+    @keyframes loginSlideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-header .login-icon {
+      width: 70px;
+      height: 70px;
+      background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      color: #fff;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 20px rgba(21,101,192,0.3);
+    }
+    .login-header h2 {
+      font-family: var(--poppins);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 4px;
+    }
+    .login-header p {
+      font-size: 13px;
+      color: var(--dark-grey);
+    }
+    .login-form .form-group {
+      margin-bottom: 18px;
+    }
+    .login-form label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--dark-grey);
+      margin-bottom: 6px;
+      font-family: var(--poppins);
+    }
+    .login-form .login-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--grey);
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: var(--poppins);
+      color: var(--dark);
+      background: var(--grey);
+      outline: none;
+      transition: 0.2s;
+    }
+    .login-form .login-input:focus {
+      border-color: var(--blue);
+      background: var(--light-blue);
+    }
+    .login-form .login-input::placeholder {
+      color: var(--dark-grey);
+      opacity: 0.6;
+    }
+    .login-input-wrap {
+      position: relative;
+    }
+    .login-input-wrap i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 20px;
+      color: var(--dark-grey);
+    }
+    .login-input-wrap .login-input {
+      padding-left: 44px;
+    }
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+      color: #fff;
+      font-family: var(--poppins);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(21,101,192,0.4);
+    }
+    .login-btn:active {
+      transform: translateY(0);
+    }
+    .login-error {
+      display: none;
+      background: #FFEBEE;
+      color: var(--red);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      text-align: center;
+      animation: shake 0.4s ease-in-out;
+    }
+    .login-error.show { display: block; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--grey);
+    }
+    .login-footer p {
+      font-size: 12px;
+      color: var(--dark-grey);
+    }
+    .login-footer strong {
+      color: var(--blue);
+    }
+
     /* ── SIDEBAR ── */
     #sidebar {
       position: fixed; top: 0; left: 0;
@@ -486,6 +727,8 @@
     @media (max-width: 768px) {
       #sidebar { width: 200px; }
       #content { width: calc(100% - 60px); left: 200px; }
+      .login-container { margin: 16px; padding: 32px 24px; }
+      .splash-title { font-size: 24px; }
     }
     @media (max-width: 576px) {
       #sidebar { width: 60px; }
@@ -494,6 +737,8 @@
       #content main { padding: 20px 12px; }
       .form-input input { display: none; }
       .destaques-grid { grid-template-columns: 1fr; }
+      .splash-title { font-size: 22px; }
+      .splash-logo { width: 80px; height: 80px; font-size: 44px; }
     }
 
     /* dark overrides */
@@ -528,8 +773,63 @@
     .sport-basquete .total-score { color: var(--orange); }
     .sport-basquete .jogo-vs { color: var(--orange); }
   </style>
+<base target="_blank">
 </head>
 <body>
+
+<!-- ======== SPLASH SCREEN ======== -->
+<div id="splash-screen">
+  <div class="splash-logo">
+    <i class='bx bxs-trophy'></i>
+  </div>
+  <div class="splash-title">Supercopa</div>
+  <div class="splash-subtitle">Painel Administrativo</div>
+  <div class="splash-loader">
+    <div class="splash-loader-bar"></div>
+  </div>
+  <div class="splash-version">v1.0 · 2026</div>
+</div>
+
+<!-- ======== LOGIN SCREEN ======== -->
+<div id="login-screen" class="hidden">
+  <div class="login-container">
+    <div class="login-header">
+      <div class="login-icon">
+        <i class='bx bxs-trophy'></i>
+      </div>
+      <h2>Bem-vindo de volta</h2>
+      <p>Faça login para acessar o painel</p>
+    </div>
+
+    <div class="login-error" id="login-error">
+      <i class='bx bxs-error-circle'></i> Usuário ou senha incorretos
+    </div>
+
+    <form class="login-form" id="login-form" onsubmit="return doLogin(event)">
+      <div class="form-group">
+        <label for="login-user">Usuário</label>
+        <div class="login-input-wrap">
+          <i class='bx bxs-user'></i>
+          <input type="text" class="login-input" id="login-user" placeholder="Digite seu usuário" autocomplete="username">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="login-pass">Senha</label>
+        <div class="login-input-wrap">
+          <i class='bx bxs-lock-alt'></i>
+          <input type="password" class="login-input" id="login-pass" placeholder="Digite sua senha" autocomplete="current-password">
+        </div>
+      </div>
+      <button type="submit" class="login-btn">
+        <i class='bx bxs-log-in'></i> Entrar
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p><strong>Supercopa</strong> — Painel Admin</p>
+    </div>
+  </div>
+</div>
 
 <!-- ══ SIDEBAR ══ -->
 <section id="sidebar">
@@ -585,7 +885,7 @@
 
   <div class="side-bottom">
     <a href="#"><i class='bx bxs-cog'></i><span>Configurações</span></a>
-    <a href="#" style="color:var(--red)"><i class='bx bx-power-off'></i><span>Sair</span></a>
+    <a href="#" style="color:var(--red)" onclick="doLogout()"><i class='bx bx-power-off'></i><span>Sair</span></a>
   </div>
 </section>
 
@@ -631,7 +931,7 @@
         <ul>
           <li><a href="#">Meu Perfil</a></li>
           <li><a href="#">Configurações</a></li>
-          <li><a href="#" style="color:var(--red)">Sair</a></li>
+          <li><a href="#" style="color:var(--red)" onclick="doLogout()">Sair</a></li>
         </ul>
       </div>
     </div>
@@ -992,15 +1292,15 @@
   </div>
 </div>
 
-<!-- Modal: Notícia -->
+<!-- Modal: Noticia -->
 <div class="modal-overlay" id="modal-noticia">
   <div class="modal">
-    <div class="modal-title"><i class='bx bxs-news'></i> <span id="modal-noticia-title">Nova Notícia</span></div>
+    <div class="modal-title"><i class='bx bxs-news'></i> <span id="modal-noticia-title">Nova Noticia</span></div>
     <input type="hidden" id="noticia-edit-id" value="">
     <div class="destaque-form">
       <div class="form-group">
-        <label>Título *</label>
-        <input type="text" class="form-control" id="noticia-titulo" placeholder="Título da notícia">
+        <label>Titulo *</label>
+        <input type="text" class="form-control" id="noticia-titulo" placeholder="Titulo da noticia">
       </div>
       <div class="form-group">
         <label>Categoria</label>
@@ -1013,8 +1313,8 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Conteúdo *</label>
-        <textarea class="form-control" id="noticia-corpo" rows="5" placeholder="Escreva o conteúdo completo da notícia..."></textarea>
+        <label>Conteudo *</label>
+        <textarea class="form-control" id="noticia-corpo" rows="5" placeholder="Escreva o conteudo completo da noticia..."></textarea>
       </div>
       <div class="form-group">
         <label>URL da Planilha Google (POST)</label>
@@ -1033,6 +1333,63 @@
 
 <!-- ══ SCRIPT ══ -->
 <script>
+// ======== AUTH / LOGIN ========
+const AUTH_USER = 'Diego';
+const AUTH_PASS = '2111';
+
+function checkAuth() {
+  const isLogged = sessionStorage.getItem('supercopa_logged') === 'true';
+  if (!isLogged) {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('content').style.display = 'none';
+  } else {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('sidebar').style.display = '';
+    document.getElementById('content').style.display = '';
+  }
+}
+
+function doLogin(e) {
+  e.preventDefault();
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  const errorEl = document.getElementById('login-error');
+
+  if (user === AUTH_USER && pass === AUTH_PASS) {
+    sessionStorage.setItem('supercopa_logged', 'true');
+    errorEl.classList.remove('show');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('sidebar').style.display = '';
+    document.getElementById('content').style.display = '';
+    showToast('Bem-vindo, Diego!');
+  } else {
+    errorEl.classList.add('show');
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+  }
+  return false;
+}
+
+function doLogout() {
+  sessionStorage.removeItem('supercopa_logged');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').classList.remove('show');
+  showToast('Sessão encerrada.');
+}
+
+// ======== SPLASH ========
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    document.getElementById('splash-screen').classList.add('hidden');
+    checkAuth();
+  }, 2800);
+});
+
 // ── STATE ──
 const state = {
   jogos: { volei: [], basquete: [] },
@@ -1299,7 +1656,6 @@ function updateQuarterB(id, qi, val) {
 }
 
 function rerenderJogoTotals(id, sport) {
-  // update only totals in the DOM to avoid re-rendering (losing focus)
   const j = state.jogos[sport].find(x=>x.id===id);
   if (!j) return;
   const card = document.getElementById('jogo-' + id);
@@ -1487,11 +1843,11 @@ function excluirRanking(id, tipo) {
 }
 
 // ═══════════════════════════════
-// ── NOTÍCIAS ──
+// ── NOTICIAS ──
 // ═══════════════════════════════
 function openModalNoticia() {
   document.getElementById('noticia-edit-id').value = '';
-  document.getElementById('modal-noticia-title').textContent = 'Nova Notícia';
+  document.getElementById('modal-noticia-title').textContent = 'Nova Noticia';
   ['noticia-titulo','noticia-corpo','noticia-sheet-url'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('noticia-cat').value = 'Geral';
   openModal('modal-noticia');
@@ -1500,7 +1856,7 @@ function openModalNoticia() {
 async function salvarNoticia() {
   const titulo = document.getElementById('noticia-titulo').value.trim();
   const corpo = document.getElementById('noticia-corpo').value.trim();
-  if (!titulo || !corpo) { showToast('Preencha título e conteúdo.','error'); return; }
+  if (!titulo || !corpo) { showToast('Preencha titulo e conteudo.','error'); return; }
   const sheetUrl = document.getElementById('noticia-sheet-url').value.trim();
   const editId = document.getElementById('noticia-edit-id').value;
   const n = {
@@ -1518,14 +1874,14 @@ async function salvarNoticia() {
   renderNoticias();
   updateStats();
   closeModal('modal-noticia');
-  showToast('Notícia publicada!');
+  showToast('Noticia publicada!');
   await postToSheet(sheetUrl, { action: 'nova_noticia', ...n });
 }
 
 function renderNoticias() {
   const c = document.getElementById('noticias-list');
   if (!state.noticias.length) {
-    c.innerHTML = `<div class="empty-state"><i class='bx bxs-news'></i><p>Nenhuma notícia publicada.</p></div>`;
+    c.innerHTML = `<div class="empty-state"><i class='bx bxs-news'></i><p>Nenhuma noticia publicada.</p></div>`;
     return;
   }
   c.innerHTML = state.noticias.map(n => `
@@ -1549,7 +1905,7 @@ function renderNoticias() {
 function editNoticia(id) {
   const n = state.noticias.find(x=>x.id===id); if(!n) return;
   document.getElementById('noticia-edit-id').value = id;
-  document.getElementById('modal-noticia-title').textContent = 'Editar Notícia';
+  document.getElementById('modal-noticia-title').textContent = 'Editar Noticia';
   document.getElementById('noticia-titulo').value = n.titulo;
   document.getElementById('noticia-corpo').value = n.corpo;
   document.getElementById('noticia-cat').value = n.categoria;
@@ -1557,13 +1913,13 @@ function editNoticia(id) {
   openModal('modal-noticia');
 }
 function excluirNoticia(id) {
-  if (!confirm('Excluir notícia?')) return;
+  if (!confirm('Excluir noticia?')) return;
   state.noticias = state.noticias.filter(x=>x.id!==id);
-  renderNoticias(); updateStats(); showToast('Notícia excluída.');
+  renderNoticias(); updateStats(); showToast('Noticia excluída.');
 }
 
 // ═══════════════════════════════
-// ── NOTIFICAÇÕES PUSH ──
+// ── NOTIFICACOES PUSH ──
 // ═══════════════════════════════
 function selectNotifType(el, type) {
   document.querySelectorAll('.notif-type-btn').forEach(b=>b.classList.remove('selected'));
@@ -1579,7 +1935,7 @@ function clearPush() {
 function sendPush() {
   const titulo = document.getElementById('push-titulo').value.trim();
   const body = document.getElementById('push-body').value.trim();
-  if (!titulo || !body) { showToast('Preencha título e mensagem.','error'); return; }
+  if (!titulo || !body) { showToast('Preencha titulo e mensagem.','error'); return; }
 
   const entry = {
     id: Date.now().toString(),
@@ -1629,7 +1985,6 @@ function updateStats() {
 }
 
 function updateDashboard() {
-  // próximos jogos
   const allJogos = [...state.jogos.volei, ...state.jogos.basquete];
   const djl = document.getElementById('dash-jogos-list');
   if (!allJogos.length) {
@@ -1644,7 +1999,6 @@ function updateDashboard() {
       </div>`).join('');
   }
 
-  // últimos destaques
   const ddl = document.getElementById('dash-destaques-list');
   if (!state.destaques.length) {
     ddl.innerHTML = `<div class="empty-state"><i class='bx bxs-star'></i><p>Nenhum destaque.</p></div>`;
