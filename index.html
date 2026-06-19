@@ -349,7 +349,151 @@
     .refresh-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--grey); background: var(--light); color: var(--dark-grey); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: .2s; }
     .refresh-btn:hover { background: var(--light-blue); color: var(--blue); border-color: var(--blue); }
     .refresh-btn.spinning i { animation: spin 1s linear infinite; }
-  </style>
+  
+/* Atleta Destaque */
+.atleta-destaque-container {
+  padding: 20px;
+}
+
+.sport-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.sport-tab {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--light-grey);
+  color: var(--dark);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.sport-tab.active {
+  background: var(--primary);
+  color: white;
+}
+
+.sport-tab:hover {
+  background: var(--primary-light);
+  color: white;
+}
+
+.atleta-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.form-card h3 {
+  margin-bottom: 20px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.form-select, .form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--light-grey);
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+}
+
+.form-select:focus, .form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0,82,155,0.1);
+}
+
+.atletas-lista {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.atletas-lista h4 {
+  margin-bottom: 15px;
+  color: var(--dark);
+}
+
+.atleta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--light-grey);
+  transition: background 0.2s;
+}
+
+.atleta-item:hover {
+  background: var(--light-bg);
+}
+
+.atleta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.atleta-equipe {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.atleta-jogo {
+  color: var(--dark-grey);
+  font-size: 12px;
+}
+
+.atleta-data {
+  color: var(--dark-grey);
+  font-size: 11px;
+}
+
+.empty-msg {
+  color: var(--dark-grey);
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .atleta-form {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
 <base target="_blank">
 <base target="_blank">
 </head>
@@ -789,6 +933,7 @@ const QUIZ_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzg9nL9j0cqHr9P
 const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/enviar";
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
+const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfYYtefnwWm6_iwAO-nIwQNZoCiBjX4qhsyhC5WHTyjvtaJ-I14Lm6V8th2xBV95Tj/exec";
 
 // ════════════════════════════════════════════════════════
 // AUTH / LOGIN
@@ -898,6 +1043,18 @@ async function sheetWrite(payload) {
 async function sheetWriteBasquete(payload) {
   try {
     const res = await fetch(BASQ_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+    try { return JSON.parse(text); } catch(e) { return { ok: false, erro: 'Resposta inválida' }; }
+  } catch(e) { return { ok: false, erro: e.message }; }
+}
+
+async function sheetWriteAtleta(payload) {
+  try {
+    const res = await fetch(ATLETA_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
@@ -1705,6 +1862,50 @@ function openModalDestaque() {
   ['dest-jogo', 'dest-nome', 'dest-equipe', 'dest-obs'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('dest-modalidade').value = 'Vôlei';
   openModal('modal-destaque');
+}
+
+
+async function salvarAtletaDestaque(sport) {
+  const jogoId = document.getElementById('atleta-' + sport + '-jogo').value;
+  const nome = document.getElementById('atleta-' + sport + '-nome').value.trim();
+  const equipe = document.getElementById('atleta-' + sport + '-equipe').value;
+
+  if (!jogoId || !nome || !equipe) {
+    showToast('Preencha todos os campos!', 'error');
+    return;
+  }
+
+  showLoading(true);
+  try {
+    // Encontrar dados do jogo
+    let jogo;
+    if (sport === 'volei') {
+      jogo = state.jogos.volei.find(j => j.id === jogoId);
+    } else {
+      jogo = state.jogos.basquete.find(j => j.id === jogoId);
+    }
+
+    const jogoLabel = jogo ? (jogo.rodada + ' - ' + jogo.equipeA + ' vs ' + jogo.equipeB) : jogoId;
+
+    const res = await sheetWriteAtleta({
+      acao: 'adicionar',
+      linha: [sport.toUpperCase(), jogoLabel, nome, equipe, new Date().toLocaleString('pt-BR')]
+    });
+
+    if (res && res.ok) {
+      showToast('✅ Atleta destaque salvo com sucesso!');
+      document.getElementById('atleta-' + sport + '-jogo').value = '';
+      document.getElementById('atleta-' + sport + '-nome').value = '';
+      document.getElementById('atleta-' + sport + '-equipe').value = '';
+      loadAtletasFromSheet();
+    } else {
+      showToast('❌ Erro ao salvar: ' + (res?.erro || 'desconhecido'), 'error');
+    }
+  } catch(e) {
+    showToast('❌ Erro: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
 }
 
 async function salvarDestaque() {
