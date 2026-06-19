@@ -1461,20 +1461,10 @@ async function loadAtletasFromSheet(manual=false) {
 async function loadNoticiasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const url = NOTICIAS_SCRIPT_URL + '?acao=listar&aba=Noticias';
-    console.log('Buscando notícias em:', url);
-    const res = await fetch(url, { method: 'GET' });
-    const data = await res.json();
-    console.log('Resposta do servidor (notícias):', data);
+    const rows = await sheetRead(APP_SHEET_ID, "'Noticias'!A2:E200");
     state.noticias = [];
-    let rows = [];
-    if (data.ok && data.values && Array.isArray(data.values)) {
-      rows = data.values;
-    }
-    console.log('Linhas de notícias processadas:', rows.length);
     if (!rows || rows.length === 0) {
-      renderNoticias();
-      updateStats();
+      renderNoticias(); updateStats();
       if (manual) showToast('Nenhuma notícia encontrada.', 'error');
       return;
     }
@@ -1483,20 +1473,20 @@ async function loadNoticiasFromSheet(manual=false) {
       const cat = (row[1] || 'Notícia').trim();
       const titulo = (row[2] || '').trim();
       const dataStr = (row[3] || '').trim();
+      const corpo = (row[4] || '').trim();
       if (!titulo) return;
       state.noticias.push({
         id: 'news_' + i,
         titulo,
-        corpo: titulo,
+        corpo: corpo || titulo,
         categoria: cat,
         data: dataStr || new Date().toLocaleDateString('pt-BR'),
         hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}),
         ic
       });
     });
-    console.log('Notícias carregadas:', state.noticias.length);
-    renderNoticias();
-    updateStats();
+    updateSheetStatus(true);
+    renderNoticias(); updateStats();
     if (manual) showToast('Notícias atualizadas! (' + state.noticias.length + ' registros)');
   } catch(e) {
     console.error('Erro ao carregar notícias:', e);
@@ -2332,7 +2322,7 @@ if (sessionStorage.getItem('supercopa_logged') === 'true') {
       body: JSON.stringify({
         acao: 'adicionar',
         aba: 'Noticias',
-        linha: [ic, cat, titulo, data]
+        linha: [ic, cat, titulo, data, corpo]
       })
     });
     const text = await res.text();
@@ -2807,20 +2797,10 @@ async function loadAtletasFromSheet(manual=false) {
 async function loadNoticiasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const url = NOTICIAS_SCRIPT_URL + '?acao=listar&aba=Noticias';
-    console.log('Buscando notícias em:', url);
-    const res = await fetch(url, { method: 'GET' });
-    const data = await res.json();
-    console.log('Resposta do servidor (notícias):', data);
+    const rows = await sheetRead(APP_SHEET_ID, "'Noticias'!A2:E200");
     state.noticias = [];
-    let rows = [];
-    if (data.ok && data.values && Array.isArray(data.values)) {
-      rows = data.values;
-    }
-    console.log('Linhas de notícias processadas:', rows.length);
     if (!rows || rows.length === 0) {
-      renderNoticias();
-      updateStats();
+      renderNoticias(); updateStats();
       if (manual) showToast('Nenhuma notícia encontrada.', 'error');
       return;
     }
@@ -2829,20 +2809,20 @@ async function loadNoticiasFromSheet(manual=false) {
       const cat = (row[1] || 'Notícia').trim();
       const titulo = (row[2] || '').trim();
       const dataStr = (row[3] || '').trim();
+      const corpo = (row[4] || '').trim();
       if (!titulo) return;
       state.noticias.push({
         id: 'news_' + i,
         titulo,
-        corpo: titulo,
+        corpo: corpo || titulo,
         categoria: cat,
         data: dataStr || new Date().toLocaleDateString('pt-BR'),
         hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}),
         ic
       });
     });
-    console.log('Notícias carregadas:', state.noticias.length);
-    renderNoticias();
-    updateStats();
+    updateSheetStatus(true);
+    renderNoticias(); updateStats();
     if (manual) showToast('Notícias atualizadas! (' + state.noticias.length + ' registros)');
   } catch(e) {
     console.error('Erro ao carregar notícias:', e);
