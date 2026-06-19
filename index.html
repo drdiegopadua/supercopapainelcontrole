@@ -930,16 +930,26 @@
   <div class="modal">
     <div class="modal-title"><i class='bx bxs-star'></i> Registrar Atleta Destaque</div>
     <div class="destaque-form">
-      <div class="form-group"><label>Jogo / Rodada *</label><input type="text" class="form-control" id="dest-jogo" placeholder="Ex: Vôlei – Jogo 1, Semifinal Basquete..."></div>
-      <div class="form-group"><label>Nome do Atleta *</label><input type="text" class="form-control" id="dest-nome" placeholder="Nome completo"></div>
-      <div class="form-group"><label>Equipe *</label><input type="text" class="form-control" id="dest-equipe" placeholder="Nome da equipe"></div>
       <div class="form-group">
         <label>Modalidade</label>
-        <select class="form-control" id="dest-modalidade">
-          <option value="Vôlei">Vôlei</option>
-          <option value="Basquete">Basquete</option>
+        <select class="form-control" id="dest-modalidade" onchange="onModalidadeChange()">
+          <option value="Vôlei">🏐 Vôlei</option>
+          <option value="Basquete">🏀 Basquete</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Jogo / Rodada *</label>
+        <select class="form-control" id="dest-jogo" onchange="onJogoChange()">
+          <option value="">— Selecione o jogo —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Equipe *</label>
+        <select class="form-control" id="dest-equipe">
+          <option value="">— Selecione o jogo primeiro —</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Nome do Atleta *</label><input type="text" class="form-control" id="dest-nome" placeholder="Nome completo"></div>
       <div class="form-group"><label>Observação (opcional)</label><input type="text" class="form-control" id="dest-obs" placeholder="Ex: 18 pontos, 5 aces..."></div>
     </div>
     <div class="modal-footer">
@@ -1390,23 +1400,27 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead(APP_SHEET_ID, "'Atleta'!A1:D100");
+    const rows = await sheetRead(APP_SHEET_ID, "'Atleta'!A1:F100");
     if (!rows || rows.length < 2) throw new Error('Sem dados');
 
     state.destaques = [];
     rows.slice(1).forEach((row, i) => {
-      const modalidade = (row[0] || '').trim();
-      const jogoNum = parseInt(row[1]) || (i+1);
+      const modalidadeKey = (row[0] || '').trim().toLowerCase();
+      const jogoLabel = (row[1] || '').trim();
       const nome = (row[2] || '').trim();
       const equipe = (row[3] || '').trim();
+      const obs = (row[4] || '').trim();
       if (!nome) return;
+
+      const emoji = modalidadeKey === 'basquete' ? '🏀' : '🏐';
+      const modalidade = modalidadeKey === 'basquete' ? 'Basquete' : 'Vôlei';
 
       state.destaques.push({
         id: 'atleta_' + i,
-        jogo: (modalidade === 'basquete' ? '🏀 Basquete' : '🏐 Vôlei') + ' · Jogo ' + jogoNum,
-        nome, equipe,
-        modalidade: modalidade === 'basquete' ? 'Basquete' : 'Vôlei',
-        obs: ''
+        jogo: jogoLabel,
+        nome, equipe, obs,
+        modalidade,
+        emoji
       });
     });
 
@@ -1936,9 +1950,45 @@ function salvarJogo() {
 }
 
 function openModalDestaque() {
-  ['dest-jogo', 'dest-nome', 'dest-equipe', 'dest-obs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('dest-nome').value = '';
+  document.getElementById('dest-obs').value = '';
   document.getElementById('dest-modalidade').value = 'Vôlei';
+  popularJogosSelect('Vôlei');
+  document.getElementById('dest-equipe').innerHTML = '<option value="">— Selecione o jogo primeiro —</option>';
   openModal('modal-destaque');
+}
+
+function onModalidadeChange() {
+  const modalidade = document.getElementById('dest-modalidade').value;
+  popularJogosSelect(modalidade);
+  document.getElementById('dest-equipe').innerHTML = '<option value="">— Selecione o jogo primeiro —</option>';
+}
+
+function popularJogosSelect(modalidade) {
+  const sel = document.getElementById('dest-jogo');
+  const jogos = modalidade === 'Vôlei' ? state.jogos.volei : state.jogos.basquete;
+  sel.innerHTML = '<option value="">— Selecione o jogo —</option>' +
+    jogos.map(j => {
+      const emoji = modalidade === 'Vôlei' ? '🏐' : '🏀';
+      const label = emoji + ' ' + j.rodada + ' · ' + j.equipeA + ' vs ' + j.equipeB;
+      return '<option value="' + j.id + '" data-ea="' + j.equipeA + '" data-eb="' + j.equipeB + '">' + label + '</option>';
+    }).join('');
+}
+
+function onJogoChange() {
+  const sel = document.getElementById('dest-jogo');
+  const opt = sel.options[sel.selectedIndex];
+  const equipeSel = document.getElementById('dest-equipe');
+  if (!opt || !opt.value) {
+    equipeSel.innerHTML = '<option value="">— Selecione o jogo primeiro —</option>';
+    return;
+  }
+  const ea = opt.dataset.ea || '';
+  const eb = opt.dataset.eb || '';
+  equipeSel.innerHTML =
+    '<option value="">— Selecione a equipe —</option>' +
+    '<option value="' + ea + '">' + ea + '</option>' +
+    '<option value="' + eb + '">' + eb + '</option>';
 }
 
 
@@ -1994,30 +2044,35 @@ async function salvarAtletaDestaque(sport) {
 }
 
 async function salvarDestaque() {
+  const jogoId = document.getElementById('dest-jogo').value;
   const nome = document.getElementById('dest-nome').value.trim();
-  const equipe = document.getElementById('dest-equipe').value.trim();
-  const jogo = document.getElementById('dest-jogo').value.trim();
-  if (!nome || !equipe || !jogo) { showToast('Preencha todos os campos obrigatórios.', 'error'); return; }
-
+  const equipe = document.getElementById('dest-equipe').value;
   const modalidade = document.getElementById('dest-modalidade').value;
-  const obs = document.getElementById('dest-obs').value;
+  const obs = document.getElementById('dest-obs').value.trim();
+
+  if (!jogoId) { showToast('Selecione o jogo.', 'error'); return; }
+  if (!equipe) { showToast('Selecione a equipe.', 'error'); return; }
+  if (!nome) { showToast('Digite o nome do atleta.', 'error'); return; }
+
+  // Montar label do jogo
+  const jogos = modalidade === 'Vôlei' ? state.jogos.volei : state.jogos.basquete;
+  const jogo = jogos.find(j => j.id === jogoId);
+  const jogoLabel = jogo ? (jogo.rodada + ' - ' + jogo.equipeA + ' vs ' + jogo.equipeB) : jogoId;
+  const modalidadeKey = modalidade === 'Vôlei' ? 'volei' : 'basquete';
 
   showLoading(true);
   try {
-    const res = await sheetWrite({
-      aba: 'Atleta',
-      acao: 'substituir',
-      coluna: 0, chave: modalidade.toLowerCase(),
-      colunaB: 1, chaveB: String(state.destaques.length + 1),
-      linha: [modalidade.toLowerCase(), state.destaques.length + 1, nome, equipe]
+    const res = await sheetWriteAtleta({
+      acao: 'adicionar',
+      linha: [modalidadeKey, jogoLabel, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
 
-    if (res.ok) {
-      showToast('Atleta destaque registrado!');
+    if (res && res.ok) {
+      showToast('✅ Atleta destaque registrado com sucesso!');
       closeModal('modal-destaque');
       await loadAtletasFromSheet();
     } else {
-      showToast('❌ Erro: ' + (res.erro || 'desconhecido'), 'error');
+      showToast('❌ Erro: ' + (res?.erro || 'desconhecido'), 'error');
     }
   } catch(e) {
     showToast('❌ Falha na conexão', 'error');
@@ -2034,9 +2089,11 @@ function renderDestaques() {
   }
   c.innerHTML = state.destaques.map(d => `
     <div class="destaque-card">
-      <div class="destaque-jogo">${d.modalidade.toUpperCase()} · ${d.jogo}</div>
+      <div class="destaque-jogo">${d.emoji || '⭐'} ${d.modalidade.toUpperCase()}</div>
       <div class="destaque-nome">⭐ ${d.nome}</div>
-      <div class="destaque-equipe"><i class='bx bxs-shield'></i>${d.equipe}${d.obs ? ' · <em style="opacity:.7">' + d.obs + '</em>' : ''}</div>
+      <div class="destaque-equipe"><i class='bx bxs-shield'></i>${d.equipe}</div>
+      <div style="font-size:11px;opacity:.75;margin-top:6px;line-height:1.4">${d.jogo}</div>
+      ${d.obs ? '<div style="font-size:11px;opacity:.65;margin-top:4px;font-style:italic">' + d.obs + '</div>' : ''}
       <button class="btn btn-danger" style="position:absolute;top:10px;right:10px;padding:3px 8px;font-size:11px;" onclick="excluirDestaque('${d.id}')"><i class='bx bx-trash'></i></button>
     </div>`).join('');
 }
