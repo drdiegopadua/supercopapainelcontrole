@@ -573,6 +573,7 @@
 </style>
 <base target="_blank">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -1400,16 +1401,44 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead(APP_SHEET_ID, "'Atleta'!A1:F100");
-    if (!rows || rows.length < 2) throw new Error('Sem dados');
+    // Usar o ATLETA_SCRIPT_URL com GET para ler dados
+    const url = ATLETA_SCRIPT_URL + '?acao=listar';
+    console.log('Buscando atletas em:', url);
+
+    const res = await fetch(url, { method: 'GET' });
+    const data = await res.json();
+    console.log('Resposta do servidor:', data);
 
     state.destaques = [];
-    rows.slice(1).forEach((row, i) => {
+
+    // Seu Apps Script retorna { ok: true, values: [...] }
+    let rows = [];
+    if (data.ok && data.values && Array.isArray(data.values)) {
+      rows = data.values;
+    } else if (data.ok && Array.isArray(data.dados)) {
+      rows = data.dados;
+    }
+
+    console.log('Linhas processadas:', rows.length);
+
+    if (!rows || rows.length === 0) {
+      console.warn('Nenhum dado retornado do servidor');
+      renderDestaques();
+      updateStats();
+      updateDashboard();
+      if (manual) showToast('Nenhum atleta destaque encontrado.', 'error');
+      return;
+    }
+
+    rows.forEach((row, i) => {
+      // Seu Apps Script retorna array de arrays: [ESPORTE, JOGO, NOME, TIME, OBS, DATA]
       const modalidadeKey = (row[0] || '').trim().toLowerCase();
       const jogoLabel = (row[1] || '').trim();
       const nome = (row[2] || '').trim();
       const equipe = (row[3] || '').trim();
       const obs = (row[4] || '').trim();
+      const dataReg = (row[5] || '').trim();
+
       if (!nome) return;
 
       const emoji = modalidadeKey === 'basquete' ? '🏀' : '🏐';
@@ -1420,17 +1449,21 @@ async function loadAtletasFromSheet(manual=false) {
         jogo: jogoLabel,
         nome, equipe, obs,
         modalidade,
-        emoji
+        emoji,
+        data: dataReg
       });
     });
 
+    console.log('Destaques carregados:', state.destaques.length);
     renderDestaques();
     updateStats();
     updateDashboard();
-    if (manual) showToast('Atletas destaque atualizados!');
+    if (manual) showToast('Atletas destaque atualizados! (' + state.destaques.length + ' registros)');
   } catch(e) {
-    console.warn('Erro ao carregar atletas:', e);
-    if (manual) showToast('Erro ao carregar atletas.', 'error');
+    console.error('Erro ao carregar atletas:', e);
+    console.error('Stack:', e.stack);
+    updateSheetStatus(false);
+    if (manual) showToast('Erro ao carregar atletas: ' + e.message, 'error');
   } finally {
     if (manual) showLoading(false);
   }
