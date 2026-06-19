@@ -493,6 +493,83 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Atleta Destaque - Layout com Dropdowns */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--light-grey);
+}
+
+.btn-secondary {
+  background: var(--light-grey);
+  color: var(--dark);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-secondary:hover {
+  background: var(--dark-grey);
+  color: white;
+}
+
+.form-card h3 {
+  margin-bottom: 20px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--dark);
+  font-size: 14px;
+}
+
+.form-group label::after {
+  color: var(--danger);
+}
+
+.form-select, .form-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--light-grey);
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.form-select:focus, .form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0,82,155,0.1);
+}
+
+.form-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 35px;
+}
 </style>
 <base target="_blank">
 <base target="_blank">
@@ -1865,13 +1942,21 @@ function openModalDestaque() {
 }
 
 
+function limparAtletaForm(sport) {
+  document.getElementById('atleta-' + sport + '-jogo').value = '';
+  document.getElementById('atleta-' + sport + '-equipe').value = '';
+  document.getElementById('atleta-' + sport + '-nome').value = '';
+  document.getElementById('atleta-' + sport + '-obs').value = '';
+}
+
 async function salvarAtletaDestaque(sport) {
   const jogoId = document.getElementById('atleta-' + sport + '-jogo').value;
   const nome = document.getElementById('atleta-' + sport + '-nome').value.trim();
   const equipe = document.getElementById('atleta-' + sport + '-equipe').value;
+  const obs = document.getElementById('atleta-' + sport + '-obs').value.trim();
 
   if (!jogoId || !nome || !equipe) {
-    showToast('Preencha todos os campos!', 'error');
+    showToast('Preencha todos os campos obrigatórios!', 'error');
     return;
   }
 
@@ -1889,7 +1974,7 @@ async function salvarAtletaDestaque(sport) {
 
     const res = await sheetWriteAtleta({
       acao: 'adicionar',
-      linha: [sport.toUpperCase(), jogoLabel, nome, equipe, new Date().toLocaleString('pt-BR')]
+      linha: [sport.toUpperCase(), jogoLabel, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
 
     if (res && res.ok) {
