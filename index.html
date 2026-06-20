@@ -1550,7 +1550,7 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead(APP_SHEET_ID, "'Atleta'!A2:F200");
+    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Página1'!A2:E200");
     state.destaques = [];
     if (!rows || rows.length === 0) {
       renderDestaques();
@@ -1561,12 +1561,11 @@ async function loadAtletasFromSheet(manual=false) {
     }
     rows.forEach((row, i) => {
       const modalidadeKey = (row[0] || '').trim().toLowerCase();
-      const jogoId = (row[1] || '').toString().trim();
-      const jogoLabel = 'Jogo ' + jogoId;
+      const jogoLabel = (row[1] || '').toString().trim();
       const nome = (row[2] || '').trim();
       const equipe = (row[3] || '').trim();
-      const obs = (row[4] || '').trim();
-      const dataReg = (row[5] || '').trim();
+      const obs = '';
+      const dataReg = (row[4] || '').trim();
       if (!nome) return;
       const emoji = modalidadeKey === 'basquete' ? '🏀' : '🏐';
       const modalidade = modalidadeKey === 'basquete' ? 'Basquete' : 'Vôlei';
