@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -879,7 +879,7 @@
           </div>
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
             <button class="btn btn-secondary" onclick="clearPush()">Limpar</button>
-            <button class="btn btn-primary" onclick="sendPush()"><i class='bx bxs-send'></i> Enviar Push</button>
+            <button class="btn btn-primary" onclick="sendPush()"><i class='bx bxs-send'></i> Enviar Push</button></div><div id="push-status" style="text-align:center;font-size:12px;margin-top:10px;color:var(--dark-grey)"></div><div id="push-inscritos" style="text-align:center;font-size:11px;color:var(--dark-grey);margin-top:4px"></div>
           </div>
         </div>
       </div>
@@ -1191,6 +1191,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push'};
   document.getElementById('navLabel').textContent = labels[page] || page;
+  if (page === 'notificacoes') loadPushStatus();
   return false;
 }
 
@@ -1567,7 +1568,7 @@ function clearPush() {
   document.getElementById('push-target').value = 'all';
 }
 
-async function sendPush() {
+async async function sendPush() {
   const titulo = document.getElementById('push-titulo').value.trim();
   const body = document.getElementById('push-body').value.trim();
   if (!titulo || !body) { showToast('Preencha título e mensagem.', 'error'); return; }
@@ -2531,6 +2532,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push'};
   document.getElementById('navLabel').textContent = labels[page] || page;
+  if (page === 'notificacoes') loadPushStatus();
   return false;
 }
 
@@ -2902,12 +2904,23 @@ function selectNotifType(el, type) {
   state.pushType = type;
 }
 
-function clearPush() {
+
+async function loadPushStatus() {
+  const el = document.getElementById('push-inscritos');
+  if (!el) return;
+  try {
+    const res = await fetch('https://supercopa-push-server.onrender.com/api/push/status');
+    const data = await res.json();
+    el.textContent = '👥 ' + data.total + ' usuário(s) inscrito(s)';
+  } catch(e) {
+    el.textContent = 'Servidor push offline';
+  }
+}function clearPush() {
   ['push-titulo','push-body','push-link'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('push-target').value = 'all';
 }
 
-async function sendPush() {
+async async function sendPush() {
   const titulo = document.getElementById('push-titulo').value.trim();
   const body = document.getElementById('push-body').value.trim();
   if (!titulo || !body) { showToast('Preencha título e mensagem.', 'error'); return; }
