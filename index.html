@@ -1493,10 +1493,10 @@ async function loadBasqueteFromSheet(manual=false) {
         // Estrutura com colunas vazias:
         // A=JOGO, B=EQUIPE1, C=VAZIA, D=PTS1, E=X, F=PTS2, G=VAZIA, H=EQUIPE2, I=VAZIA, J=RESULTADO
         const ea = _cc(rows, rIdx, 1 + colOffset);   // B: EQUIPE 1
-        const eb = _cc(rows, rIdx, 5 + colOffset);   // F: EQUIPE 2
+        const eb = _cc(rows, rIdx, 6 + colOffset);   // G: EQUIPE 2 (col C vazia=merge)
         if (!ea && !eb) return;
-        const ptsA = _cc(rows, rIdx, 2 + colOffset); // C: PTS 1
-        const ptsB = _cc(rows, rIdx, 4 + colOffset); // E: PTS 2
+        const ptsA = _cc(rows, rIdx, 3 + colOffset); // D: PTS 1
+        const ptsB = _cc(rows, rIdx, 5 + colOffset); // F: PTS 2
 
         console.log('LOAD BASQUETE - Grupo ' + g + ' Jogo ' + (i+1) + ':', { ea, eb, ptsA, ptsB, colOffset });
         state.jogos.basquete.push({
