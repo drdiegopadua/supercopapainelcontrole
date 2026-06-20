@@ -1675,14 +1675,16 @@ async function loadBolaoRanking(manual=false) {
 async function loadQuizRanking(manual=false) {
   if (manual) showLoading(true);
   try {
-    // Tenta ler da planilha de quiz
-    const url = QUIZ_SHEETS_URL; // endpoint de leitura
-    // Como não temos endpoint de leitura direto, usamos dados de exemplo
-    state.quiz = [
-      { id: 'q1', nome: 'João Silva', acertos: 45, pontos: 95 },
-      { id: 'q2', nome: 'Maria Costa', acertos: 42, pontos: 88 },
-      { id: 'q3', nome: 'Pedro Lima', acertos: 38, pontos: 80 }
-    ];
+    const PALPITES_SHEET_ID = '13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A';
+    const rows = await sheetRead(PALPITES_SHEET_ID, "'QUIZ'!A2:G200");
+    state.quiz = rows
+      .filter(r => r[1] && r[1].toString().trim())
+      .map((r, i) => ({
+        id: 'q' + i,
+        nome: r[1] || '—',
+        acertos: r[3] || '—',
+        pontos: r[5] || '—'
+      }));
     renderRanking();
     if (manual) showToast('Ranking do quiz atualizado!');
   } catch(e) {
