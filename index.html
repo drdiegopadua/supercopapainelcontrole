@@ -2175,7 +2175,7 @@ async function salvarAtletaDestaque(sport) {
     const jogoLabel = jogo ? (jogo.rodada + ' - ' + jogo.equipeA + ' vs ' + jogo.equipeB) : jogoId;
 
     const res = await sheetWriteAtleta({
-      aba: 'Atleta',
+      aba: 'Página1',
       acao: 'adicionar',
       linha: [modalidadeKey, jogoId, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
@@ -2216,6 +2216,7 @@ async function salvarDestaque() {
   showLoading(true);
   try {
     const res = await sheetWriteAtleta({
+      aba: 'Página1',
       acao: 'adicionar',
       linha: [modalidadeKey, jogoId, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
