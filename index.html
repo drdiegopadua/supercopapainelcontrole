@@ -1508,12 +1508,16 @@ async function loadBolaoRanking(manual=false) {
     const data = await res.json();
     const ranking = data.ranking || [];
 
-    state.bolao = ranking.map((p, i) => ({
-      id: 'bolao_' + i,
-      nome: p.nome || 'Anônimo',
-      acertos: parseInt(p.acertos) || 0,
-      pontos: parseInt(p.pontos) || Math.round((parseInt(p.acertos) || 0) / 12 * 100)
-    }));
+    state.bolao = ranking.map((p, i) => {
+      const pctRaw = p.pct || p['% ACERTO'] || p['%ACERTO'] || p.acerto || p.acertos || 0;
+      const pct = parseFloat(String(pctRaw).replace('%', '')) || 0;
+      return {
+        id: 'bolao_' + i,
+        nome: p.nome || p.NOME || 'Anônimo',
+        acertos: pct,
+        pontos: pct
+      };
+    });
 
     renderRanking();
     if (manual) showToast('Ranking do bolão atualizado!');
@@ -2153,8 +2157,8 @@ function renderRankingTable(tipo, list) {
     return `<tr>
       <td><div class="rank-pos ${posClass}">${i+1}</div></td>
       <td><strong>${p.nome}</strong></td>
-      <td>${p.acertos}</td>
-      <td><span class="pts-badge">${p.pontos} pts</span></td>
+      <td>${p.acertos > 0 ? p.acertos + '%' : '0%'}</td>
+      <td><span class="pts-badge">${p.pontos > 0 ? p.pontos + '%' : '0%'}</span></td>
       <td style="display:flex;gap:6px;">
         <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRanking('${p.id}','${tipo}')"><i class='bx bx-edit'></i></button>
         <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="excluirRanking('${p.id}','${tipo}')"><i class='bx bx-trash'></i></button>
@@ -2844,12 +2848,16 @@ async function loadBolaoRanking(manual=false) {
     const data = await res.json();
     const ranking = data.ranking || [];
 
-    state.bolao = ranking.map((p, i) => ({
-      id: 'bolao_' + i,
-      nome: p.nome || 'Anônimo',
-      acertos: parseInt(p.acertos) || 0,
-      pontos: parseInt(p.pontos) || Math.round((parseInt(p.acertos) || 0) / 12 * 100)
-    }));
+    state.bolao = ranking.map((p, i) => {
+      const pctRaw = p.pct || p['% ACERTO'] || p['%ACERTO'] || p.acerto || p.acertos || 0;
+      const pct = parseFloat(String(pctRaw).replace('%', '')) || 0;
+      return {
+        id: 'bolao_' + i,
+        nome: p.nome || p.NOME || 'Anônimo',
+        acertos: pct,
+        pontos: pct
+      };
+    });
 
     renderRanking();
     if (manual) showToast('Ranking do bolão atualizado!');
@@ -3489,8 +3497,8 @@ function renderRankingTable(tipo, list) {
     return `<tr>
       <td><div class="rank-pos ${posClass}">${i+1}</div></td>
       <td><strong>${p.nome}</strong></td>
-      <td>${p.acertos}</td>
-      <td><span class="pts-badge">${p.pontos} pts</span></td>
+      <td>${p.acertos > 0 ? p.acertos + '%' : '0%'}</td>
+      <td><span class="pts-badge">${p.pontos > 0 ? p.pontos + '%' : '0%'}</span></td>
       <td style="display:flex;gap:6px;">
         <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRanking('${p.id}','${tipo}')"><i class='bx bx-edit'></i></button>
         <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="excluirRanking('${p.id}','${tipo}')"><i class='bx bx-trash'></i></button>
