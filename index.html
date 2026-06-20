@@ -1640,27 +1640,28 @@ async function loadNoticiasFromSheet(manual=false) {
 async function loadBolaoRanking(manual=false) {
   if (manual) showLoading(true);
   try {
-    const url = BOLAO_SHEETS_URL + '?action=ranking_sabado';
-    const res = await fetch(url);
-    const data = await res.json();
-    const ranking = data.ranking || [];
+    // Lê direto da planilha PALPITES: cols A=timestamp B=palpite C=NOME D=WHATSAPP E=%ACERTO
+    const rows = await sheetRead('13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A', "'PALPITES'!A2:E500");
 
-    state.bolao = ranking.map((p, i) => {
-      const pctRaw = p.pct || p['% ACERTO'] || p['%ACERTO'] || p.acerto || p.acertos || 0;
-      const pct = parseFloat(String(pctRaw).replace('%', '')) || 0;
-      return {
-        id: 'bolao_' + i,
-        nome: p.nome || p.NOME || 'Anônimo',
-        acertos: pct,
-        pontos: pct
-      };
-    });
+    state.bolao = rows
+      .filter(r => r[2] && r[2].trim()) // precisa ter NOME
+      .map((r, i) => {
+        const pct = parseFloat((r[4] || '0').toString().replace('%','').replace(',','.')) || 0;
+        return {
+          id: 'bolao_' + i,
+          nome: r[2].trim(),
+          whatsapp: r[3] || '',
+          acertos: pct,
+          pontos: pct
+        };
+      })
+      .sort((a, b) => b.pontos - a.pontos);
 
     renderRanking();
-    if (manual) showToast('Ranking do bolão atualizado!');
+    if (manual) showToast('Ranking do bolão atualizado! (' + state.bolao.length + ' participantes)');
   } catch(e) {
     console.warn('Erro bolão:', e);
-    if (manual) showToast('Erro ao carregar bolão.', 'error');
+    if (manual) showToast('Erro ao carregar bolão: ' + e.message, 'error');
   } finally {
     if (manual) showLoading(false);
   }
