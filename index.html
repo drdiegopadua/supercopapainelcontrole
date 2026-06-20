@@ -2381,10 +2381,33 @@ function editNoticia(id) {
   document.getElementById('noticia-corpo').value = n.corpo;
   openModal('modal-noticia');
 }
-function excluirNoticia(id) {
-  if (!confirm('Excluir notícia?')) return;
-  state.noticias = state.noticias.filter(x => x.id !== id);
-  renderNoticias(); updateStats(); showToast('Notícia excluída.');
+async function excluirNoticia(id) {
+  const noticia = state.noticias.find(x => x.id === id);
+  if (!noticia) return;
+  if (!confirm('Excluir "' + noticia.titulo + '" da planilha?')) return;
+
+  showLoading(true);
+  try {
+    const res = await fetch(NOTICIAS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ acao: 'deletar', aba: 'Noticias', coluna: 2, valor: noticia.titulo })
+    });
+    const text = await res.text();
+    let result;
+    try { result = JSON.parse(text); } catch(e) { result = { ok: true }; }
+
+    if (result.ok === false) {
+      showToast('Erro ao excluir: ' + (result.erro || 'desconhecido'), 'error');
+    } else {
+      showToast('Notícia excluída da planilha!');
+      await loadNoticiasFromSheet(false);
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
 }
 
 // ════════════════════════════════════════════════════════
