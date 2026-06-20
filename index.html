@@ -1373,6 +1373,14 @@ window.addEventListener('click', e => {
 
 function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openModalNoticia() {
+  document.getElementById('noticia-ic').value = '📰';
+  document.getElementById('noticia-cat').value = 'Notícia';
+  document.getElementById('noticia-titulo').value = '';
+  document.getElementById('noticia-data').value = '';
+  document.getElementById('noticia-corpo').value = '';
+  openModal('modal-noticia');
+}
 document.querySelectorAll('.modal-overlay').forEach(o => {
   o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); });
 });
