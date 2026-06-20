@@ -621,6 +621,7 @@
     <li><a href="javascript:void(0)" onclick="navTo('social',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Social</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('classificacao',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Classificação</span></a></li>
   </ul>
   <div class="side-bottom">
     <a href="javascript:void(0)"><i class='bx bxs-cog'></i><span>Configurações</span></a>
@@ -891,6 +892,42 @@
       </div>
     </div>
 
+
+    <!-- ─── CLASSIFICAÇÃO ─── -->
+    <div class="page" id="page-classificacao">
+      <div class="page-header">
+        <div>
+          <h1>Classificação</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Classificação</span></div>
+        </div>
+        <button class="refresh-btn" onclick="loadClassificacao(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+      </div>
+
+      <!-- Tabs esporte -->
+      <div class="tabs" style="margin-bottom:20px;">
+        <button class="tab-btn active" id="classTabVolei" onclick="switchClassTab('volei')">🏐 Vôlei</button>
+        <button class="tab-btn" id="classTabBasq" onclick="switchClassTab('basquete')">🏀 Basquete</button>
+      </div>
+
+      <!-- VÔLEI -->
+      <div id="classVolei">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="classVoleiGrid">
+          <div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dark-grey);">
+            <i class='bx bx-loader-alt bx-spin' style="font-size:32px;"></i><br>Carregando...
+          </div>
+        </div>
+      </div>
+
+      <!-- BASQUETE -->
+      <div id="classBasq" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="classBasqGrid">
+          <div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dark-grey);">
+            <i class='bx bx-loader-alt bx-spin' style="font-size:32px;"></i><br>Carregando...
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </section>
 
@@ -1023,6 +1060,115 @@ const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aW
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
 const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
+
+// ════════════════════════════════════════════════════════
+// CLASSIFICAÇÃO — somente visualização
+// ════════════════════════════════════════════════════════
+let _classTab = 'volei';
+let _classLoaded = false;
+
+function switchClassTab(sport) {
+  _classTab = sport;
+  document.getElementById('classVolei').style.display = sport === 'volei' ? '' : 'none';
+  document.getElementById('classBasq').style.display  = sport === 'basquete' ? '' : 'none';
+  document.getElementById('classTabVolei').className = 'tab-btn' + (sport === 'volei' ? ' active' : '');
+  document.getElementById('classTabBasq').className  = 'tab-btn' + (sport === 'basquete' ? ' active' : '');
+}
+
+function _ccP(rows, r, c) {
+  return rows[r] && rows[r][c] != null ? rows[r][c].toString().trim() : '';
+}
+
+function _classGrupoCard(title, teams, color) {
+  const rows = teams.map((t, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+    const pts = parseInt(t.pts) || 0;
+    const ptsColor = pts > 0 ? 'color:var(--blue);font-weight:800;' : 'color:var(--dark-grey);';
+    return `<tr style="border-bottom:1px solid var(--grey);">
+      <td style="padding:10px 8px;font-size:13px;">${medal} ${i+1}º</td>
+      <td style="padding:10px 8px;font-size:13px;font-weight:700;">${t.name}</td>
+      <td style="padding:10px 8px;font-size:12px;text-align:center;">${t.pj}</td>
+      <td style="padding:10px 8px;font-size:12px;text-align:center;color:var(--green);font-weight:700;">${t.v}</td>
+      <td style="padding:10px 8px;font-size:12px;text-align:center;color:var(--red);">${t.d}</td>
+      <td style="padding:10px 8px;font-size:12px;text-align:center;">${t.sp > 0 ? '+'+t.sp : t.sp}</td>
+      <td style="padding:10px 8px;font-size:13px;text-align:center;${ptsColor}">${pts}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="card" style="margin:0;">
+    <div class="card-title" style="color:${color};">${title}</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--grey);font-size:11px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;">
+          <th style="padding:6px 8px;text-align:left;">#</th>
+          <th style="padding:6px 8px;text-align:left;">Equipe</th>
+          <th style="padding:6px 8px;text-align:center;">PJ</th>
+          <th style="padding:6px 8px;text-align:center;">V</th>
+          <th style="padding:6px 8px;text-align:center;">D</th>
+          <th style="padding:6px 8px;text-align:center;">SP</th>
+          <th style="padding:6px 8px;text-align:center;">PTS</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+async function loadClassificacao(force) {
+  if (_classLoaded && !force) return;
+  _classLoaded = true;
+
+  const sheetUrl = (id, tab, range) =>
+    `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent("'"+tab+"'!"+range)}?key=${GOOGLE_API_KEY}`;
+
+  // VÔLEI
+  try {
+    const res  = await fetch(sheetUrl(INDEX_VOLEI_SHEET_ID, 'Fase de Grupos', 'A1:Q49'));
+    const json = await res.json();
+    const l    = json.values || [];
+
+    const voleiGrupos = [
+      { title: '🏐 Grupo A', rows: [4,5,6] },
+      { title: '🏐 Grupo B', rows: [16,17,18] },
+      { title: '🏐 Grupo C', rows: [28,29,30] },
+      { title: '🏐 Grupo D', rows: [40,41,42] },
+    ];
+
+    let cards = '';
+    voleiGrupos.forEach(g => {
+      const teams = g.rows.map(r => {
+        const v = parseInt(_ccP(l,r,3)||'0'), d = parseInt(_ccP(l,r,4)||'0');
+        return { name: _ccP(l,r,1), pj: v+d, v, d, sp: parseInt(_ccP(l,r,5)||'0'), pts: parseInt(_ccP(l,r,2)||'0') };
+      }).filter(t => t.name && t.name.length > 1);
+      teams.sort((a,b) => b.pts - a.pts || b.sp - a.sp);
+      cards += _classGrupoCard(g.title, teams, 'var(--blue)');
+    });
+    document.getElementById('classVoleiGrid').innerHTML = cards || '<div style="padding:20px;color:var(--dark-grey);">Nenhum dado</div>';
+  } catch(e) {
+    document.getElementById('classVoleiGrid').innerHTML = '<div class="card" style="color:var(--red);padding:20px;">Erro ao carregar vôlei: '+e.message+'</div>';
+  }
+
+  // BASQUETE
+  try {
+    const res  = await fetch(sheetUrl(BASQ_SHEET_ID, 'Fase de Grupos', 'A1:S15'));
+    const json = await res.json();
+    const s    = json.values || [];
+
+    // Grupo A: cols 0-9, Grupo B: cols 10-18  (rows 11,12,13 = índices)
+    const mapTeamA = r => ({ name: _ccP(s,r,1), pj: _ccP(s,r,2), v: parseInt(_ccP(s,r,3)||'0'), d: parseInt(_ccP(s,r,4)||'0'), sp: parseInt(_ccP(s,r,6)||'0'), pts: parseInt(_ccP(s,r,5)||'0') });
+    const mapTeamB = r => ({ name: _ccP(s,r,11), pj: _ccP(s,r,12), v: parseInt(_ccP(s,r,13)||'0'), d: parseInt(_ccP(s,r,14)||'0'), sp: parseInt(_ccP(s,r,16)||'0'), pts: parseInt(_ccP(s,r,15)||'0') });
+
+    const teamsA = [11,12,13].map(mapTeamA).filter(t=>t.name&&t.name.length>1&&t.name.toUpperCase()!=='EQUIPE');
+    const teamsB = [11,12,13].map(mapTeamB).filter(t=>t.name&&t.name.length>1&&t.name.toUpperCase()!=='EQUIPE');
+    teamsA.sort((a,b) => b.pts - a.pts || b.sp - a.sp);
+    teamsB.sort((a,b) => b.pts - a.pts || b.sp - a.sp);
+
+    document.getElementById('classBasqGrid').innerHTML =
+      _classGrupoCard('🏀 Grupo A', teamsA, 'var(--orange)') +
+      _classGrupoCard('🏀 Grupo B', teamsB, 'var(--orange)');
+  } catch(e) {
+    document.getElementById('classBasqGrid').innerHTML = '<div class="card" style="color:var(--red);padding:20px;">Erro ao carregar basquete: '+e.message+'</div>';
+  }
+}
 
 // ════════════════════════════════════════════════════════
 // AUTH / LOGIN
@@ -1185,6 +1331,7 @@ const state = {
 // NAV / UI
 // ════════════════════════════════════════════════════════
 function navTo(page, el) {
+  if (page === 'classificacao') loadClassificacao();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
