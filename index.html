@@ -1570,7 +1570,7 @@ function clearPush() {
   document.getElementById('push-target').value = 'all';
 }
 
-async async function sendPush() {
+async function sendPush() {
   const titulo = document.getElementById('push-titulo').value.trim();
   const body = document.getElementById('push-body').value.trim();
   if (!titulo || !body) { showToast('Preencha título e mensagem.', 'error'); return; }
