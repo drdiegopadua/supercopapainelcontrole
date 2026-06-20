@@ -344,6 +344,17 @@
     .sport-basquete .set-input:focus, .sport-basquete .quarter-input:focus { border-color: var(--orange); }
     .sport-basquete .total-score { color: var(--orange); }
     .sport-basquete .jogo-vs { color: var(--orange); }
+    .sport-handebol .jogo-header { background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%); }
+    .sport-handebol .set-input:focus { border-color: #2E7D32; }
+    .sport-handebol .total-score { color: #2E7D32; }
+    .sport-handebol .jogo-vs { color: #2E7D32; }
+    .hand-classif-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .hand-classif-table th { background:#1B5E20; color:#fff; padding:8px 10px; text-align:center; }
+    .hand-classif-table td { padding:8px 10px; text-align:center; border-bottom:1px solid var(--grey); }
+    .hand-classif-table tr:nth-child(2) td, .hand-classif-table tr:nth-child(3) td { background:#E8F5E9; }
+    .hand-grupo-title { font-weight:700; color:#1B5E20; margin:16px 0 6px; font-size:15px; }
+    .hand-classif-wrap { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:700px){ .hand-classif-wrap { grid-template-columns:1fr; } }
 
     /* refresh button */
     .refresh-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--grey); background: var(--light); color: var(--dark-grey); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: .2s; }
@@ -617,6 +628,7 @@
     <li class="active"><a href="javascript:void(0)" onclick="navTo('dashboard',this); return false;"><i class='bx bxs-dashboard'></i><span>Dashboard</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('volei',this); return false;"><i class='bx bx-run'></i><span>Vôlei</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('basquete',this); return false;"><i class='bx bxs-basketball'></i><span>Basquete</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('handebol',this); return false;"><i class='bx bx-handball'></i><span>Handebol</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('destaque',this); return false;"><i class='bx bxs-star'></i><span>Atleta Destaque</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('social',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Social</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
@@ -750,6 +762,48 @@
         <div class="card-title" style="color:var(--orange)"><i class='bx bxs-basketball'></i> Tabela de Jogos — Basquete (4 quartos)</div>
         <div class="jogos-grid" id="basquete-jogos-grid">
           <div class="empty-state"><i class='bx bxs-basketball'></i><p>Carregando jogos da planilha...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── HANDEBOL ─── -->
+    <div class="page" id="page-handebol">
+      <div class="page-header">
+        <div>
+          <h1>Handebol</h1>
+          <div class="breadcrumb"><span>AFOHAND</span>›<span class="cur">Handebol</span></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="refresh-btn" onclick="loadHandebolFromSheet(true)" id="refreshHandebol"><i class='bx bx-refresh'></i> Atualizar</button>
+        </div>
+      </div>
+
+      <!-- Placares -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:#1B5E20"><i class='bx bx-handball'></i> Entrada de Placares — AFOHAND</div>
+        <div class="jogos-grid" id="handebol-jogos-grid">
+          <div class="empty-state"><i class='bx bx-handball'></i><p>Carregando jogos...</p></div>
+        </div>
+      </div>
+
+      <!-- Classificação em tempo real -->
+      <div class="card">
+        <div class="card-title" style="color:#1B5E20"><i class='bx bxs-bar-chart-alt-2'></i> Classificação em Tempo Real</div>
+        <div class="hand-classif-wrap">
+          <div>
+            <div class="hand-grupo-title">🟢 Grupo A</div>
+            <table class="hand-classif-table">
+              <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+              <tbody id="hand-classif-A"></tbody>
+            </table>
+          </div>
+          <div>
+            <div class="hand-grupo-title">🟢 Grupo B</div>
+            <table class="hand-classif-table">
+              <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+              <tbody id="hand-classif-B"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -1054,6 +1108,8 @@ const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aW
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
 const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
+const HAND_SHEET_ID   = "1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU";
+const HAND_SCRIPT_URL = "COLE_AQUI_URL_APPS_SCRIPT_AFOHAND"; // substitua após criar o Apps Script
 
 // ════════════════════════════════════════════════════════
 // CLASSIFICAÇÃO — somente visualização
@@ -1312,7 +1368,7 @@ function _cc(rows, rowIdx, colIdx) {
 // STATE
 // ════════════════════════════════════════════════════════
 const state = {
-  jogos: { volei: [], basquete: [] },
+  jogos: { volei: [], basquete: [], handebol: [] },
   destaques: [],
   bolao: [],
   quiz: [],
@@ -1330,7 +1386,8 @@ function navTo(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push'};
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push'};
+  if (page === 'handebol') loadHandebolFromSheet();
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   return false;
@@ -1768,6 +1825,196 @@ async function sendPush() {
   } finally {
     showLoading(false);
   }
+}
+
+// ════════════════════════════════════════════════════════
+// HANDEBOL
+// ════════════════════════════════════════════════════════
+const HAND_API = (range) =>
+  `https://sheets.googleapis.com/v4/spreadsheets/${HAND_SHEET_ID}/values/${encodeURIComponent(range)}?key=AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw`;
+
+async function loadHandebolFromSheet(manual = false) {
+  if (manual) showLoading(true);
+  try {
+    const res  = await fetch(HAND_API("'Fase de Grupos'!A5:S7"));
+    const data = await res.json();
+    const rows = data.values || [];
+    state.jogos.handebol = [];
+
+    // Estrutura: cols A-I = Grupo A, cols K-S = Grupo B
+    // [JOGO, EQUIPE1, _, GOLS1, X, GOLS2, EQUIPE2, _, RESULTADO]
+    const jogosConfig = [
+      { grupo:'A', numCol:0, e1:1, g1:3, g2:5, e2:6 },
+      { grupo:'B', numCol:10, e1:11, g1:13, g2:15, e2:16 },
+    ];
+
+    rows.forEach((row, ri) => {
+      jogosConfig.forEach(({ grupo, numCol, e1, g1, g2, e2 }) => {
+        const equipeA = row[e1] || '';
+        const equipeB = row[e2] || '';
+        if (!equipeA && !equipeB) return;
+        const golsA = row[g1] || '';
+        const golsB = row[g2] || '';
+        state.jogos.handebol.push({
+          id: `hand_${grupo}_${ri}`,
+          grupo, jogo: ri + 1,
+          equipeA, equipeB,
+          golsA, golsB,
+          rowIdx: ri + 5, // linha real na planilha (5,6,7)
+          grupo_offset: grupo,
+        });
+      });
+    });
+
+    renderHandebolJogos();
+    renderHandebolClassif();
+    if (manual) showToast('Handebol atualizado!');
+  } catch(e) {
+    console.warn('Erro handebol:', e);
+    if (manual) showToast('Erro ao carregar handebol.', 'error');
+  } finally {
+    if (manual) showLoading(false);
+  }
+}
+
+function renderHandebolJogos() {
+  const grid = document.getElementById('handebol-jogos-grid');
+  if (!state.jogos.handebol.length) {
+    grid.innerHTML = `<div class="empty-state"><i class='bx bx-handball'></i><p>Nenhum jogo encontrado na planilha.</p></div>`;
+    return;
+  }
+  grid.innerHTML = state.jogos.handebol.map(j => `
+    <div class="jogo-card sport-handebol" id="hand-card-${j.id}">
+      <div class="jogo-header">
+        <span>Grupo ${j.grupo} · Jogo ${j.jogo}</span>
+        <span class="jogo-sport-badge">🤾 Handebol</span>
+      </div>
+      <div class="jogo-body">
+        <div class="jogo-equipes">
+          <div class="equipe-name">${j.equipeA || '—'}</div>
+          <div class="jogo-vs" style="color:#2E7D32">VS</div>
+          <div class="equipe-name">${j.equipeB || '—'}</div>
+        </div>
+        <div class="placar-section">
+          <div class="placar-title">Placar Final — ${j.equipeA} | ${j.equipeB}</div>
+          <div class="sets-grid" style="max-width:300px;margin:0 auto;">
+            <div class="set-col">
+              <div class="set-label">GOLS A</div>
+              <div class="set-inputs">
+                <input class="set-input" id="gol-a-${j.id}" type="number" min="0" max="99" value="${j.golsA}" placeholder="0"
+                  onchange="handUpdateGols('${j.id}')">
+              </div>
+            </div>
+            <div class="set-col">
+              <div class="set-label">GOLS B</div>
+              <div class="set-inputs">
+                <input class="set-input" id="gol-b-${j.id}" type="number" min="0" max="99" value="${j.golsB}" placeholder="0"
+                  onchange="handUpdateGols('${j.id}')">
+              </div>
+            </div>
+          </div>
+          <div class="total-row">
+            <span class="total-label">Resultado</span>
+            <div class="total-scores">
+              <span class="total-score" id="tot-a-${j.id}" style="color:#2E7D32">${j.golsA || 0}</span>
+              <span style="color:var(--dark-grey);font-size:16px;align-self:center">×</span>
+              <span class="total-score" id="tot-b-${j.id}" style="color:#2E7D32">${j.golsB || 0}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="jogo-footer">
+        <button class="btn btn-success" style="padding:5px 12px;font-size:12px;background:#2E7D32;border-color:#2E7D32"
+          onclick="salvarPlacarHandebol('${j.id}')"><i class='bx bxs-cloud-upload'></i> Enviar Placar</button>
+      </div>
+    </div>`).join('');
+}
+
+function handUpdateGols(id) {
+  const ga = parseInt(document.getElementById('gol-a-' + id)?.value) || 0;
+  const gb = parseInt(document.getElementById('gol-b-' + id)?.value) || 0;
+  const elA = document.getElementById('tot-a-' + id);
+  const elB = document.getElementById('tot-b-' + id);
+  if (elA) elA.textContent = ga;
+  if (elB) elB.textContent = gb;
+  // Atualiza state
+  const j = state.jogos.handebol.find(x => x.id === id);
+  if (j) { j.golsA = ga; j.golsB = gb; renderHandebolClassif(); }
+}
+
+async function salvarPlacarHandebol(id) {
+  const j = state.jogos.handebol.find(x => x.id === id);
+  if (!j) return;
+  const ga = parseInt(document.getElementById('gol-a-' + id)?.value) || 0;
+  const gb = parseInt(document.getElementById('gol-b-' + id)?.value) || 0;
+  j.golsA = ga; j.golsB = gb;
+
+  // Células na planilha: Grupo A → D{row} e F{row}; Grupo B → N{row} e P{row}
+  const colA = j.grupo === 'A' ? 'D' : 'N';
+  const colB = j.grupo === 'A' ? 'F' : 'P';
+  const range = `'Fase de Grupos'!${colA}${j.rowIdx}:${colB}${j.rowIdx}`;
+
+  if (HAND_SCRIPT_URL === 'COLE_AQUI_URL_APPS_SCRIPT_AFOHAND') {
+    renderHandebolClassif();
+    showToast(`Placar atualizado localmente. Configure o Apps Script para salvar na planilha.`, 'warning');
+    return;
+  }
+
+  try {
+    await fetch(HAND_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo: 'placar_handebol', range, valores: [[ga, '', gb]] }),
+    });
+    renderHandebolClassif();
+    showToast(`Placar salvo: ${j.equipeA} ${ga} × ${gb} ${j.equipeB}`);
+  } catch(e) {
+    showToast('Erro ao salvar placar.', 'error');
+  }
+}
+
+function renderHandebolClassif() {
+  ['A','B'].forEach(g => {
+    const jogosG = state.jogos.handebol.filter(j => j.grupo === g);
+    const times = {};
+    jogosG.forEach(j => {
+      [j.equipeA, j.equipeB].forEach(t => {
+        if (t && !times[t]) times[t] = { nome:t, j:0, v:0, e:0, d:0, gp:0, gc:0, sg:0, pts:0 };
+      });
+    });
+    jogosG.forEach(j => {
+      if (!j.equipeA || !j.equipeB) return;
+      const ga = parseInt(j.golsA) || 0;
+      const gb = parseInt(j.golsB) || 0;
+      if (ga === 0 && gb === 0 && j.golsA === '' && j.golsB === '') return; // sem placar
+      const tA = times[j.equipeA], tB = times[j.equipeB];
+      if (!tA || !tB) return;
+      tA.j++; tB.j++;
+      tA.gp += ga; tA.gc += gb;
+      tB.gp += gb; tB.gc += ga;
+      if (ga > gb)      { tA.pts += 3; tA.v++; tB.d++; }
+      else if (ga < gb) { tB.pts += 3; tB.v++; tA.d++; }
+      else              { tA.pts += 1; tA.e++; tB.pts += 1; tB.e++; }
+    });
+    Object.values(times).forEach(t => t.sg = t.gp - t.gc);
+    const sorted = Object.values(times).sort((a,b) =>
+      b.pts - a.pts || b.v - a.v || b.sg - a.sg || b.gp - a.gp
+    );
+    const medals = ['🥇','🥈','🥉'];
+    const tbody = document.getElementById('hand-classif-' + g);
+    if (!tbody) return;
+    tbody.innerHTML = sorted.length
+      ? sorted.map((t, i) => `<tr>
+          <td>${medals[i] || (i+1)+'º'}</td>
+          <td style="text-align:left;font-weight:700">${t.nome}</td>
+          <td>${t.j}</td><td style="color:#2E7D32;font-weight:700">${t.v}</td>
+          <td>${t.e}</td><td style="color:var(--red)">${t.d}</td>
+          <td>${t.gp}</td><td>${t.gc}</td>
+          <td>${t.sg > 0 ? '+' : ''}${t.sg}</td>
+          <td style="font-weight:800;color:#1B5E20">${t.pts}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="10" style="color:var(--dark-grey);padding:16px">Nenhum placar registrado</td></tr>';
+  });
 }
 
 // ════════════════════════════════════════════════════════
