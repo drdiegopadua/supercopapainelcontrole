@@ -1021,7 +1021,7 @@ const QUIZ_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzg9nL9j0cqHr9P
 const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/enviar";
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
-const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfYYtefnwWm6_iwAO-nIwQNZoCiBjX4qhsyhC5WHTyjvtaJ-I14Lm6V8th2xBV95Tj/exec";
+const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 
 // ════════════════════════════════════════════════════════
@@ -1403,19 +1403,8 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const url = ATLETA_SCRIPT_URL + '?acao=listar';
-    console.log('Buscando atletas em:', url);
-    const res = await fetch(url, { method: 'GET' });
-    const data = await res.json();
-    console.log('Resposta do servidor:', data);
+    const rows = await sheetRead(APP_SHEET_ID, "'Atleta'!A2:F200");
     state.destaques = [];
-    let rows = [];
-    if (data.ok && data.values && Array.isArray(data.values)) {
-      rows = data.values;
-    } else if (data.ok && Array.isArray(data.dados)) {
-      rows = data.dados;
-    }
-    console.log('Linhas processadas:', rows.length);
     if (!rows || rows.length === 0) {
       renderDestaques();
       updateStats();
@@ -1425,7 +1414,8 @@ async function loadAtletasFromSheet(manual=false) {
     }
     rows.forEach((row, i) => {
       const modalidadeKey = (row[0] || '').trim().toLowerCase();
-      const jogoLabel = (row[1] || '').trim();
+      const jogoId = (row[1] || '').toString().trim();
+      const jogoLabel = 'Jogo ' + jogoId;
       const nome = (row[2] || '').trim();
       const equipe = (row[3] || '').trim();
       const obs = (row[4] || '').trim();
@@ -2024,8 +2014,9 @@ async function salvarAtletaDestaque(sport) {
     const jogoLabel = jogo ? (jogo.rodada + ' - ' + jogo.equipeA + ' vs ' + jogo.equipeB) : jogoId;
 
     const res = await sheetWriteAtleta({
+      aba: 'Atleta',
       acao: 'adicionar',
-      linha: [sport.toUpperCase(), jogoLabel, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
+      linha: [modalidadeKey, jogoId, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
 
     if (res && res.ok) {
@@ -2065,7 +2056,7 @@ async function salvarDestaque() {
   try {
     const res = await sheetWriteAtleta({
       acao: 'adicionar',
-      linha: [modalidadeKey, jogoLabel, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
+      linha: [modalidadeKey, jogoId, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
 
     if (res && res.ok) {
@@ -2362,7 +2353,7 @@ const QUIZ_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzg9nL9j0cqHr9P
 const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/enviar";
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
-const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfYYtefnwWm6_iwAO-nIwQNZoCiBjX4qhsyhC5WHTyjvtaJ-I14Lm6V8th2xBV95Tj/exec";
+const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 
 // ════════════════════════════════════════════════════════
@@ -2744,19 +2735,8 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const url = ATLETA_SCRIPT_URL + '?acao=listar';
-    console.log('Buscando atletas em:', url);
-    const res = await fetch(url, { method: 'GET' });
-    const data = await res.json();
-    console.log('Resposta do servidor:', data);
+    const rows = await sheetRead(APP_SHEET_ID, "'Atleta'!A2:F200");
     state.destaques = [];
-    let rows = [];
-    if (data.ok && data.values && Array.isArray(data.values)) {
-      rows = data.values;
-    } else if (data.ok && Array.isArray(data.dados)) {
-      rows = data.dados;
-    }
-    console.log('Linhas processadas:', rows.length);
     if (!rows || rows.length === 0) {
       renderDestaques();
       updateStats();
@@ -2766,7 +2746,8 @@ async function loadAtletasFromSheet(manual=false) {
     }
     rows.forEach((row, i) => {
       const modalidadeKey = (row[0] || '').trim().toLowerCase();
-      const jogoLabel = (row[1] || '').trim();
+      const jogoId = (row[1] || '').toString().trim();
+      const jogoLabel = 'Jogo ' + jogoId;
       const nome = (row[2] || '').trim();
       const equipe = (row[3] || '').trim();
       const obs = (row[4] || '').trim();
@@ -3376,8 +3357,9 @@ async function salvarAtletaDestaque(sport) {
     const jogoLabel = jogo ? (jogo.rodada + ' - ' + jogo.equipeA + ' vs ' + jogo.equipeB) : jogoId;
 
     const res = await sheetWriteAtleta({
+      aba: 'Atleta',
       acao: 'adicionar',
-      linha: [sport.toUpperCase(), jogoLabel, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
+      linha: [modalidadeKey, jogoId, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
 
     if (res && res.ok) {
@@ -3417,7 +3399,7 @@ async function salvarDestaque() {
   try {
     const res = await sheetWriteAtleta({
       acao: 'adicionar',
-      linha: [modalidadeKey, jogoLabel, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
+      linha: [modalidadeKey, jogoId, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
     });
 
     if (res && res.ok) {
