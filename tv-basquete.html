@@ -647,7 +647,7 @@ function loadData(){
     fetch(apiUrl("'Fase de Grupos'!A1:S15")).then(function(r){return r.json();}),
     fetch(apiUrl("'Mata-Mata'!A1:O22")).then(function(r){return r.json();}),
     fetch(apiUrl("'Config'!A1:B50")).then(function(r){return r.json();}).catch(function(){return {values:[]};}),
-    fetch(apiUrl("'Bolao'!A1:B200")).then(function(r){return r.json();}).catch(function(){return {values:[]};})
+    fetch(apiUrl("'Bolao'!A1:G200")).then(function(r){return r.json();}).catch(function(){return {values:[]};})
   ]).then(function(res){
     var gRows=res[0].values||[];
     var mRows=res[1].values||[];
@@ -659,13 +659,18 @@ function loadData(){
       if(row[0]&&row[1]) appData.config[row[0].toString().trim()]=row[1].toString().trim();
     });
 
-    // Parse Bolao
+    // Parse Bolao — colunas: Nome, Time, Esporte, Data, Resultado, Acerto, % Acerto Geral
     var bolaoRows=res[3].values||[];
     appData.bolao=[];
     bolaoRows.slice(1).forEach(function(row){
       var nome=(row[0]||'').toString().trim();
       var time=(row[1]||'').toString().trim();
-      if(nome&&time) appData.bolao.push({nome:nome,time:time});
+      if(nome&&time) appData.bolao.push({
+        nome:nome, time:time,
+        esporte:(row[2]||'').toString().trim(),
+        resultado:(row[4]||'').toString().trim(),
+        acerto:(row[5]||'').toString().trim()
+      });
     });
 
     // Parse fotos IDs
@@ -875,8 +880,17 @@ function renderAll(){
 
 // ── PÓDIO ──────────────────────────────────────────
 function renderPodio(){
-  var n1=appData.config['PODIO_1']||'A DEFINIR';
-  var n2=appData.config['PODIO_2']||'A DEFINIR';
+  var n1=appData.config['PODIO_1']||'';
+  var n2=appData.config['PODIO_2']||'';
+  // Fallback: deriva do mata-mata se Config não tiver pódio definido
+  if(!n1||!n2){
+    var fin=appData.matamata[2]||{};
+    if(fin.ptsA!==null&&fin.ptsB!==null&&fin.equipeA&&fin.equipeB){
+      if(fin.ptsA>fin.ptsB){ n1=fin.equipeA; n2=fin.equipeB; }
+      else if(fin.ptsB>fin.ptsA){ n1=fin.equipeB; n2=fin.equipeA; }
+    }
+  }
+  n1=n1||'A DEFINIR'; n2=n2||'A DEFINIR';
   document.getElementById('podioTeam1').textContent=n1;
   document.getElementById('podioTeam2').textContent=n2;
   // CSS confetti
@@ -957,47 +971,60 @@ function renderFotos(){
 // ── BOLÃO ──────────────────────────────────────────
 function renderBolao(){
   var el=document.getElementById('bolaoPanel');
-  var jA=appData.config['JOGO_DOMINGO_A']||'';
-  var jB=appData.config['JOGO_DOMINGO_B']||'';
-  var pct=appData.config['BOLAO_PCT_ACERTO']||'';
+  var pctGeral=appData.config['BOLAO_PCT_ACERTO']||'';
+  var totalConf=appData.config['BOLAO_TOTAL']||'';
+  var acertosConf=appData.config['BOLAO_ACERTOS']||'';
+  var atualizado=appData.config['BOLAO_ATUALIZADO']||'';
+
   if(!appData.bolao.length){
-    var jogInfo=jA&&jB?'<div style="font-size:16px;font-weight:700;color:var(--gold);margin-top:12px;">'+jA+' × '+jB+'</div>':'';
     el.innerHTML='<div style="text-align:center;padding:24px 16px;">'+
       '<div style="font-size:40px;margin-bottom:8px;">🎯</div>'+
-      '<div style="font-size:15px;font-weight:700;color:var(--text);">BOLÃO ABERTO</div>'+
-      '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo painel!</div>'+
-      jogInfo+
+      '<div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div>'+
     '</div>';
     return;
   }
-  // Count by team
-  var counts={};
-  appData.bolao.forEach(function(b){
-    counts[b.time]=(counts[b.time]||0)+1;
+
+  // Ordenação: SIM → PARCIAL → AGUARDANDO → NÃO → resto
+  var ordem={'SIM':0,'PARCIAL':1,'AGUARDANDO':2,'NÃO':3};
+  var sorted=appData.bolao.slice().sort(function(a,b){
+    var oa=ordem[a.acerto]!==undefined?ordem[a.acerto]:4;
+    var ob=ordem[b.acerto]!==undefined?ordem[b.acerto]:4;
+    return oa-ob;
   });
-  var total=appData.bolao.length;
-  var teams=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
-  var html='<div class="bolao-bars">';
-  teams.forEach(function(team,i){
-    var n=counts[team];
-    var pct=Math.round(n/total*100);
-    var fillClass=i===0?'gold':'maroon';
-    var delay=(i*0.12).toFixed(2);
-    html+='<div class="bolao-bar-row" style="animation-delay:'+delay+'s">'+
-      '<div class="bolao-bar-label">'+team+'</div>'+
-      '<div class="bolao-bar-track">'+
-        '<div class="bolao-bar-fill '+fillClass+'" style="--bar-target:'+pct+'%;animation-delay:'+delay+'s"></div>'+
+
+  function chip(acerto){
+    if(acerto==='SIM')    return '<span style="background:#15803d;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:1px;">✓ ACERTO</span>';
+    if(acerto==='PARCIAL')return '<span style="background:#b45309;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:1px;">~ PARCIAL</span>';
+    if(acerto==='NÃO')    return '<span style="background:#991b1b;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:1px;">✗ ERRO</span>';
+    return '<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:1px;">⏳</span>';
+  }
+
+  var visible=sorted.slice(0,12); // mostra até 12 na TV
+  var html='<div style="display:flex;flex-direction:column;gap:5px;flex:1;overflow:hidden;">';
+  visible.forEach(function(b,i){
+    var delay=(i*0.07).toFixed(2);
+    html+='<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:9px;padding:7px 10px;animation:slideRowIn .4s '+delay+'s ease both;">'+
+      '<div style="min-width:22px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:rgba(240,165,0,.5);">'+(i+1)+'</div>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+b.nome+'</div>'+
+        '<div style="font-size:10px;color:var(--muted);margin-top:1px;">'+b.time+'</div>'+
       '</div>'+
-      '<div class="bolao-bar-meta">'+n+' ('+pct+'%)</div>'+
+      chip(b.acerto)+
     '</div>';
   });
   html+='</div>';
-  // rodapé com total e % de acerto
-  var rodape='<div class="bolao-total">'+total+' participante'+(total!==1?'s':'')+' no bolão';
-  if(pct) rodape+=' &nbsp;·&nbsp; <span style="color:var(--gold)">'+pct+' de acerto</span>';
-  if(jA&&jB) rodape+='<div style="font-size:11px;color:var(--muted);margin-top:2px;">Jogo: '+jA+' × '+jB+'</div>';
-  rodape+='</div>';
-  html+=rodape;
+
+  // Resumo no rodapé
+  if(pctGeral||totalConf){
+    html+='<div style="display:flex;gap:6px;margin-top:6px;flex-shrink:0;">';
+    if(totalConf) html+='<div style="flex:1;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.2);border-radius:8px;padding:5px 8px;text-align:center;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--gold);">'+totalConf+'</div><div style="font-size:8px;color:var(--muted);letter-spacing:1px;">PARTICIPANTES</div></div>';
+    if(acertosConf) html+='<div style="flex:1;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.3);border-radius:8px;padding:5px 8px;text-align:center;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:#4ade80;">'+acertosConf+'</div><div style="font-size:8px;color:var(--muted);letter-spacing:1px;">ACERTOS</div></div>';
+    if(pctGeral) html+='<div style="flex:1;background:rgba(240,165,0,.12);border:1px solid rgba(240,165,0,.3);border-radius:8px;padding:5px 8px;text-align:center;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--gold2);">'+pctGeral+'</div><div style="font-size:8px;color:var(--muted);letter-spacing:1px;">DE ACERTO</div></div>';
+    html+='</div>';
+    if(atualizado) html+='<div style="text-align:center;font-size:8px;color:rgba(255,255,255,.25);margin-top:3px;">Atualizado '+atualizado+'</div>';
+  }
+
   el.innerHTML=html;
 }
 

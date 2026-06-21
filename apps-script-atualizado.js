@@ -324,6 +324,40 @@ function doPost(e) {
       return jsonResponse({ ok: true, mode: 'substituir_linha' });
     }
 
+    // ── votar_atleta ─────────────────────────────────
+    if (mode === 'votar_atleta') {
+      var nomeAtleta = (body.atleta || '').toString().trim();
+      var timeAtleta = (body.time || '').toString().trim();
+      var esporteAtleta = (body.esporte || '').toString().trim();
+      if (!nomeAtleta) return jsonResponse({ ok: false, erro: 'Nome do atleta obrigatório' });
+
+      var votos = ss.getSheetByName('Votos');
+      if (!votos) {
+        votos = ss.insertSheet('Votos');
+        votos.appendRow(['Atleta', 'Time', 'Esporte', 'Data']);
+      } else if (votos.getLastRow() === 0) {
+        votos.appendRow(['Atleta', 'Time', 'Esporte', 'Data']);
+      }
+      votos.appendRow([nomeAtleta, timeAtleta, esporteAtleta, new Date()]);
+      return jsonResponse({ ok: true, mode: 'votar_atleta' });
+    }
+
+    // ── ranking_atleta (GET-like via POST) ────────────
+    if (mode === 'ranking_atleta') {
+      var votosSheet = ss.getSheetByName('Votos');
+      if (!votosSheet || votosSheet.getLastRow() <= 1) return jsonResponse({ ok: true, ranking: [] });
+      var rows = votosSheet.getDataRange().getValues().slice(1);
+      var contagem = {};
+      rows.forEach(function(r) {
+        var key = (r[0] || '').toString().trim();
+        if (!key) return;
+        if (!contagem[key]) contagem[key] = { atleta: key, time: (r[1]||'').toString().trim(), esporte: (r[2]||'').toString().trim(), votos: 0 };
+        contagem[key].votos++;
+      });
+      var ranking = Object.values(contagem).sort(function(a,b){ return b.votos - a.votos; }).slice(0, 10);
+      return jsonResponse({ ok: true, ranking: ranking });
+    }
+
     return jsonResponse({ ok: false, erro: 'modo desconhecido: ' + mode });
 
   } catch(err) {
