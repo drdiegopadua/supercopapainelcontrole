@@ -508,11 +508,8 @@ setInterval(updateClock,1000); updateClock();
 
 // ── MODE ───────────────────────────────────────────
 function getMode(){
-  var p=new URLSearchParams(window.location.search);
-  var m=p.get('modo');
-  if(m==='matamata') return 'matamata';
-  if(m==='grupos')   return 'grupos';
-  return new Date().getDay()===0?'matamata':'grupos';
+  var m=new URLSearchParams(window.location.search).get('modo');
+  return m==='matamata' ? 'matamata' : 'grupos';
 }
 
 // ── SCENES ─────────────────────────────────────────
