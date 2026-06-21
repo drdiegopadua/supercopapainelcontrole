@@ -771,9 +771,53 @@
     <div class="page" id="page-tvconfig">
       <div class="page-header">
         <div>
-          <h1>🏀 TV Config — Basquete</h1>
+          <h1>📺 TV Config</h1>
           <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">TV Config</span></div>
         </div>
+      </div>
+
+      <!-- Controle dos Bolões -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:var(--gold)"><i class='bx bx-toggle-left'></i> Controle dos Bolões</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:16px;">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px;">🏀 Bolão Basquete</div>
+            <div id="statusBolaoBasquete" style="font-size:13px;margin-bottom:12px;font-weight:600;">—</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-gold" style="flex:1" onclick="setBolaoStatus('basquete','SIM')"><i class='bx bx-lock-open-alt'></i> Abrir</button>
+              <button class="btn" style="flex:1;background:#c53030;color:#fff;" onclick="setBolaoStatus('basquete','NAO')"><i class='bx bx-lock-alt'></i> Fechar</button>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:16px;">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px;">🏐 Bolão Vôlei</div>
+            <div id="statusBolaoVolei" style="font-size:13px;margin-bottom:12px;font-weight:600;">—</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-gold" style="flex:1" onclick="setBolaoStatus('volei','SIM')"><i class='bx bx-lock-open-alt'></i> Abrir</button>
+              <button class="btn" style="flex:1;background:#c53030;color:#fff;" onclick="setBolaoStatus('volei','NAO')"><i class='bx bx-lock-alt'></i> Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jogo do Domingo (Bolão por Jogo) -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:var(--gold)"><i class='bx bxs-calendar-event'></i> Jogo do Domingo — Bolão</div>
+        <p style="font-size:13px;color:var(--dark-grey);margin-bottom:12px;">Configure o confronto do domingo. Os apostadores escolhem qual time vai vencer esse jogo.</p>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:12px;">
+          <div class="form-group" style="margin:0">
+            <label>Time A (mandante)</label>
+            <input type="text" class="form-control" id="inputDomingoTimeA" placeholder="Ex: Rubro-Negro">
+          </div>
+          <div style="font-size:22px;font-weight:900;color:var(--gold);text-align:center;padding-top:18px;">VS</div>
+          <div class="form-group" style="margin:0">
+            <label>Time B (visitante)</label>
+            <input type="text" class="form-control" id="inputDomingoTimeB" placeholder="Ex: Azul e Branco">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn btn-gold" onclick="salvarJogoDomingo()"><i class='bx bx-save'></i> Salvar Jogo do Domingo</button>
+        </div>
+        <div id="jogoDomingoAtual" style="margin-top:12px;font-size:13px;color:var(--dark-grey);"></div>
       </div>
 
       <!-- Pódio -->
@@ -3099,6 +3143,7 @@ function registrarAposta() {
 
 async function loadBolaoTV() {
   try {
+    // Carrega apostas
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Bolao'!A1:B200")}?key=${GOOGLE_API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
@@ -3106,18 +3151,78 @@ async function loadBolaoTV() {
     const tbody = document.getElementById('bolaoTvTbody');
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="3" style="padding:16px;color:var(--dark-grey);text-align:center">Nenhuma aposta ainda.</td></tr>';
-      return;
+    } else {
+      tbody.innerHTML = rows.map((r, i) => `<tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:600">${r[0] || '—'}</td>
+        <td>${r[1] || '—'}</td>
+      </tr>`).join('');
+      populateBolaoTeamSelect(rows);
     }
-    tbody.innerHTML = rows.map((r, i) => `<tr>
-      <td>${i + 1}</td>
-      <td style="font-weight:600">${r[0] || '—'}</td>
-      <td>${r[1] || '—'}</td>
-    </tr>`).join('');
-    // Populate team select from loaded basquete teams
-    populateBolaoTeamSelect(rows);
+
+    // Carrega status dos bolões e jogo do domingo da aba Config
+    const cfgUrl = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Config'!A1:B30")}?key=${GOOGLE_API_KEY}`;
+    const cfgRes = await fetch(cfgUrl);
+    const cfgData = await cfgRes.json();
+    const cfg = {};
+    (cfgData.values || []).forEach(r => { if (r[0]) cfg[r[0].trim()] = (r[1] || '').trim(); });
+
+    // Atualiza status visual dos bolões
+    renderStatusBolao('Basquete', cfg['BOLAO_BASQUETE_ABERTO'] || 'NAO');
+    renderStatusBolao('Volei',    cfg['BOLAO_VOLEI_ABERTO']    || 'NAO');
+
+    // Mostra jogo do domingo configurado
+    const tA = cfg['JOGO_DOMINGO_A'] || '';
+    const tB = cfg['JOGO_DOMINGO_B'] || '';
+    if (tA) document.getElementById('inputDomingoTimeA').value = tA;
+    if (tB) document.getElementById('inputDomingoTimeB').value = tB;
+    const info = document.getElementById('jogoDomingoAtual');
+    if (info) info.textContent = tA && tB ? `Jogo atual: ${tA} × ${tB}` : 'Nenhum jogo configurado.';
+
+    // Popula o select do bolão com os times do jogo do domingo (se configurado)
+    if (tA && tB) {
+      const sel = document.getElementById('selectBolaoTime');
+      sel.innerHTML = `<option value="">— Selecione o time —</option>
+        <option value="${tA}">${tA}</option>
+        <option value="${tB}">${tB}</option>`;
+    } else {
+      populateBolaoTeamSelect(rows);
+    }
   } catch(e) {
     console.warn('Erro bolao TV:', e);
   }
+}
+
+function renderStatusBolao(esporte, valor) {
+  const el = document.getElementById('statusBolao' + esporte);
+  if (!el) return;
+  if (valor === 'SIM') {
+    el.innerHTML = '<span style="color:#48bb78">🟢 ABERTO — apostas liberadas</span>';
+  } else {
+    el.innerHTML = '<span style="color:#fc8181">🔴 FECHADO — apostas bloqueadas</span>';
+  }
+}
+
+async function setBolaoStatus(esporte, status) {
+  const key = 'BOLAO_' + esporte.toUpperCase() + '_ABERTO';
+  await salvarConfig({ [key]: status });
+  renderStatusBolao(esporte === 'basquete' ? 'Basquete' : 'Volei', status);
+  showToast(`Bolão ${esporte} ${status === 'SIM' ? 'ABERTO' : 'FECHADO'}!`);
+}
+
+async function salvarJogoDomingo() {
+  const tA = document.getElementById('inputDomingoTimeA').value.trim();
+  const tB = document.getElementById('inputDomingoTimeB').value.trim();
+  if (!tA || !tB) { showToast('Preencha os dois times.', 'error'); return; }
+  await salvarConfig({ JOGO_DOMINGO_A: tA, JOGO_DOMINGO_B: tB });
+  const info = document.getElementById('jogoDomingoAtual');
+  if (info) info.textContent = `Jogo atual: ${tA} × ${tB}`;
+  // Atualiza o select do bolão com os times do jogo
+  const sel = document.getElementById('selectBolaoTime');
+  sel.innerHTML = `<option value="">— Selecione o time —</option>
+    <option value="${tA}">${tA}</option>
+    <option value="${tB}">${tB}</option>`;
+  showToast(`Jogo do domingo salvo: ${tA} × ${tB}`);
 }
 
 function populateBolaoTeamSelect(rows) {

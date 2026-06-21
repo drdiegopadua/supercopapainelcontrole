@@ -253,18 +253,33 @@ function doPost(e) {
 
     // ── adicionar_bolao ─────────────────────────────────
     if (mode === 'adicionar_bolao') {
+      // Verifica se o bolão do esporte está aberto
+      var esporte = (body.esporte || 'basquete').toUpperCase();
+      var configKey = 'BOLAO_' + esporte + '_ABERTO';
+      var cfgSheet = ss.getSheetByName('Config');
+      var bolaoAberto = false;
+      if (cfgSheet && cfgSheet.getLastRow() > 0) {
+        var cfgVals = cfgSheet.getDataRange().getValues();
+        for (var ci = 0; ci < cfgVals.length; ci++) {
+          if (cfgVals[ci][0] && cfgVals[ci][0].toString().trim() === configKey) {
+            bolaoAberto = cfgVals[ci][1].toString().trim() === 'SIM';
+            break;
+          }
+        }
+      }
+      if (!bolaoAberto) {
+        return jsonResponse({ ok: false, erro: 'Bolão ' + esporte + ' está fechado no momento.' });
+      }
+
       var bolao = ss.getSheetByName('Bolao');
       if (!bolao) {
         bolao = ss.insertSheet('Bolao');
-        bolao.appendRow(['Nome', 'Time', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
+        bolao.appendRow(['Nome', 'Time', 'Esporte', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
       } else if (bolao.getLastRow() === 0) {
-        bolao.appendRow(['Nome', 'Time', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
+        bolao.appendRow(['Nome', 'Time', 'Esporte', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
       }
-      bolao.appendRow([body.nome || '', body.time || '', new Date(), '', '', '']);
-
-      // Roda verificação imediata para atualizar o novo palpite
+      bolao.appendRow([body.nome || '', body.time || '', esporte, new Date(), '', '', '']);
       verificarBolao();
-
       return jsonResponse({ ok: true, mode: 'adicionar_bolao' });
     }
 
