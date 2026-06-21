@@ -1,18 +1,18 @@
-// ════════════════════════════════════════════════════════
-// APPS SCRIPT — BASQUETE (SUPERCOPA)
+﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// APPS SCRIPT â€” BASQUETE (SUPERCOPA)
 // Planilha ID: 1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0
 //
-// SETUP (faça UMA VEZ após colar o código):
-//   1. Cole este código inteiro substituindo o anterior
+// SETUP (faÃ§a UMA VEZ apÃ³s colar o cÃ³digo):
+//   1. Cole este cÃ³digo inteiro substituindo o anterior
 //   2. Salve (Ctrl+S)
-//   3. No menu: Executar → configurarTrigger
-//   4. Autorize as permissões quando solicitado
-//   Isso cria o trigger automático a cada 30 min para o bolão.
-// ════════════════════════════════════════════════════════
+//   3. No menu: Executar â†’ configurarTrigger
+//   4. Autorize as permissÃµes quando solicitado
+//   Isso cria o trigger automÃ¡tico a cada 30 min para o bolÃ£o.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 var SHEET_ID = '1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0';
 
-// ── TRIGGER SETUP (execute uma única vez) ───────────────
+// â”€â”€ TRIGGER SETUP (execute uma Ãºnica vez) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function configurarTrigger() {
   // Remove triggers antigos para evitar duplicatas
   ScriptApp.getProjectTriggers().forEach(function(t) {
@@ -28,19 +28,19 @@ function configurarTrigger() {
   Logger.log('Trigger criado: verificarBolao a cada 30 minutos');
 }
 
-// ══════════════════════════════════════════════════════════
-// VERIFICAÇÃO AUTOMÁTICA DO BOLÃO (roda a cada 30 min)
-// Lê os resultados reais dos jogos, compara com os palpites
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// VERIFICAÃ‡ÃƒO AUTOMÃTICA DO BOLÃƒO (roda a cada 30 min)
+// LÃª os resultados reais dos jogos, compara com os palpites
 // e atualiza a aba Bolao com acertos/erros e % geral.
-// ══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function verificarBolao() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
 
-  // ── 1. Ler palpites do bolão ─────────────────────────
+  // â”€â”€ 1. Ler palpites do bolÃ£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var bolaoSheet = ss.getSheetByName('Bolao');
   if (!bolaoSheet || bolaoSheet.getLastRow() <= 1) return; // sem dados
 
-  // Garante cabeçalhos com colunas extras
+  // Garante cabeÃ§alhos com colunas extras
   var header = bolaoSheet.getRange(1, 1, 1, 6).getValues()[0];
   if (!header[3] || header[3] === '') {
     bolaoSheet.getRange(1, 4).setValue('Resultado');
@@ -49,19 +49,19 @@ function verificarBolao() {
   }
 
   var lastRow = bolaoSheet.getLastRow();
-  // Lê linhas de dados (a partir da linha 2)
+  // LÃª linhas de dados (a partir da linha 2)
   var bets = bolaoSheet.getRange(2, 1, lastRow - 1, 3).getValues();
   // bets[i] = [Nome, Time (palpite), Data]
 
-  // ── 2. Descobrir o campeão atual (Mata-Mata) ─────────
+  // â”€â”€ 2. Descobrir o campeÃ£o atual (Mata-Mata) â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var campeao = getCampeaoAtual(ss);
 
-  // ── 3. Ler resultados da fase de grupos ─────────────
-  // Para pontuação parcial: verificar se o time do palpite
-  // ganhou jogos na fase de grupos (1 acerto por vitória)
+  // â”€â”€ 3. Ler resultados da fase de grupos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Para pontuaÃ§Ã£o parcial: verificar se o time do palpite
+  // ganhou jogos na fase de grupos (1 acerto por vitÃ³ria)
   var resultadosGrupos = getResultadosGrupos(ss);
 
-  // ── 4. Calcular acertos por palpite ─────────────────
+  // â”€â”€ 4. Calcular acertos por palpite â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var totalAcertos = 0;
   var totalValidos = 0;
   var resultados = []; // [resultado_texto, acerto_sim_nao, %]
@@ -76,20 +76,20 @@ function verificarBolao() {
 
     totalValidos++;
 
-    // Verificar se há campeão definido
+    // Verificar se hÃ¡ campeÃ£o definido
     if (campeao) {
       var acertouCampeao = normalizar(timePalpite) === normalizar(campeao);
       resultados.push([
-        acertouCampeao ? 'Campeão: ' + campeao : 'Eliminado',
-        acertouCampeao ? 'SIM' : 'NÃO',
-        ''  // % será calculado após
+        acertouCampeao ? 'CampeÃ£o: ' + campeao : 'Eliminado',
+        acertouCampeao ? 'SIM' : 'NÃƒO',
+        ''  // % serÃ¡ calculado apÃ³s
       ]);
       if (acertouCampeao) totalAcertos++;
     } else {
-      // Fase em andamento: verificar vitórias do time escolhido
+      // Fase em andamento: verificar vitÃ³rias do time escolhido
       var vitorias = contarVitorias(timePalpite, resultadosGrupos);
       var totalJogos = resultadosGrupos.length;
-      var status = 'Em andamento (' + vitorias + ' vitória' + (vitorias !== 1 ? 's' : '') + ')';
+      var status = 'Em andamento (' + vitorias + ' vitÃ³ria' + (vitorias !== 1 ? 's' : '') + ')';
       // "Acerto parcial" = time ganhou pelo menos 1 jogo
       var acertoParcial = vitorias > 0;
       resultados.push([status, acertoParcial ? 'PARCIAL' : 'AGUARDANDO', '']);
@@ -97,17 +97,17 @@ function verificarBolao() {
     }
   });
 
-  // ── 5. Calcular % geral ──────────────────────────────
+  // â”€â”€ 5. Calcular % geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var pctGeral = totalValidos > 0
     ? Math.round((totalAcertos / totalValidos) * 100)
     : 0;
 
-  // ── 6. Gravar resultados na aba Bolao ────────────────
+  // â”€â”€ 6. Gravar resultados na aba Bolao â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   resultados.forEach(function(r, i) {
-    var row = i + 2; // linha na planilha (dados começam na linha 2)
+    var row = i + 2; // linha na planilha (dados comeÃ§am na linha 2)
     bolaoSheet.getRange(row, 4).setValue(r[0]); // Resultado
     bolaoSheet.getRange(row, 5).setValue(r[1]); // Acerto
-    // % só na primeira linha de dados para referência
+    // % sÃ³ na primeira linha de dados para referÃªncia
     if (i === 0) {
       bolaoSheet.getRange(row, 6).setValue(pctGeral + '%');
     } else {
@@ -115,10 +115,10 @@ function verificarBolao() {
     }
   });
 
-  // % geral no cabeçalho da coluna F
+  // % geral no cabeÃ§alho da coluna F
   bolaoSheet.getRange(1, 6).setValue('% Acerto: ' + pctGeral + '%');
 
-  // ── 7. Salvar % na aba Config (para a TV exibir) ─────
+  // â”€â”€ 7. Salvar % na aba Config (para a TV exibir) â”€â”€â”€â”€â”€
   salvarConfigInterno(ss, {
     'BOLAO_PCT_ACERTO': pctGeral + '%',
     'BOLAO_ACERTOS': totalAcertos.toString(),
@@ -127,16 +127,16 @@ function verificarBolao() {
     'BOLAO_ATUALIZADO': Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm')
   });
 
-  Logger.log('Bolão verificado: ' + totalAcertos + '/' + totalValidos + ' (' + pctGeral + '%)');
+  Logger.log('BolÃ£o verificado: ' + totalAcertos + '/' + totalValidos + ' (' + pctGeral + '%)');
 }
 
-// ── Retorna o campeão do mata-mata (se houver) ──────────
+// â”€â”€ Retorna o campeÃ£o do mata-mata (se houver) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getCampeaoAtual(ss) {
   var sheet = ss.getSheetByName('Mata-Mata');
   if (!sheet || sheet.getLastRow() < 2) return null;
 
   var data = sheet.getDataRange().getValues();
-  // Percorre todas as linhas procurando a final (última linha com resultado)
+  // Percorre todas as linhas procurando a final (Ãºltima linha com resultado)
   // Estrutura esperada: Time A | Placar A | Placar B | Time B | (opcional: Fase)
   var campeao = null;
   data.forEach(function(row) {
@@ -146,13 +146,13 @@ function getCampeaoAtual(ss) {
     var timeB = (row[3] || '').toString().trim();
     var fase  = (row[4] || '').toString().toLowerCase();
 
-    // Final identificada por "final" na coluna fase, ou última linha com placar
+    // Final identificada por "final" na coluna fase, ou Ãºltima linha com placar
     if ((fase.includes('final') || fase === 'f') && timeA && timeB && (placA > 0 || placB > 0)) {
       campeao = placA > placB ? timeA : (placB > placA ? timeB : null);
     }
   });
 
-  // Se não achou via coluna fase, pega a última linha com dois times e placar diferente
+  // Se nÃ£o achou via coluna fase, pega a Ãºltima linha com dois times e placar diferente
   if (!campeao) {
     for (var i = data.length - 1; i >= 1; i--) {
       var r = data[i];
@@ -170,7 +170,7 @@ function getCampeaoAtual(ss) {
   return campeao;
 }
 
-// ── Lê resultados da fase de grupos ─────────────────────
+// â”€â”€ LÃª resultados da fase de grupos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Retorna array de { timeA, placA, placB, timeB, vencedor }
 function getResultadosGrupos(ss) {
   var sheet = ss.getSheetByName('Fase de Grupos');
@@ -178,7 +178,7 @@ function getResultadosGrupos(ss) {
 
   var data = sheet.getDataRange().getValues();
   var jogos = [];
-  data.slice(1).forEach(function(row) { // pula cabeçalho
+  data.slice(1).forEach(function(row) { // pula cabeÃ§alho
     var timeA = (row[0] || '').toString().trim();
     var placA = parseInt(row[1]);
     var placB = parseInt(row[2]);
@@ -196,7 +196,7 @@ function getResultadosGrupos(ss) {
   return jogos;
 }
 
-// ── Conta quantos jogos um time venceu ──────────────────
+// â”€â”€ Conta quantos jogos um time venceu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function contarVitorias(time, jogos) {
   var n = normalizar(time);
   return jogos.filter(function(j) {
@@ -204,15 +204,15 @@ function contarVitorias(time, jogos) {
   }).length;
 }
 
-// ── Normaliza string para comparação (sem acento/maiúsculas) ─
+// â”€â”€ Normaliza string para comparaÃ§Ã£o (sem acento/maiÃºsculas) â”€
 function normalizar(str) {
   return str.toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[Ì€-Í¯]/g, '')
     .replace(/[^a-z0-9 ]/g, '')
     .trim();
 }
 
-// ── Grava chave-valor na aba Config (uso interno) ────────
+// â”€â”€ Grava chave-valor na aba Config (uso interno) â”€â”€â”€â”€â”€â”€â”€â”€
 function salvarConfigInterno(ss, kvMap) {
   var cfg = ss.getSheetByName('Config');
   if (!cfg) cfg = ss.insertSheet('Config');
@@ -236,24 +236,24 @@ function salvarConfigInterno(ss, kvMap) {
   });
 }
 
-// ══════════════════════════════════════════════════════════
-// doPost — recebe requisições do painel de controle
-// ══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// doPost â€” recebe requisiÃ§Ãµes do painel de controle
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
     var mode = body.mode || body.tipo || '';
     var ss   = SpreadsheetApp.openById(SHEET_ID);
 
-    // ── salvar_config ───────────────────────────────────
+    // â”€â”€ salvar_config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (mode === 'salvar_config') {
       salvarConfigInterno(ss, body.data || {});
       return jsonResponse({ ok: true, mode: 'salvar_config' });
     }
 
-    // ── adicionar_bolao ─────────────────────────────────
+    // â”€â”€ adicionar_bolao â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (mode === 'adicionar_bolao') {
-      // Verifica se o bolão do esporte está aberto
+      // Verifica se o bolÃ£o do esporte estÃ¡ aberto
       var esporte = (body.esporte || 'basquete').toUpperCase();
       var configKey = 'BOLAO_' + esporte + '_ABERTO';
       var cfgSheet = ss.getSheetByName('Config');
@@ -268,7 +268,7 @@ function doPost(e) {
         }
       }
       if (!bolaoAberto) {
-        return jsonResponse({ ok: false, erro: 'Bolão ' + esporte + ' está fechado no momento.' });
+        return jsonResponse({ ok: false, erro: 'BolÃ£o ' + esporte + ' estÃ¡ fechado no momento.' });
       }
 
       var bolao = ss.getSheetByName('Bolao');
@@ -283,39 +283,39 @@ function doPost(e) {
       return jsonResponse({ ok: true, mode: 'adicionar_bolao' });
     }
 
-    // ── atualizarPlacarBasquete (modo existente) ─────────
+    // â”€â”€ atualizarPlacarBasquete (modo existente) â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (mode === 'placar_basquete' || mode === 'atualizar_placar') {
       var sheet = ss.getSheetByName('Fase de Grupos');
-      if (!sheet) return jsonResponse({ ok: false, erro: 'Aba Fase de Grupos não encontrada' });
+      if (!sheet) return jsonResponse({ ok: false, erro: 'Aba Fase de Grupos nÃ£o encontrada' });
 
       var linha = parseInt(body.linha);
-      if (isNaN(linha) || linha < 2) return jsonResponse({ ok: false, erro: 'Linha inválida' });
+      if (isNaN(linha) || linha < 2) return jsonResponse({ ok: false, erro: 'Linha invÃ¡lida' });
 
       if (body.timeA) sheet.getRange(linha, 1).setValue(body.timeA);
       if (body.placA !== undefined) sheet.getRange(linha, 2).setValue(body.placA);
       if (body.placB !== undefined) sheet.getRange(linha, 3).setValue(body.placB);
       if (body.timeB) sheet.getRange(linha, 4).setValue(body.timeB);
 
-      // Após atualizar placar, roda verificação do bolão imediatamente
+      // ApÃ³s atualizar placar, roda verificaÃ§Ã£o do bolÃ£o imediatamente
       verificarBolao();
 
       return jsonResponse({ ok: true, mode: 'placar_basquete', linha: linha });
     }
 
-    // ── adicionar linha (modo existente) ────────────────
+    // â”€â”€ adicionar linha (modo existente) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (mode === 'adicionar_linha') {
       var sheetName = body.aba || 'Fase de Grupos';
       var s = ss.getSheetByName(sheetName);
-      if (!s) return jsonResponse({ ok: false, erro: 'Aba não encontrada: ' + sheetName });
+      if (!s) return jsonResponse({ ok: false, erro: 'Aba nÃ£o encontrada: ' + sheetName });
       s.appendRow(body.dados || []);
       return jsonResponse({ ok: true, mode: 'adicionar_linha' });
     }
 
-    // ── substituir linha (modo existente) ───────────────
+    // â”€â”€ substituir linha (modo existente) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (mode === 'substituir_linha') {
       var sheetName2 = body.aba || 'Fase de Grupos';
       var s2 = ss.getSheetByName(sheetName2);
-      if (!s2) return jsonResponse({ ok: false, erro: 'Aba não encontrada: ' + sheetName2 });
+      if (!s2) return jsonResponse({ ok: false, erro: 'Aba nÃ£o encontrada: ' + sheetName2 });
       var ln = parseInt(body.linha);
       var dados = body.dados || [];
       if (!isNaN(ln) && ln >= 1 && dados.length > 0) {
@@ -324,34 +324,33 @@ function doPost(e) {
       return jsonResponse({ ok: true, mode: 'substituir_linha' });
     }
 
-    // ── votar_atleta ─────────────────────────────────
+    // â”€â”€ votar_atleta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (mode === 'votar_atleta') {
       var nomeAtleta = (body.atleta || '').toString().trim();
       var timeAtleta = (body.time || '').toString().trim();
-      var esporteAtleta = (body.esporte || '').toString().trim();
-      if (!nomeAtleta) return jsonResponse({ ok: false, erro: 'Nome do atleta obrigatório' });
+      if (!nomeAtleta) return jsonResponse({ ok: false, erro: 'Nome do atleta obrigatorio' });
 
-      var votos = ss.getSheetByName('Votos');
-      if (!votos) {
-        votos = ss.insertSheet('Votos');
-        votos.appendRow(['Atleta', 'Time', 'Esporte', 'Data']);
-      } else if (votos.getLastRow() === 0) {
-        votos.appendRow(['Atleta', 'Time', 'Esporte', 'Data']);
+      var ssVotos = SpreadsheetApp.openById('1VS2RWX50aGYquB_AE-X9HQCcTvHsOEJwPcFAJjvD99c');
+      var votos = ssVotos.getSheets()[0];
+      if (votos.getLastRow() === 0) {
+        votos.appendRow(['Data-Hora', 'Atleta', 'Time']);
       }
-      votos.appendRow([nomeAtleta, timeAtleta, esporteAtleta, new Date()]);
+      var agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+      votos.appendRow([agora, nomeAtleta, timeAtleta]);
       return jsonResponse({ ok: true, mode: 'votar_atleta' });
     }
 
-    // ── ranking_atleta (GET-like via POST) ────────────
-    if (mode === 'ranking_atleta') {
-      var votosSheet = ss.getSheetByName('Votos');
+    // -- ranking_atleta (GET-like via POST) ------------
+if (mode === 'ranking_atleta') {
+      var ssVotos2 = SpreadsheetApp.openById('1VS2RWX50aGYquB_AE-X9HQCcTvHsOEJwPcFAJjvD99c');
+      var votosSheet = ssVotos2.getSheets()[0];
       if (!votosSheet || votosSheet.getLastRow() <= 1) return jsonResponse({ ok: true, ranking: [] });
       var rows = votosSheet.getDataRange().getValues().slice(1);
       var contagem = {};
       rows.forEach(function(r) {
-        var key = (r[0] || '').toString().trim();
+        var key = (r[1] || '').toString().trim();
         if (!key) return;
-        if (!contagem[key]) contagem[key] = { atleta: key, time: (r[1]||'').toString().trim(), esporte: (r[2]||'').toString().trim(), votos: 0 };
+        if (!contagem[key]) contagem[key] = { atleta: key, time: (r[2]||'').toString().trim(), votos: 0 };
         contagem[key].votos++;
       });
       var ranking = Object.values(contagem).sort(function(a,b){ return b.votos - a.votos; }).slice(0, 10);
@@ -367,14 +366,14 @@ function doPost(e) {
   }
 }
 
-// ── doGet ────────────────────────────────────────────────
+// â”€â”€ doGet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function doGet(e) {
   return ContentService
     .createTextOutput('Supercopa Basquete Apps Script v6 OK')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-// ── Helper ───────────────────────────────────────────────
+// â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function jsonResponse(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
