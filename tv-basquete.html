@@ -337,16 +337,68 @@ html, body {
 .camp-name { font-size:17px; font-weight:900; background:linear-gradient(90deg,var(--gold),#fff,var(--gold)); background-size:200% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:shimmer 2s linear infinite; }
 
 /* ── FOOTER ── */
+/* ── TICKET PRÓXIMO JOGO ── */
+@keyframes ticketGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(240,165,0,0); }
+  50%      { box-shadow: 0 0 22px 4px rgba(240,165,0,.3); }
+}
+@keyframes ticketSlide {
+  from { transform:translateY(8px); opacity:.7; }
+  to   { transform:translateY(0);   opacity:1; }
+}
+
+.ticket-next {
+  background: linear-gradient(135deg, rgba(40,10,10,.9), rgba(107,21,21,.5));
+  border: 1px dashed rgba(240,165,0,.5);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 14px;
+  animation: ticketGlow 2.5s ease-in-out infinite, ticketSlide .5s ease;
+  position: relative; overflow: hidden; margin-bottom: 8px;
+}
+.ticket-next::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(240,165,0,.04),transparent);
+  animation:shine 3s ease-in-out infinite;
+}
+.ticket-badge {
+  background: rgba(240,165,0,.12);
+  border: 1px solid rgba(240,165,0,.3);
+  border-radius: 8px; padding: 6px 10px;
+  font-size: 9px; font-weight: 700; letter-spacing: 2px;
+  color: var(--gold); text-transform: uppercase;
+  flex-shrink: 0; text-align: center; line-height: 1.4;
+}
+.ticket-teams {
+  flex:1; display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.ticket-team { font-size:18px; font-weight:800; color:var(--txt); }
+.ticket-vs {
+  font-size:11px; font-weight:700; letter-spacing:4px; color:var(--muted);
+  background:rgba(255,255,255,.05); border-radius:20px; padding:3px 10px;
+}
+.ticket-hora {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px; font-weight:900; color:var(--gold); flex-shrink:0;
+  animation:scorePulse 3s ease-in-out infinite;
+}
+
+/* ── FOOTER ── */
 .tv-footer {
   flex-shrink:0;
   background:rgba(0,0,0,.4);
   border-top:1px solid rgba(240,165,0,.15);
   padding:7px 20px;
-  display:flex; align-items:center; justify-content:space-between;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
 }
 .tv-footer span { font-size:10px; color:var(--muted); }
 .progress-bar { width:100px; height:3px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:8px; }
 .progress-fill { height:100%; background:var(--gold); border-radius:2px; transition:width 1s linear; }
+
+.qr-wrap { display:flex; align-items:center; gap:7px; flex-shrink:0; }
+.qr-wrap img { width:42px; height:42px; border-radius:6px; border:2px solid rgba(240,165,0,.35); background:#fff; }
+.qr-label { font-size:9px; color:var(--muted); line-height:1.3; }
+.qr-label strong { display:block; color:var(--gold); font-size:10px; }
 
 /* ── SCENE DOTS ── */
 .scene-dots { display:flex; justify-content:center; gap:7px; padding:5px 0; flex-shrink:0; }
@@ -458,6 +510,10 @@ html, body {
     <span><span id="countLbl">30</span>s
       <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:100%"></div></div>
     </span>
+    <div class="qr-wrap">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&color=6B1515&bgcolor=F0A500&data=https://drdiegopadua.github.io/supercopa-app/" alt="QR App">
+      <div class="qr-label"><strong>Acompanhe pelo</strong>celular — escaneie!</div>
+    </div>
   </div>
 </div>
 
@@ -655,9 +711,21 @@ function renderLiveCard(){
 
 // ── TABELA JOGOS ────────────────────────────────────
 function renderTabela(){
-  var html=appData.grupos.map(function(j,i){
-    var ok=j.status==='done';
-    var vA=ok&&j.ptsA>j.ptsB, vB=ok&&j.ptsB>j.ptsA;
+  var nextIdx = appData.grupos.findIndex(function(j){ return j.status !== 'done'; });
+  var html = appData.grupos.map(function(j,i){
+    var ok = j.status === 'done';
+    var vA = ok && j.ptsA > j.ptsB, vB = ok && j.ptsB > j.ptsA;
+    if (i === nextIdx) {
+      return '<div class="ticket-next">'+
+        '<div class="ticket-badge">PRÓXIMO<br>JOGO</div>'+
+        '<div class="ticket-teams">'+
+          '<div class="ticket-team">'+j.equipeA+'</div>'+
+          '<div class="ticket-vs">VS</div>'+
+          '<div class="ticket-team">'+j.equipeB+'</div>'+
+        '</div>'+
+        '<div class="ticket-hora">'+j.horario+'</div>'+
+      '</div>';
+    }
     return '<div class="jogo-row '+(ok?'done':'wait')+'" style="animation-delay:'+(i*.07)+'s">'+
       '<div class="jogo-hora">'+j.horario+'</div>'+
       '<div class="jogo-grupo">GRP '+j.grupo+'</div>'+
