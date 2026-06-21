@@ -1506,11 +1506,12 @@ const state = {
 // ════════════════════════════════════════════════════════
 function navTo(page, el) {
   if (page === 'classificacao') loadClassificacao();
+  if (page === 'tvconfig') loadBolaoTV();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push'};
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
@@ -3138,14 +3139,6 @@ function populateBolaoTeamSelect(rows) {
   });
 }
 
-// Load bolão TV data when page is opened
-const _origNavTo = navTo;
-function navTo(page, el) {
-  if (page === 'tvconfig') {
-    loadBolaoTV();
-  }
-  return _origNavTo(page, el);
-}
 
 </script>
 </body>
