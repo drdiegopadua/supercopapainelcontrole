@@ -1930,33 +1930,55 @@ const HAND_API = (range) =>
 async function loadHandebolFromSheet(manual = false) {
   if (manual) showLoading(true);
   try {
-    const res  = await fetch(HAND_API("'Fase de Grupos'!A5:S7"));
-    const data = await res.json();
-    const rows = data.values || [];
+    const [grRes, mmRes] = await Promise.all([
+      fetch(HAND_API("'Fase de Grupos'!A5:S7")),
+      fetch(HAND_API("'Mata-Mata'!A4:M17")),
+    ]);
+    const grData = await grRes.json();
+    const mmData = await mmRes.json();
+    const rows   = grData.values || [];
+    const mmRows = mmData.values || [];
     state.jogos.handebol = [];
 
-    // Estrutura: cols A-I = Grupo A, cols K-S = Grupo B
-    // [JOGO, EQUIPE1, _, GOLS1, X, GOLS2, EQUIPE2, _, RESULTADO]
+    // ── Fase de Grupos ──
     const jogosConfig = [
-      { grupo:'A', numCol:0, e1:1, g1:3, g2:5, e2:6 },
-      { grupo:'B', numCol:10, e1:11, g1:13, g2:15, e2:16 },
+      { grupo:'A', e1:1, g1:3, g2:5, e2:6 },
+      { grupo:'B', e1:11, g1:13, g2:15, e2:16 },
     ];
-
     rows.forEach((row, ri) => {
-      jogosConfig.forEach(({ grupo, numCol, e1, g1, g2, e2 }) => {
-        const equipeA = row[e1] || '';
-        const equipeB = row[e2] || '';
+      jogosConfig.forEach(({ grupo, e1, g1, g2, e2 }) => {
+        const equipeA = row[e1] || '', equipeB = row[e2] || '';
         if (!equipeA && !equipeB) return;
-        const golsA = row[g1] || '';
-        const golsB = row[g2] || '';
         state.jogos.handebol.push({
           id: `hand_${grupo}_${ri}`,
-          grupo, jogo: ri + 1,
+          fase: 'grupo', grupo, jogo: ri + 1,
           equipeA, equipeB,
-          golsA, golsB,
-          rowIdx: ri + 5, // linha real na planilha (5,6,7)
-          grupo_offset: grupo,
+          golsA: row[g1] || '', golsB: row[g2] || '',
+          rowIdx: ri + 5,
         });
+      });
+    });
+
+    // ── Mata-Mata ──
+    // SF1: mmRows[0]=nomes(col1=B,col7=H), mmRows[1]=gols
+    // SF2: mmRows[5]=nomes, mmRows[6]=gols
+    // Final: mmRows[11]=nomes, mmRows[12]=gols
+    const mmConfig = [
+      { id:'hand_sf1', fase:'Semifinal 1', nameRow:0, golRow:1, sheetGolRow:5 },
+      { id:'hand_sf2', fase:'Semifinal 2', nameRow:5, golRow:6, sheetGolRow:10 },
+      { id:'hand_final', fase:'Final',     nameRow:11, golRow:12, sheetGolRow:16 },
+    ];
+    const getCell = (r, c) => (mmRows[r] && mmRows[r][c]) ? mmRows[r][c].toString().trim() : '';
+    mmConfig.forEach(({ id, fase, nameRow, golRow, sheetGolRow }) => {
+      const equipeA = getCell(nameRow, 1);
+      const equipeB = getCell(nameRow, 7);
+      state.jogos.handebol.push({
+        id, fase: 'matamata', faseName: fase,
+        equipeA: equipeA || fase + ' T1',
+        equipeB: equipeB || fase + ' T2',
+        golsA: getCell(golRow, 1),
+        golsB: getCell(golRow, 7),
+        sheetGolRow,
       });
     });
 
@@ -1971,16 +1993,14 @@ async function loadHandebolFromSheet(manual = false) {
   }
 }
 
-function renderHandebolJogos() {
-  const grid = document.getElementById('handebol-jogos-grid');
-  if (!state.jogos.handebol.length) {
-    grid.innerHTML = `<div class="empty-state"><i class='bx bx-handball'></i><p>Nenhum jogo encontrado na planilha.</p></div>`;
-    return;
-  }
-  grid.innerHTML = state.jogos.handebol.map(j => `
+function _handCard(j) {
+  const label = j.fase === 'matamata'
+    ? `🏆 ${j.faseName}`
+    : `Grupo ${j.grupo} · Jogo ${j.jogo}`;
+  return `
     <div class="jogo-card sport-handebol" id="hand-card-${j.id}">
       <div class="jogo-header">
-        <span>Grupo ${j.grupo} · Jogo ${j.jogo}</span>
+        <span>${label}</span>
         <span class="jogo-sport-badge">🤾 Handebol</span>
       </div>
       <div class="jogo-body">
@@ -1990,7 +2010,7 @@ function renderHandebolJogos() {
           <div class="equipe-name">${j.equipeB || '—'}</div>
         </div>
         <div class="placar-section">
-          <div class="placar-title">Placar Final — ${j.equipeA} | ${j.equipeB}</div>
+          <div class="placar-title">Placar — ${j.equipeA} × ${j.equipeB}</div>
           <div class="sets-grid" style="max-width:300px;margin:0 auto;">
             <div class="set-col">
               <div class="set-label">GOLS A</div>
@@ -2021,7 +2041,28 @@ function renderHandebolJogos() {
         <button class="btn btn-success" style="padding:5px 12px;font-size:12px;background:#2E7D32;border-color:#2E7D32"
           onclick="salvarPlacarHandebol('${j.id}')"><i class='bx bxs-cloud-upload'></i> Enviar Placar</button>
       </div>
-    </div>`).join('');
+    </div>`;
+}
+
+function renderHandebolJogos() {
+  const grid = document.getElementById('handebol-jogos-grid');
+  if (!state.jogos.handebol.length) {
+    grid.innerHTML = `<div class="empty-state"><i class='bx bxs-hand-right'></i><p>Nenhum jogo encontrado na planilha.</p></div>`;
+    return;
+  }
+  const grupos  = state.jogos.handebol.filter(j => j.fase === 'grupo');
+  const matamata = state.jogos.handebol.filter(j => j.fase === 'matamata');
+
+  let html = '';
+  if (grupos.length) {
+    html += `<div style="grid-column:1/-1;font-weight:700;color:#1B5E20;font-size:15px;margin-bottom:4px;">⚽ Fase de Grupos</div>`;
+    html += grupos.map(_handCard).join('');
+  }
+  if (matamata.length) {
+    html += `<div style="grid-column:1/-1;font-weight:700;color:#1B5E20;font-size:15px;margin:16px 0 4px;">🏆 Mata-Mata</div>`;
+    html += matamata.map(_handCard).join('');
+  }
+  grid.innerHTML = html;
 }
 
 function handUpdateGols(id) {
@@ -2043,22 +2084,30 @@ async function salvarPlacarHandebol(id) {
   const gb = parseInt(document.getElementById('gol-b-' + id)?.value) || 0;
   j.golsA = ga; j.golsB = gb;
 
-  // Células na planilha: Grupo A → D{row} e F{row}; Grupo B → N{row} e P{row}
-  const colA = j.grupo === 'A' ? 'D' : 'N';
-  const colB = j.grupo === 'A' ? 'F' : 'P';
-  const range = `'Fase de Grupos'!${colA}${j.rowIdx}:${colB}${j.rowIdx}`;
-
-  if (HAND_SCRIPT_URL === 'COLE_AQUI_URL_APPS_SCRIPT_AFOHAND') {
-    renderHandebolClassif();
-    showToast(`Placar atualizado localmente. Configure o Apps Script para salvar na planilha.`, 'warning');
-    return;
+  let payload;
+  if (j.fase === 'grupo') {
+    // Fase de Grupos: Grupo A → cols D/F; Grupo B → cols N/P
+    const colA = j.grupo === 'A' ? 'D' : 'N';
+    const colB = j.grupo === 'A' ? 'F' : 'P';
+    payload = {
+      tipo: 'placar_handebol',
+      range: `'Fase de Grupos'!${colA}${j.rowIdx}:${colB}${j.rowIdx}`,
+      valores: [[ga, '', gb]],
+    };
+  } else {
+    // Mata-Mata: gols em B{row} e H{row}
+    payload = {
+      tipo: 'placar_handebol_mm',
+      golRow: j.sheetGolRow,
+      golsA: ga, golsB: gb,
+    };
   }
 
   try {
     await fetch(HAND_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo: 'placar_handebol', range, valores: [[ga, '', gb]] }),
+      body: JSON.stringify(payload),
     });
     renderHandebolClassif();
     showToast(`Placar salvo: ${j.equipeA} ${ga} × ${gb} ${j.equipeB}`);
