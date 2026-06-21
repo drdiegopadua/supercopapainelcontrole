@@ -628,7 +628,7 @@
     <li class="active"><a href="javascript:void(0)" onclick="navTo('dashboard',this); return false;"><i class='bx bxs-dashboard'></i><span>Dashboard</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('volei',this); return false;"><i class='bx bx-run'></i><span>Vôlei</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('basquete',this); return false;"><i class='bx bxs-basketball'></i><span>Basquete</span></a></li>
-    <li><a href="javascript:void(0)" onclick="navTo('handebol',this); return false;"><i class='bx bx-handball'></i><span>Handebol</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('handebol',this); return false;"><i class='bx bxs-hand-right'></i><span>Handebol</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('destaque',this); return false;"><i class='bx bxs-star'></i><span>Atleta Destaque</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('social',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Social</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
@@ -955,6 +955,7 @@
       <div class="tabs" style="margin-bottom:20px;">
         <button class="tab-btn active" id="classTabVolei" onclick="switchClassTab('volei')">🏐 Vôlei</button>
         <button class="tab-btn" id="classTabBasq" onclick="switchClassTab('basquete')">🏀 Basquete</button>
+        <button class="tab-btn" id="classTabHand" onclick="switchClassTab('handebol')">🤾 Handebol</button>
       </div>
 
       <!-- VÔLEI -->
@@ -971,6 +972,29 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="classBasqGrid">
           <div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dark-grey);">
             <i class='bx bx-loader-alt bx-spin' style="font-size:32px;"></i><br>Carregando...
+          </div>
+        </div>
+      </div>
+
+      <!-- HANDEBOL -->
+      <div id="classHand" style="display:none;">
+        <div class="card">
+          <div class="card-title" style="color:#1B5E20"><i class='bx bxs-hand-right'></i> Classificação AFOHAND</div>
+          <div class="hand-classif-wrap">
+            <div>
+              <div class="hand-grupo-title">🟢 Grupo A</div>
+              <table class="hand-classif-table">
+                <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+                <tbody id="classHandA"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
+              </table>
+            </div>
+            <div>
+              <div class="hand-grupo-title">🟢 Grupo B</div>
+              <table class="hand-classif-table">
+                <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+                <tbody id="classHandB"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -1119,10 +1143,13 @@ let _classLoaded = false;
 
 function switchClassTab(sport) {
   _classTab = sport;
-  document.getElementById('classVolei').style.display = sport === 'volei' ? '' : 'none';
+  document.getElementById('classVolei').style.display = sport === 'volei'    ? '' : 'none';
   document.getElementById('classBasq').style.display  = sport === 'basquete' ? '' : 'none';
-  document.getElementById('classTabVolei').className = 'tab-btn' + (sport === 'volei' ? ' active' : '');
+  document.getElementById('classHand').style.display  = sport === 'handebol' ? '' : 'none';
+  document.getElementById('classTabVolei').className = 'tab-btn' + (sport === 'volei'    ? ' active' : '');
   document.getElementById('classTabBasq').className  = 'tab-btn' + (sport === 'basquete' ? ' active' : '');
+  document.getElementById('classTabHand').className  = 'tab-btn' + (sport === 'handebol' ? ' active' : '');
+  if (sport === 'handebol') loadClassHandebol();
 }
 
 function _ccP(rows, r, c) {
@@ -1824,6 +1851,73 @@ async function sendPush() {
     showToast('Notificação salva localmente');
   } finally {
     showLoading(false);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// CLASSIFICAÇÃO HANDEBOL (aba Classificação do painel)
+// ════════════════════════════════════════════════════════
+async function loadClassHandebol() {
+  try {
+    const res  = await fetch(HAND_API("'Fase de Grupos'!A5:S7"));
+    const data = await res.json();
+    const rows = data.values || [];
+
+    const jogos = [];
+    rows.forEach((row, ri) => {
+      const configs = [
+        { grupo:'A', e1:1, g1:3, g2:5, e2:6 },
+        { grupo:'B', e1:11, g1:13, g2:15, e2:16 },
+      ];
+      configs.forEach(({ grupo, e1, g1, g2, e2 }) => {
+        const ea = row[e1] || '', eb = row[e2] || '';
+        if (ea && eb) jogos.push({ grupo, equipeA:ea, equipeB:eb, golsA:row[g1]||'', golsB:row[g2]||'' });
+      });
+    });
+
+    ['A','B'].forEach(g => {
+      const jogosG = jogos.filter(j => j.grupo === g);
+      const times = {};
+      jogosG.forEach(j => {
+        [j.equipeA, j.equipeB].forEach(t => {
+          if (t && !times[t]) times[t] = { nome:t, j:0, v:0, e:0, d:0, gp:0, gc:0, sg:0, pts:0 };
+        });
+      });
+      jogosG.forEach(j => {
+        const ga = parseInt(j.golsA), gb = parseInt(j.golsB);
+        if (isNaN(ga) || isNaN(gb)) return;
+        const tA = times[j.equipeA], tB = times[j.equipeB];
+        tA.j++; tB.j++;
+        tA.gp += ga; tA.gc += gb; tB.gp += gb; tB.gc += ga;
+        if (ga > gb)      { tA.pts+=3; tA.v++; tB.d++; }
+        else if (ga < gb) { tB.pts+=3; tB.v++; tA.d++; }
+        else              { tA.pts++; tA.e++; tB.pts++; tB.e++; }
+      });
+      Object.values(times).forEach(t => t.sg = t.gp - t.gc);
+      const sorted = Object.values(times).sort((a,b) =>
+        b.pts-a.pts || b.v-a.v || b.sg-a.sg || b.gp-a.gp
+      );
+      const medals = ['🥇','🥈','🥉'];
+      const tbodyId = g === 'A' ? 'classHandA' : 'classHandB';
+      const tbody = document.getElementById(tbodyId);
+      if (!tbody) return;
+      tbody.innerHTML = sorted.length
+        ? sorted.map((t,i) => `<tr>
+            <td>${medals[i]||i+1+'º'}</td>
+            <td style="text-align:left;font-weight:700">${t.nome}</td>
+            <td>${t.j}</td><td style="color:#2E7D32;font-weight:700">${t.v}</td>
+            <td>${t.e}</td><td style="color:var(--red)">${t.d}</td>
+            <td>${t.gp}</td><td>${t.gc}</td>
+            <td>${t.sg>0?'+':''}${t.sg}</td>
+            <td style="font-weight:800;color:#1B5E20">${t.pts}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Sem dados</td></tr>';
+    });
+  } catch(e) {
+    ['classHandA','classHandB'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<tr><td colspan="10" style="color:var(--red);padding:12px">Erro ao carregar</td></tr>';
+    });
   }
 }
 
