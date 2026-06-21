@@ -601,19 +601,15 @@ function getMode(){ return new URLSearchParams(window.location.search).get('modo
 
 // ── SCENES ─────────────────────────────────────────
 function buildScenes(){
-  var hasFotos  = fotosArr.length > 0;
-  var hasBolao  = appData.bolao.length > 0;
-  var hasPodio  = appData.config['PODIO_1'] && appData.config['PODIO_1'].trim();
-  var hasMvp    = appData.config['MVP_NOME'] && appData.config['MVP_NOME'].trim();
+  // Todas as cenas entram sempre no ciclo — mostram estado vazio se sem dados
   if(getMode()==='matamata'){
-    scenes = ['scene-matamata'];
-    if(hasPodio)  scenes.push('scene-podio');
-    if(hasMvp)    scenes.push('scene-mvp');
-    if(hasFotos)  scenes.push('scene-fotos');
+    scenes = ['scene-matamata','scene-podio','scene-mvp','scene-bolao'];
+    if(fotosArr.length > 0) scenes.push('scene-fotos');
   } else {
-    scenes = ['scene-placar','scene-tabela'];
-    if(hasBolao)  scenes.push('scene-bolao');
-    if(hasFotos)  scenes.push('scene-fotos');
+    scenes = ['scene-placar','scene-tabela','scene-bolao'];
+    if(appData.config['PODIO_1']) scenes.push('scene-podio');
+    if(appData.config['MVP_NOME']) scenes.push('scene-mvp');
+    if(fotosArr.length > 0) scenes.push('scene-fotos');
   }
   buildDots();
 }
@@ -650,7 +646,7 @@ function loadData(){
   Promise.all([
     fetch(apiUrl("'Fase de Grupos'!A1:S15")).then(function(r){return r.json();}),
     fetch(apiUrl("'Mata-Mata'!A1:O22")).then(function(r){return r.json();}),
-    fetch(apiUrl("'Config'!A1:B15")).then(function(r){return r.json();}).catch(function(){return {values:[]};}),
+    fetch(apiUrl("'Config'!A1:B50")).then(function(r){return r.json();}).catch(function(){return {values:[]};}),
     fetch(apiUrl("'Bolao'!A1:B200")).then(function(r){return r.json();}).catch(function(){return {values:[]};})
   ]).then(function(res){
     var gRows=res[0].values||[];
@@ -879,8 +875,8 @@ function renderAll(){
 
 // ── PÓDIO ──────────────────────────────────────────
 function renderPodio(){
-  var n1=appData.config['PODIO_1']||'—';
-  var n2=appData.config['PODIO_2']||'—';
+  var n1=appData.config['PODIO_1']||'A DEFINIR';
+  var n2=appData.config['PODIO_2']||'A DEFINIR';
   document.getElementById('podioTeam1').textContent=n1;
   document.getElementById('podioTeam2').textContent=n2;
   // CSS confetti
@@ -898,12 +894,12 @@ function renderPodio(){
 
 // ── MVP ────────────────────────────────────────────
 function renderMvp(){
-  var nome=appData.config['MVP_NOME']||'—';
+  var nome=appData.config['MVP_NOME']||'A DEFINIR';
   var time=appData.config['MVP_TIME']||'';
   var pts=appData.config['MVP_PONTOS']||'';
   document.getElementById('mvpNome').textContent=nome;
-  document.getElementById('mvpTime').textContent=time?time.toUpperCase():'';
-  document.getElementById('mvpPts').textContent=pts?pts+' PONTOS':'— PONTOS';
+  document.getElementById('mvpTime').textContent=time?time.toUpperCase():'SUPERCOPA BASQUETE 2026';
+  document.getElementById('mvpPts').textContent=pts?pts+' PONTOS':'EM ANDAMENTO';
   // radiate stars
   var w=document.getElementById('mvpWrap');
   if(w&&!w.querySelector('.mvp-star')){
@@ -961,8 +957,17 @@ function renderFotos(){
 // ── BOLÃO ──────────────────────────────────────────
 function renderBolao(){
   var el=document.getElementById('bolaoPanel');
+  var jA=appData.config['JOGO_DOMINGO_A']||'';
+  var jB=appData.config['JOGO_DOMINGO_B']||'';
+  var pct=appData.config['BOLAO_PCT_ACERTO']||'';
   if(!appData.bolao.length){
-    el.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px;font-size:12px;">Aguardando apostas...</div>';
+    var jogInfo=jA&&jB?'<div style="font-size:16px;font-weight:700;color:var(--gold);margin-top:12px;">'+jA+' × '+jB+'</div>':'';
+    el.innerHTML='<div style="text-align:center;padding:24px 16px;">'+
+      '<div style="font-size:40px;margin-bottom:8px;">🎯</div>'+
+      '<div style="font-size:15px;font-weight:700;color:var(--text);">BOLÃO ABERTO</div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo painel!</div>'+
+      jogInfo+
+    '</div>';
     return;
   }
   // Count by team
@@ -986,7 +991,13 @@ function renderBolao(){
       '<div class="bolao-bar-meta">'+n+' ('+pct+'%)</div>'+
     '</div>';
   });
-  html+='</div><div class="bolao-total">'+total+' participante'+(total!==1?'s':'')+' no bolão</div>';
+  html+='</div>';
+  // rodapé com total e % de acerto
+  var rodape='<div class="bolao-total">'+total+' participante'+(total!==1?'s':'')+' no bolão';
+  if(pct) rodape+=' &nbsp;·&nbsp; <span style="color:var(--gold)">'+pct+' de acerto</span>';
+  if(jA&&jB) rodape+='<div style="font-size:11px;color:var(--muted);margin-top:2px;">Jogo: '+jA+' × '+jB+'</div>';
+  rodape+='</div>';
+  html+=rodape;
   el.innerHTML=html;
 }
 
