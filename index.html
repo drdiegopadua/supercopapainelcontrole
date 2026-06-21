@@ -2112,9 +2112,27 @@ async function salvarPlacarHandebol(id) {
     });
     renderHandebolClassif();
     showToast(`Placar salvo: ${j.equipeA} ${ga} × ${gb} ${j.equipeB}`);
+    // Publicar push automaticamente
+    enviarPushResultado('handebol', j.equipeA, ga, j.equipeB, gb, j.rodada || j.fase);
   } catch(e) {
     showToast('Erro ao salvar placar.', 'error');
   }
+}
+
+async function enviarPushResultado(esporte, tA, gA, tB, gB, rodada) {
+  const emoji = esporte === 'handebol' ? '🤾' : esporte === 'basquete' ? '🏀' : '🏐';
+  try {
+    await fetch(PUSH_SERVER_URL.replace('/enviar','') + '/api/push/enviar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `${emoji} Resultado — ${rodada || esporte}`,
+        body: `${tA} ${gA} × ${gB} ${tB}`,
+        url: 'https://drdiegopadua.github.io/afohandapp/',
+        category: esporte
+      })
+    });
+  } catch(e) { /* push falhou silenciosamente */ }
 }
 
 function renderHandebolClassif() {
