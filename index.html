@@ -634,6 +634,7 @@
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('classificacao',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Classificação</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('tvconfig',this); return false;"><i class='bx bx-tv'></i><span>TV Config</span></a></li>
   </ul>
   <div class="side-bottom">
     <a href="javascript:void(0)"><i class='bx bxs-cog'></i><span>Configurações</span></a>
@@ -762,6 +763,102 @@
         <div class="card-title" style="color:var(--orange)"><i class='bx bxs-basketball'></i> Tabela de Jogos — Basquete (4 quartos)</div>
         <div class="jogos-grid" id="basquete-jogos-grid">
           <div class="empty-state"><i class='bx bxs-basketball'></i><p>Carregando jogos da planilha...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TV CONFIG (BASQUETE) ─── -->
+    <div class="page" id="page-tvconfig">
+      <div class="page-header">
+        <div>
+          <h1>🏀 TV Config — Basquete</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">TV Config</span></div>
+        </div>
+      </div>
+
+      <!-- Pódio -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:var(--gold)"><i class='bx bxs-trophy'></i> Pódio Final</div>
+        <div class="destaque-form">
+          <div class="form-group">
+            <label>🥇 1º Lugar</label>
+            <input type="text" class="form-control" id="inputPodio1" placeholder="Nome da equipe campeã">
+          </div>
+          <div class="form-group">
+            <label>🥈 2º Lugar</label>
+            <input type="text" class="form-control" id="inputPodio2" placeholder="Nome da equipe vice-campeã">
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-gold" onclick="salvarPodio()"><i class='bx bx-save'></i> Salvar Pódio</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MVP -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:var(--gold)"><i class='bx bxs-star'></i> MVP do Torneio</div>
+        <div class="destaque-form">
+          <div class="form-group">
+            <label>Nome do Jogador</label>
+            <input type="text" class="form-control" id="inputMvpNome" placeholder="Nome completo">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label>Time</label>
+              <input type="text" class="form-control" id="inputMvpTime" placeholder="Equipe do jogador">
+            </div>
+            <div class="form-group">
+              <label>Total de Pontos</label>
+              <input type="number" class="form-control" id="inputMvpPontos" placeholder="0" min="0">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-gold" onclick="salvarMvp()"><i class='bx bx-save'></i> Salvar MVP</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fotos -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:var(--gold)"><i class='bx bx-image'></i> Galeria de Fotos (Google Drive)</div>
+        <div class="destaque-form">
+          <div class="form-group">
+            <label>IDs das fotos (um por linha)</label>
+            <textarea class="form-control" id="inputFotos" rows="5" placeholder="Cole o ID do arquivo do Google Drive&#10;Ex: 1ABC_xyz123..."></textarea>
+            <p style="font-size:11px;color:var(--dark-grey);margin-top:4px;">Cole o ID da URL do Drive (a parte após <code>/d/</code> e antes de <code>/view</code>)</p>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-gold" onclick="salvarFotos()"><i class='bx bx-save'></i> Salvar Fotos</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bolão -->
+      <div class="card">
+        <div class="card-title" style="color:var(--gold)"><i class='bx bxs-bar-chart-alt-2'></i> Bolão — Apostas</div>
+        <div class="destaque-form">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label>Nome do Apostador</label>
+              <input type="text" class="form-control" id="inputBolaoNome" placeholder="Nome completo">
+            </div>
+            <div class="form-group">
+              <label>Time Apostado</label>
+              <select class="form-control" id="selectBolaoTime">
+                <option value="">— Selecione o time —</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-gold" onclick="registrarAposta()"><i class='bx bxs-send'></i> Registrar Aposta</button>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div style="font-size:13px;font-weight:700;color:var(--dark-grey);margin-bottom:8px;">Apostas registradas:</div>
+          <table class="ranking-table" id="bolaoTvTable">
+            <thead><tr><th>#</th><th>Apostador</th><th>Time</th></tr></thead>
+            <tbody id="bolaoTvTbody"><tr><td colspan="3" style="padding:16px;color:var(--dark-grey);text-align:center">Carregando...</td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -2934,6 +3031,120 @@ async function salvarNoticia() {
   } finally {
     showLoading(false);
   }
+}
+
+// ════════════════════════════════════════════════════════
+// TV CONFIG — Pódio, MVP, Fotos, Bolão
+// ════════════════════════════════════════════════════════
+async function salvarConfig(kvMap) {
+  try {
+    await fetch(BASQ_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      mode: 'no-cors',
+      body: JSON.stringify({ mode: 'salvar_config', data: kvMap })
+    });
+    showToast('Configuração salva na planilha!');
+  } catch(e) {
+    showToast('Erro ao salvar configuração.', 'error');
+  }
+}
+
+async function salvarBolaoTV(nome, time) {
+  try {
+    await fetch(BASQ_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      mode: 'no-cors',
+      body: JSON.stringify({ mode: 'adicionar_bolao', nome: nome, time: time })
+    });
+    showToast('Aposta registrada: ' + nome + ' → ' + time);
+  } catch(e) {
+    showToast('Erro ao registrar aposta.', 'error');
+  }
+}
+
+function salvarPodio() {
+  const v1 = document.getElementById('inputPodio1').value.trim();
+  const v2 = document.getElementById('inputPodio2').value.trim();
+  if (!v1 || !v2) { showToast('Preencha 1º e 2º lugar.', 'error'); return; }
+  salvarConfig({ PODIO_1: v1, PODIO_2: v2 });
+}
+
+function salvarMvp() {
+  const nome = document.getElementById('inputMvpNome').value.trim();
+  const time = document.getElementById('inputMvpTime').value.trim();
+  const pts  = document.getElementById('inputMvpPontos').value.trim();
+  if (!nome) { showToast('Informe o nome do jogador.', 'error'); return; }
+  salvarConfig({ MVP_NOME: nome, MVP_TIME: time, MVP_PONTOS: pts });
+}
+
+function salvarFotos() {
+  const raw = document.getElementById('inputFotos').value.trim();
+  const ids = raw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+  if (!ids.length) { showToast('Cole pelo menos um ID de foto.', 'error'); return; }
+  salvarConfig({ FOTOS: ids.join(',') });
+}
+
+function registrarAposta() {
+  const nome = document.getElementById('inputBolaoNome').value.trim();
+  const time = document.getElementById('selectBolaoTime').value;
+  if (!nome || !time) { showToast('Preencha nome e time.', 'error'); return; }
+  salvarBolaoTV(nome, time);
+  document.getElementById('inputBolaoNome').value = '';
+  document.getElementById('selectBolaoTime').value = '';
+  setTimeout(loadBolaoTV, 1500);
+}
+
+async function loadBolaoTV() {
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Bolao'!A1:B200")}?key=${GOOGLE_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const rows = (data.values || []).slice(1);
+    const tbody = document.getElementById('bolaoTvTbody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="padding:16px;color:var(--dark-grey);text-align:center">Nenhuma aposta ainda.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((r, i) => `<tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600">${r[0] || '—'}</td>
+      <td>${r[1] || '—'}</td>
+    </tr>`).join('');
+    // Populate team select from loaded basquete teams
+    populateBolaoTeamSelect(rows);
+  } catch(e) {
+    console.warn('Erro bolao TV:', e);
+  }
+}
+
+function populateBolaoTeamSelect(rows) {
+  const sel = document.getElementById('selectBolaoTime');
+  // Collect unique teams from existing bets + basquete state
+  const teams = new Set();
+  rows.forEach(r => { if (r[1]) teams.add(r[1].trim()); });
+  state.jogos.basquete.forEach(j => {
+    if (j.equipeA) teams.add(j.equipeA);
+    if (j.equipeB) teams.add(j.equipeB);
+  });
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o time —</option>';
+  [...teams].sort().forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    if (t === current) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// Load bolão TV data when page is opened
+const _origNavTo = navTo;
+function navTo(page, el) {
+  if (page === 'tvconfig') {
+    loadBolaoTV();
+  }
+  return _origNavTo(page, el);
 }
 
 </script>

@@ -322,6 +322,78 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
 @keyframes shimmer    { 0%{background-position:-200% center} 100%{background-position:200% center} }
 @keyframes scaleIn    { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:none} }
 @keyframes fadeInDown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:none} }
+
+/* ── CENA PÓDIO ── */
+@keyframes podioEnter { from{opacity:0;transform:translateY(60px)} to{opacity:1;transform:none} }
+@keyframes silverGlow { 0%,100%{box-shadow:0 0 20px rgba(192,192,192,.2)} 50%{box-shadow:0 0 40px rgba(192,192,192,.55)} }
+@keyframes goldGlow   { 0%,100%{box-shadow:0 0 20px rgba(240,165,0,.25)} 50%{box-shadow:0 0 55px rgba(240,165,0,.7)} }
+@keyframes confettiFall { 0%{transform:translateY(-10px) rotate(0deg);opacity:1} 100%{transform:translateY(120vh) rotate(720deg);opacity:0} }
+
+.podio-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:0 8px 0; gap:0; min-height:0; position:relative; }
+.podio-title { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:6px; color:var(--gold2); text-shadow:0 0 25px rgba(240,165,0,.6); animation:fadeInDown .8s ease both; margin-bottom:10px; text-align:center; flex-shrink:0; }
+.podio-stage { display:flex; align-items:flex-end; justify-content:center; gap:14px; width:100%; flex-shrink:0; }
+.podio-slot { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.podio-slot.silver { animation:podioEnter 1s .2s ease both; }
+.podio-slot.gold   { animation:podioEnter 1s .8s ease both; }
+.podio-medal { font-size:36px; line-height:1; }
+.podio-slot.gold .podio-medal { font-size:44px; }
+.podio-team { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; text-align:center; max-width:120px; line-height:1.1; }
+.podio-slot.gold .podio-team { font-size:24px; color:var(--gold2); max-width:150px; }
+.podio-slot.silver .podio-team { color:rgba(220,220,220,.9); }
+.podio-block { border-radius:10px 10px 0 0; display:flex; align-items:center; justify-content:center; width:110px; }
+.gold-block   { height:130px; background:linear-gradient(180deg,rgba(240,165,0,.8),rgba(120,80,0,.9)); border:1.5px solid rgba(240,165,0,.6); animation:goldGlow 2.5s infinite; }
+.silver-block { height:90px; background:linear-gradient(180deg,rgba(180,180,180,.6),rgba(80,80,80,.9)); border:1.5px solid rgba(192,192,192,.4); animation:silverGlow 2.5s 1s infinite; }
+.podio-pos { font-family:'Bebas Neue',sans-serif; font-size:32px; color:rgba(255,255,255,.8); }
+.podio-css-confetti { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; }
+.confetti-piece { position:absolute; width:8px; height:8px; border-radius:2px; animation:confettiFall linear infinite; }
+
+/* ── CENA MVP ── */
+@keyframes starRadiate { 0%{transform:scale(0) rotate(0);opacity:1} 100%{transform:scale(3) rotate(180deg);opacity:0} }
+@keyframes mvpSlideUp  { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:none} }
+@keyframes ballSpin    { to{transform:rotate(360deg)} }
+@keyframes nameShimmer { 0%{background-position:200% center} 100%{background-position:-200% center} }
+
+.mvp-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; position:relative; overflow:hidden; text-align:center; }
+.mvp-badge { font-size:11px; font-weight:800; letter-spacing:5px; color:var(--maroon2); background:linear-gradient(90deg,var(--gold3),var(--gold2)); padding:5px 20px; border-radius:30px; text-transform:uppercase; animation:mvpSlideUp .6s ease both; }
+.mvp-ball  { font-size:64px; animation:ballSpin 3s linear infinite, mvpSlideUp .6s .1s ease both; filter:drop-shadow(0 0 20px rgba(240,165,0,.5)); }
+.mvp-nome  {
+  font-family:'Bebas Neue',sans-serif; font-size:60px; line-height:1.05;
+  background:linear-gradient(90deg,var(--gold3),var(--gold2),#fff,var(--gold2),var(--gold3));
+  background-size:300% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  animation:nameShimmer 2.5s linear infinite, mvpSlideUp .6s .2s ease both;
+  filter:drop-shadow(0 0 20px rgba(240,165,0,.4));
+}
+.mvp-time  { font-size:16px; color:var(--muted); letter-spacing:3px; animation:mvpSlideUp .6s .3s ease both; }
+.mvp-pts   { font-size:13px; font-weight:800; letter-spacing:3px; color:var(--gold); border:1.5px solid rgba(240,165,0,.4); border-radius:30px; padding:5px 20px; animation:mvpSlideUp .6s .4s ease both; }
+.mvp-star  { position:absolute; border-radius:50%; background:rgba(240,165,0,.5); animation:starRadiate 3s ease-in-out infinite; }
+
+/* ── CENA FOTOS ── */
+@keyframes kenBurns { 0%{transform:scale(1)} 100%{transform:scale(1.08)} }
+
+.fotos-wrap { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.foto-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity 1s ease; animation:kenBurns 8s linear forwards; }
+.foto-img.active { opacity:1; }
+.fotos-caption { position:absolute; bottom:0; left:0; right:0; padding:20px 16px 12px; background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,transparent 100%); font-size:10px; font-weight:700; letter-spacing:3px; color:rgba(255,255,255,.8); text-transform:uppercase; }
+.fotos-counter { position:absolute; top:8px; right:12px; font-size:11px; font-weight:700; letter-spacing:2px; background:rgba(0,0,0,.55); padding:3px 10px; border-radius:20px; color:var(--gold); }
+.fotos-placeholder { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--muted); }
+.fotos-placeholder span:first-child { font-size:48px; }
+.fotos-placeholder span:last-child  { font-size:12px; letter-spacing:3px; }
+
+/* ── CENA BOLÃO ── */
+@keyframes barGrow { from{width:0} to{width:var(--bar-target)} }
+
+.bolao-wrap { flex:1; display:flex; flex-direction:column; gap:8px; min-height:0; overflow:hidden; }
+.bolao-title-row { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.bolao-subtitle { font-size:10px; color:var(--muted); letter-spacing:2px; margin-left:auto; }
+.bolao-bars { flex:1; display:flex; flex-direction:column; gap:8px; overflow:hidden; min-height:0; justify-content:center; }
+.bolao-bar-row { display:flex; align-items:center; gap:8px; }
+.bolao-bar-label { font-size:13px; font-weight:700; min-width:90px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bolao-bar-track { flex:1; height:22px; background:rgba(255,255,255,.06); border-radius:11px; overflow:hidden; position:relative; }
+.bolao-bar-fill { height:100%; border-radius:11px; position:absolute; left:0; top:0; --bar-target:0%; animation:barGrow .8s ease both; width:var(--bar-target); }
+.bolao-bar-fill.gold   { background:linear-gradient(90deg,var(--gold3),var(--gold2)); }
+.bolao-bar-fill.maroon { background:linear-gradient(90deg,var(--maroon),rgba(107,21,21,.7)); }
+.bolao-bar-meta { font-size:11px; color:var(--muted); min-width:60px; text-align:right; white-space:nowrap; }
+.bolao-total { font-size:10px; color:var(--muted); text-align:center; letter-spacing:2px; margin-top:4px; flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -412,6 +484,57 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
       </div>
     </div>
 
+    <!-- CENA PÓDIO -->
+    <div class="scene" id="scene-podio">
+      <div class="podio-css-confetti" id="podioCSSConfetti"></div>
+      <div class="podio-wrap">
+        <div class="podio-title">🏆 PÓDIO FINAL</div>
+        <div class="podio-stage">
+          <div class="podio-slot silver" id="podio2">
+            <div class="podio-medal">🥈</div>
+            <div class="podio-team" id="podioTeam2">—</div>
+            <div class="podio-block silver-block"><div class="podio-pos">2º</div></div>
+          </div>
+          <div class="podio-slot gold" id="podio1">
+            <div class="podio-medal">🥇</div>
+            <div class="podio-team" id="podioTeam1">—</div>
+            <div class="podio-block gold-block"><div class="podio-pos">1º</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENA MVP -->
+    <div class="scene" id="scene-mvp">
+      <div class="mvp-wrap" id="mvpWrap">
+        <div class="mvp-badge">⭐ MVP DO TORNEIO ⭐</div>
+        <div class="mvp-ball">🏀</div>
+        <div class="mvp-nome" id="mvpNome">—</div>
+        <div class="mvp-time" id="mvpTime">—</div>
+        <div class="mvp-pts" id="mvpPts">— PONTOS</div>
+      </div>
+    </div>
+
+    <!-- CENA FOTOS -->
+    <div class="scene" id="scene-fotos" style="padding:0;">
+      <div class="fotos-wrap" id="fotosWrap">
+        <div class="fotos-placeholder" id="fotosPlaceholder">
+          <span>📸</span>
+          <span>GALERIA EM BREVE...</span>
+        </div>
+      </div>
+      <div class="fotos-caption" id="fotosCaption" style="display:none;">📸 SUPERCOPA BASQUETE 2026 · GALERIA</div>
+      <div class="fotos-counter" id="fotosCounter" style="display:none;">1 / 1</div>
+    </div>
+
+    <!-- CENA BOLÃO -->
+    <div class="scene" id="scene-bolao">
+      <div class="panel" style="flex:1;">
+        <div class="panel-head">🎯 BOLÃO — QUEM VAI GANHAR?</div>
+        <div class="panel-body" id="bolaoPanel" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+
   </div>
 
   <div class="scene-dots" id="sceneDots"></div>
@@ -452,7 +575,10 @@ var HORARIOS = {
   'SF1':'14:00','SF2':'15:30','Final':'17:00'
 };
 
-var appData = { grupos:[], matamata:[] };
+var appData = { grupos:[], matamata:[], config:{}, bolao:[] };
+var fotosInterval = null;
+var fotosIdx = 0;
+var fotosArr = [];
 var countdown = REFRESH;
 var currentScene = 0;
 var scenes = [];
@@ -475,7 +601,20 @@ function getMode(){ return new URLSearchParams(window.location.search).get('modo
 
 // ── SCENES ─────────────────────────────────────────
 function buildScenes(){
-  scenes = getMode()==='matamata' ? ['scene-matamata'] : ['scene-placar','scene-tabela'];
+  var hasFotos  = fotosArr.length > 0;
+  var hasBolao  = appData.bolao.length > 0;
+  var hasPodio  = appData.config['PODIO_1'] && appData.config['PODIO_1'].trim();
+  var hasMvp    = appData.config['MVP_NOME'] && appData.config['MVP_NOME'].trim();
+  if(getMode()==='matamata'){
+    scenes = ['scene-matamata'];
+    if(hasPodio)  scenes.push('scene-podio');
+    if(hasMvp)    scenes.push('scene-mvp');
+    if(hasFotos)  scenes.push('scene-fotos');
+  } else {
+    scenes = ['scene-placar','scene-tabela'];
+    if(hasBolao)  scenes.push('scene-bolao');
+    if(hasFotos)  scenes.push('scene-fotos');
+  }
   buildDots();
 }
 function buildDots(){
@@ -510,10 +649,33 @@ setInterval(function(){
 function loadData(){
   Promise.all([
     fetch(apiUrl("'Fase de Grupos'!A1:S15")).then(function(r){return r.json();}),
-    fetch(apiUrl("'Mata-Mata'!A1:O22")).then(function(r){return r.json();})
+    fetch(apiUrl("'Mata-Mata'!A1:O22")).then(function(r){return r.json();}),
+    fetch(apiUrl("'Config'!A1:B15")).then(function(r){return r.json();}).catch(function(){return {values:[]};}),
+    fetch(apiUrl("'Bolao'!A1:B200")).then(function(r){return r.json();}).catch(function(){return {values:[]};})
   ]).then(function(res){
     var gRows=res[0].values||[];
     var mRows=res[1].values||[];
+
+    // Parse Config (key-value)
+    var cfgRows=res[2].values||[];
+    appData.config={};
+    cfgRows.forEach(function(row){
+      if(row[0]&&row[1]) appData.config[row[0].toString().trim()]=row[1].toString().trim();
+    });
+
+    // Parse Bolao
+    var bolaoRows=res[3].values||[];
+    appData.bolao=[];
+    bolaoRows.slice(1).forEach(function(row){
+      var nome=(row[0]||'').toString().trim();
+      var time=(row[1]||'').toString().trim();
+      if(nome&&time) appData.bolao.push({nome:nome,time:time});
+    });
+
+    // Parse fotos IDs
+    var fotosStr=appData.config['FOTOS']||'';
+    fotosArr=fotosStr.split(',').map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
+
 
     appData.grupos=[];
     var cfgs=[{grupo:'A',off:0},{grupo:'B',off:10}];
@@ -696,6 +858,11 @@ function renderAll(){
   renderClassif('B','classB');
   renderTabela();
   renderMataMata();
+  renderPodio();
+  renderMvp();
+  renderFotos();
+  renderBolao();
+  buildScenes();
   if(getMode()==='matamata'){
     var fin=appData.matamata[2]||{};
     if(fin.ptsA!==null&&fin.ptsB!==null){
@@ -708,6 +875,119 @@ function renderAll(){
       }
     }
   }
+}
+
+// ── PÓDIO ──────────────────────────────────────────
+function renderPodio(){
+  var n1=appData.config['PODIO_1']||'—';
+  var n2=appData.config['PODIO_2']||'—';
+  document.getElementById('podioTeam1').textContent=n1;
+  document.getElementById('podioTeam2').textContent=n2;
+  // CSS confetti
+  var c=document.getElementById('podioCSSConfetti');
+  if(c&&!c.childElementCount){
+    var colors=['#F0A500','#FFD060','#C87800','#ffffff','#6B1515'];
+    for(var i=0;i<30;i++){
+      var p=document.createElement('div'); p.className='confetti-piece';
+      var col=colors[Math.floor(Math.random()*colors.length)];
+      p.style.cssText='left:'+Math.random()*100+'%;top:-10px;background:'+col+';animation-duration:'+(Math.random()*4+3)+'s;animation-delay:'+(Math.random()*5)+'s;transform:rotate('+Math.random()*360+'deg);';
+      c.appendChild(p);
+    }
+  }
+}
+
+// ── MVP ────────────────────────────────────────────
+function renderMvp(){
+  var nome=appData.config['MVP_NOME']||'—';
+  var time=appData.config['MVP_TIME']||'';
+  var pts=appData.config['MVP_PONTOS']||'';
+  document.getElementById('mvpNome').textContent=nome;
+  document.getElementById('mvpTime').textContent=time?time.toUpperCase():'';
+  document.getElementById('mvpPts').textContent=pts?pts+' PONTOS':'— PONTOS';
+  // radiate stars
+  var w=document.getElementById('mvpWrap');
+  if(w&&!w.querySelector('.mvp-star')){
+    for(var i=0;i<6;i++){
+      var s=document.createElement('div'); s.className='mvp-star';
+      var sz=Math.random()*40+15;
+      s.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*80+'%;top:'+Math.random()*80+'%;animation-delay:'+(i*0.5)+'s;animation-duration:3s;';
+      w.appendChild(s);
+    }
+  }
+}
+
+// ── FOTOS ──────────────────────────────────────────
+function renderFotos(){
+  var wrap=document.getElementById('fotosWrap');
+  var placeholder=document.getElementById('fotosPlaceholder');
+  var caption=document.getElementById('fotosCaption');
+  var counter=document.getElementById('fotosCounter');
+  if(!fotosArr.length){
+    placeholder.style.display='';
+    caption.style.display='none';
+    counter.style.display='none';
+    return;
+  }
+  placeholder.style.display='none';
+  caption.style.display='';
+  counter.style.display='';
+  // Clear previous images
+  wrap.querySelectorAll('.foto-img').forEach(function(el){el.remove();});
+  fotosArr.forEach(function(id,i){
+    var img=document.createElement('img');
+    img.className='foto-img'+(i===0?' active':'');
+    img.src='https://drive.google.com/uc?export=view&id='+id;
+    img.alt='Foto '+(i+1);
+    wrap.insertBefore(img,placeholder);
+  });
+  fotosIdx=0;
+  counter.textContent='1 / '+fotosArr.length;
+  if(fotosInterval) clearInterval(fotosInterval);
+  if(fotosArr.length>1){
+    fotosInterval=setInterval(function(){
+      var imgs=wrap.querySelectorAll('.foto-img');
+      imgs[fotosIdx].classList.remove('active');
+      fotosIdx=(fotosIdx+1)%fotosArr.length;
+      imgs[fotosIdx].classList.add('active');
+      // reset ken-burns
+      imgs[fotosIdx].style.animation='none';
+      void imgs[fotosIdx].offsetWidth;
+      imgs[fotosIdx].style.animation='kenBurns 8s linear forwards';
+      counter.textContent=(fotosIdx+1)+' / '+fotosArr.length;
+    },8000);
+  }
+}
+
+// ── BOLÃO ──────────────────────────────────────────
+function renderBolao(){
+  var el=document.getElementById('bolaoPanel');
+  if(!appData.bolao.length){
+    el.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px;font-size:12px;">Aguardando apostas...</div>';
+    return;
+  }
+  // Count by team
+  var counts={};
+  appData.bolao.forEach(function(b){
+    counts[b.time]=(counts[b.time]||0)+1;
+  });
+  var total=appData.bolao.length;
+  var teams=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+  var html='<div class="bolao-bars">';
+  teams.forEach(function(team,i){
+    var n=counts[team];
+    var pct=Math.round(n/total*100);
+    var fillClass=i===0?'gold':'maroon';
+    var delay=(i*0.12).toFixed(2);
+    html+='<div class="bolao-bar-row" style="animation-delay:'+delay+'s">'+
+      '<div class="bolao-bar-label">'+team+'</div>'+
+      '<div class="bolao-bar-track">'+
+        '<div class="bolao-bar-fill '+fillClass+'" style="--bar-target:'+pct+'%;animation-delay:'+delay+'s"></div>'+
+      '</div>'+
+      '<div class="bolao-bar-meta">'+n+' ('+pct+'%)</div>'+
+    '</div>';
+  });
+  html+='</div><div class="bolao-total">'+total+' participante'+(total!==1?'s':'')+' no bolão</div>';
+  el.innerHTML=html;
 }
 
 // ── INIT ───────────────────────────────────────────
