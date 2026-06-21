@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SUPERCOPA BASQUETE — TV</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --maroon:  #6B1515;
+  --maroon2: #4A0E0E;
+  --maroon3: #8B1C1C;
+  --gold:    #F0A500;
+  --gold2:   #FFD060;
+  --gold3:   #C87800;
+  --txt:     #ffffff;
+  --muted:   rgba(255,255,255,.55);
+  --card:    rgba(0,0,0,.35);
+}
+
+html, body {
+  width:100%; height:100%;
+  background: var(--maroon2);
+  color: var(--txt);
+  font-family: 'Poppins', sans-serif;
+  overflow: hidden;
+}
+
+/* ── BASKETBALL BG LINES ── */
+.bball-bg {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  overflow: hidden;
+}
+
+.bball-bg svg {
+  position: absolute;
+  opacity: .07;
+}
+
+/* ── PARTICLES ── */
+.particles { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.particle  { position:absolute; border-radius:50%; animation: floatUp linear infinite; }
+@keyframes floatUp { 0%{transform:translateY(100vh)scale(0);opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-10vh)scale(1);opacity:0} }
+
+/* ── RADIAL BG ── */
+.radial-bg {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(240,165,0,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(107,21,21,.8) 0%, transparent 70%),
+    linear-gradient(180deg, #3a0808 0%, #4A0E0E 40%, #6B1515 100%);
+}
+
+/* ── LAYOUT ── */
+.tv-wrap {
+  position: relative; z-index: 1;
+  width: 100%; height: 100vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+.tv-header {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.5) 0%, transparent 100%);
+  padding: 18px 24px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  animation: fadeInDown .7s ease both;
+}
+
+.logo-shield {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0;
+}
+
+.logo-edicao {
+  font-size: 9px; font-weight: 700; letter-spacing: 3px;
+  color: var(--gold); text-transform: uppercase;
+}
+
+.logo-super {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; line-height: .9; color: var(--txt);
+  letter-spacing: 2px;
+}
+
+.logo-bar {
+  background: var(--gold);
+  padding: 2px 12px;
+  font-size: 9px; font-weight: 900; letter-spacing: 3px;
+  color: var(--maroon2); text-transform: uppercase;
+  margin: 2px 0;
+}
+
+.logo-copa {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; line-height: .9; color: var(--txt);
+  letter-spacing: 2px;
+}
+
+.tv-clock-wrap { text-align: right; }
+.tv-clock { font-size: 32px; font-weight: 900; color: var(--gold); line-height:1; font-family:'Bebas Neue',sans-serif; }
+.tv-date  { font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(240,165,0,.15); border: 1px solid rgba(240,165,0,.4);
+  border-radius: 20px; padding: 5px 14px;
+  font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 2px;
+  animation: glowGold 2s ease-in-out infinite;
+}
+
+.live-badge .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 6px var(--gold);
+  animation: blink 1s infinite;
+}
+
+/* ── DIVIDER ── */
+.gold-line {
+  height: 2px; flex-shrink: 0;
+  background: linear-gradient(90deg, transparent, var(--gold), var(--gold2), var(--gold), transparent);
+  animation: shimmerLine 3s linear infinite;
+}
+@keyframes shimmerLine { 0%{opacity:.5} 50%{opacity:1} 100%{opacity:.5} }
+
+/* ── SCENE WRAPPER ── */
+.scene-wrap { flex:1; position:relative; overflow:hidden; }
+
+.scene {
+  position: absolute; inset: 0;
+  padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+  opacity: 0; pointer-events: none;
+}
+
+.scene.active { opacity:1; pointer-events:auto; animation: slideSceneIn .6s ease both; }
+.scene.leaving { animation: slideSceneOut .5s ease forwards; }
+
+@keyframes slideSceneIn  { from{opacity:0;transform:translateY(16px)scale(.98)} to{opacity:1;transform:none} }
+@keyframes slideSceneOut { from{opacity:1;transform:none} to{opacity:0;transform:translateY(-16px)scale(.98)} }
+
+/* ── PAINEL ── */
+.panel {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid rgba(240,165,0,.15);
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.panel-head {
+  background: linear-gradient(135deg, rgba(107,21,21,.9), rgba(74,14,14,.9));
+  border-bottom: 2px solid var(--gold3);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--gold);
+  position: relative; overflow: hidden;
+}
+.panel-head::after {
+  content:''; position:absolute; top:0; left:-100%; width:60%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);
+  animation: shine 4s ease-in-out infinite;
+}
+@keyframes shine { 0%{left:-100%} 50%{left:150%} 100%{left:150%} }
+
+.panel-body { padding: 10px 14px; }
+
+/* ── PLACAR AO VIVO ── */
+.live-card {
+  background: linear-gradient(135deg, rgba(0,0,0,.5), rgba(107,21,21,.3));
+  border-radius: 16px;
+  border: 1px solid rgba(240,165,0,.3);
+  padding: 18px 16px;
+  animation: glowGold 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.live-card-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 3px;
+  color: var(--gold); text-transform: uppercase; text-align: center; margin-bottom: 12px;
+}
+
+.live-teams {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+
+.live-team { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
+
+.live-team-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--maroon), var(--maroon3));
+  border: 2px solid rgba(240,165,0,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+
+.live-team-name {
+  font-size: 15px; font-weight: 800; text-align: center;
+  line-height: 1.1; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 120px;
+}
+.live-team-name.winner { color: var(--gold); }
+
+.live-score-box { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.live-score {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 64px; line-height: 1; color: var(--gold2);
+  text-shadow: 0 0 20px rgba(240,165,0,.5);
+  animation: scorePulse 2s ease-in-out infinite;
+  min-width: 55px; text-align: center;
+}
+@keyframes scorePulse { 0%,100%{text-shadow:0 0 10px rgba(240,165,0,.3)} 50%{text-shadow:0 0 30px rgba(240,165,0,.7)} }
+
+.live-score-sep { font-family:'Bebas Neue',sans-serif; font-size:36px; color:rgba(240,165,0,.5); }
+.live-score-vs  { font-family:'Bebas Neue',sans-serif; font-size:32px; color:rgba(255,255,255,.3); letter-spacing:4px; }
+
+.live-rodada { text-align:center; font-size:10px; color:var(--muted); margin-top:10px; letter-spacing:2px; }
+
+/* ── CLASSIFICAÇÃO ── */
+.class-header {
+  display: grid; grid-template-columns: 28px 1fr 32px 32px 32px 40px;
+  gap: 4px; padding: 5px 8px;
+  font-size: 10px; font-weight: 700; color: rgba(240,165,0,.6);
+  letter-spacing: 1px; text-transform: uppercase;
+  border-bottom: 1px solid rgba(240,165,0,.1); margin-bottom: 4px;
+}
+
+.class-row {
+  display: grid; grid-template-columns: 28px 1fr 32px 32px 32px 40px;
+  gap: 4px; align-items: center; padding: 9px 8px; border-radius: 9px;
+  background: rgba(255,255,255,.03); margin-bottom: 4px;
+  animation: slideRowIn .5s ease both;
+}
+.class-row.p1 { background:rgba(240,165,0,.1); border-left:3px solid var(--gold); }
+.class-row.p2 { background:rgba(255,255,255,.05); border-left:3px solid rgba(192,192,192,.6); }
+.class-row.p3 { border-left:3px solid rgba(205,127,50,.5); }
+
+@keyframes slideRowIn { from{opacity:0;transform:translateX(-30px)} to{opacity:1;transform:none} }
+
+.rank-num {
+  width:26px; height:26px; border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:800;
+}
+.r1 { background:var(--gold); color:var(--maroon2); animation:rankPulse 2s infinite; }
+.r2 { background:rgba(192,192,192,.7); color:#000; }
+.r3 { background:rgba(205,127,50,.7); color:#fff; }
+.rn { background:rgba(255,255,255,.1); color:var(--muted); }
+
+.class-name { font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.class-num  { text-align:center; font-size:13px; color:var(--muted); }
+.class-pts  { text-align:center; font-size:17px; font-weight:800; color:var(--gold); }
+
+/* ── TABELA JOGOS ── */
+.jogo-row {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,.2); border-radius: 10px; padding: 10px 12px;
+  border-left: 3px solid transparent; margin-bottom: 6px;
+  animation: slideRowIn .5s ease both;
+}
+.jogo-row.done { border-left-color: var(--gold3); }
+.jogo-row.wait { border-left-color: rgba(255,255,255,.1); }
+
+.jogo-hora { font-size:13px; font-weight:700; color:var(--gold); min-width:44px; font-family:'Bebas Neue',sans-serif; font-size:17px; }
+.jogo-grupo { font-size:10px; color:var(--muted); min-width:60px; text-align:center; background:rgba(240,165,0,.1); border-radius:10px; padding:2px 6px; }
+.jogo-team-a { flex:1; font-size:14px; font-weight:700; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.jogo-team-a.w { color:var(--gold); }
+.jogo-score { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--gold2); min-width:70px; text-align:center; white-space:nowrap; }
+.jogo-score.vs { font-size:14px; color:var(--muted); letter-spacing:3px; }
+.jogo-team-b { flex:1; font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.jogo-team-b.w { color:var(--gold); }
+
+/* ── BRACKET ── */
+.bk-scene { display:flex; flex-direction:column; height:100%; gap:10px; }
+
+.bk-tagline { text-align:center; font-size:11px; letter-spacing:5px; color:rgba(240,165,0,.6); text-transform:uppercase; padding:4px 0; }
+
+.bk-row { display:flex; gap:0; align-items:stretch; }
+
+.bk-sf { flex:1; display:flex; flex-direction:column; gap:6px; }
+
+.bk-team-box {
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(240,165,0,.2);
+  border-radius: 10px; padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  animation: slideRowIn .5s ease both;
+}
+.bk-team-box.winner { border-color: rgba(240,165,0,.6); background:rgba(240,165,0,.1); box-shadow:0 0 12px rgba(240,165,0,.15); }
+
+.bk-tname { font-size:15px; font-weight:700; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bk-tname.w { color:var(--gold); }
+.bk-tscore { font-family:'Bebas Neue',sans-serif; font-size:28px; color:rgba(240,165,0,.5); min-width:36px; text-align:center; }
+.bk-tscore.w { color:var(--gold); }
+.bk-tscore.p { font-size:14px; color:rgba(255,255,255,.2); letter-spacing:2px; }
+
+.bk-connector {
+  width: 36px; display:flex; flex-direction:column; justify-content:center; align-items:flex-end;
+  flex-shrink:0; padding-right:0;
+}
+.bk-connector-right {
+  width: 36px; display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+  flex-shrink:0;
+}
+
+.bk-center { width:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; flex-shrink:0; }
+
+.bk-trophy { font-size:56px; filter:drop-shadow(0 0 16px rgba(240,165,0,.7)); animation:trophySpin 5s ease-in-out infinite; display:block; line-height:1; }
+@keyframes trophySpin { 0%{transform:rotateY(0)scale(1)} 50%{transform:rotateY(180deg)scale(1.15)} 100%{transform:rotateY(360deg)scale(1)} }
+
+.bk-final-label { font-size:9px; font-weight:800; letter-spacing:4px; color:var(--gold); text-transform:uppercase; border:1px solid rgba(240,165,0,.3); border-radius:20px; padding:3px 12px; }
+
+.bk-final-box {
+  background:linear-gradient(135deg,rgba(40,20,0,.9),rgba(80,40,0,.9));
+  border:1px solid rgba(240,165,0,.4); border-radius:10px; padding:8px 12px;
+  display:flex; align-items:center; justify-content:space-between; width:100%;
+  animation:scaleIn .5s .4s ease both;
+}
+.bk-final-name { font-size:13px; font-weight:700; flex:1; color:rgba(255,255,255,.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bk-final-name.w { color:var(--gold); }
+.bk-final-score { font-family:'Bebas Neue',sans-serif; font-size:24px; color:rgba(240,165,0,.5); }
+.bk-final-score.w { color:var(--gold); }
+.bk-final-score.p { font-size:12px; color:rgba(240,165,0,.25); letter-spacing:2px; }
+
+.camp-banner {
+  background:linear-gradient(135deg,rgba(60,30,0,.95),rgba(100,50,0,.95));
+  border:2px solid rgba(240,165,0,.5); border-radius:12px; padding:10px 14px; width:100%;
+  text-align:center;
+  animation:scaleIn .6s .7s ease both, glowGold 2s infinite;
+}
+.camp-lbl { font-size:9px; letter-spacing:3px; color:rgba(240,165,0,.7); text-transform:uppercase; }
+.camp-name { font-size:17px; font-weight:900; background:linear-gradient(90deg,var(--gold),#fff,var(--gold)); background-size:200% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:shimmer 2s linear infinite; }
+
+/* ── FOOTER ── */
+.tv-footer {
+  flex-shrink:0;
+  background:rgba(0,0,0,.4);
+  border-top:1px solid rgba(240,165,0,.15);
+  padding:7px 20px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.tv-footer span { font-size:10px; color:var(--muted); }
+.progress-bar { width:100px; height:3px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:8px; }
+.progress-fill { height:100%; background:var(--gold); border-radius:2px; transition:width 1s linear; }
+
+/* ── SCENE DOTS ── */
+.scene-dots { display:flex; justify-content:center; gap:7px; padding:5px 0; flex-shrink:0; }
+.scene-dot { width:7px; height:7px; border-radius:4px; background:rgba(240,165,0,.25); transition:all .4s; }
+.scene-dot.active { width:22px; background:var(--gold); }
+
+/* ── LOADING ── */
+.loading-overlay {
+  position:fixed; inset:0; z-index:100;
+  background:var(--maroon2);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  transition:opacity .6s;
+}
+.loading-overlay.hidden { opacity:0; pointer-events:none; }
+.spinner { width:44px; height:44px; border:4px solid rgba(240,165,0,.2); border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* ── KEYFRAMES COMUNS ── */
+@keyframes fadeInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:none} }
+@keyframes scaleIn    { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:none} }
+@keyframes shimmer    { 0%{background-position:-200% center} 100%{background-position:200% center} }
+@keyframes glowGold   { 0%,100%{box-shadow:0 0 16px rgba(240,165,0,.2)} 50%{box-shadow:0 0 32px rgba(240,165,0,.5)} }
+@keyframes rankPulse  { 0%,100%{box-shadow:0 0 0 0 rgba(240,165,0,0)} 50%{box-shadow:0 0 0 5px rgba(240,165,0,.25)} }
+@keyframes blink      { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes scoreFlash { 0%,100%{color:var(--gold2)} 50%{color:#fff;text-shadow:0 0 20px #fff} }
+</style>
+</head>
+<body>
+
+<!-- BG -->
+<div class="radial-bg"></div>
+<div class="bball-bg">
+  <svg width="100%" height="100%" viewBox="0 0 400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Basketball lines -->
+    <circle cx="200" cy="620" r="280" stroke="#F0A500" stroke-width="3" fill="none"/>
+    <circle cx="200" cy="620" r="180" stroke="#F0A500" stroke-width="2" fill="none"/>
+    <path d="M 200 340 Q 340 500 280 700 Q 220 850 200 900" stroke="#F0A500" stroke-width="2.5" fill="none"/>
+    <path d="M 200 340 Q 60 500 120 700 Q 180 850 200 900" stroke="#F0A500" stroke-width="2.5" fill="none"/>
+    <line x1="0" y1="620" x2="400" y2="620" stroke="#F0A500" stroke-width="2"/>
+    <path d="M 60 340 Q 200 460 340 340" stroke="#F0A500" stroke-width="2" fill="none"/>
+  </svg>
+</div>
+<div class="particles" id="particles"></div>
+
+<div class="loading-overlay" id="loading">
+  <div style="font-size:52px;">🏀</div>
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:rgba(240,165,0,.7);letter-spacing:3px;">CARREGANDO...</div>
+</div>
+
+<div class="tv-wrap">
+  <!-- HEADER -->
+  <div class="tv-header">
+    <div class="logo-shield">
+      <div class="logo-edicao">1ª Edição</div>
+      <div class="logo-super">SUPER</div>
+      <div class="logo-bar">BASQUETE</div>
+      <div class="logo-copa">COPA</div>
+    </div>
+    <div class="live-badge"><div class="dot"></div>AO VIVO</div>
+    <div class="tv-clock-wrap">
+      <div class="tv-clock" id="clockTime">00:00</div>
+      <div class="tv-date" id="clockDate">--</div>
+    </div>
+  </div>
+  <div class="gold-line"></div>
+
+  <!-- CENAS -->
+  <div class="scene-wrap" id="sceneWrap">
+
+    <!-- CENA 1: Placar + Classificação -->
+    <div class="scene" id="scene-placar">
+      <div id="liveCardWrap"></div>
+
+      <div class="panel">
+        <div class="panel-head">🏆 Classificação — Grupo A</div>
+        <div class="panel-body" id="classA"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">🏆 Classificação — Grupo B</div>
+        <div class="panel-body" id="classB"></div>
+      </div>
+    </div>
+
+    <!-- CENA 2: Tabela de Jogos -->
+    <div class="scene" id="scene-tabela">
+      <div class="panel" style="flex:1;">
+        <div class="panel-head">📋 Tabela de Jogos</div>
+        <div class="panel-body" id="tabelaJogos" style="overflow:auto;max-height:calc(100vh - 200px);"></div>
+      </div>
+    </div>
+
+    <!-- CENA 3: Mata-Mata (domingo) -->
+    <div class="scene" id="scene-matamata">
+      <div class="panel" style="flex:1;">
+        <div class="panel-head">🏆 Mata-Mata</div>
+        <div class="panel-body" id="mmPanel" style="padding:12px;overflow:hidden;height:calc(100vh - 200px);"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="scene-dots" id="sceneDots"></div>
+
+  <!-- FOOTER -->
+  <div class="tv-footer">
+    <span>🏀 Supercopa Basquete</span>
+    <span id="lastUpdate">—</span>
+    <span><span id="countLbl">30</span>s
+      <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:100%"></div></div>
+    </span>
+  </div>
+</div>
+
+<script>
+// ── PARTÍCULAS ─────────────────────────────────────
+(function(){
+  var c=document.getElementById('particles');
+  for(var i=0;i<18;i++){
+    var p=document.createElement('div');
+    p.className='particle';
+    var s=Math.random()*4+1;
+    var isGold=Math.random()>.5;
+    p.style.cssText='left:'+Math.random()*100+'%;width:'+s+'px;height:'+s+'px;background:'+(isGold?'rgba(240,165,0,.4)':'rgba(255,255,255,.15)')+';animation-duration:'+(Math.random()*18+10)+'s;animation-delay:'+(Math.random()*12)+'s;';
+    c.appendChild(p);
+  }
+})();
+
+// ── CONFIG ─────────────────────────────────────────
+var SHEET_ID = '1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0';
+var API_KEY  = 'AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw';
+var REFRESH  = 30;
+
+var HORARIOS = {
+  'A-1':'08:00','A-2':'09:30','A-3':'11:00',
+  'B-1':'08:45','B-2':'10:15','B-3':'11:45',
+  'SF1':'14:00','SF2':'15:30','Final':'17:00'
+};
+
+var appData = { grupos:[], matamata:[] };
+var countdown = REFRESH;
+var currentScene = 0;
+var scenes = [];
+
+function apiUrl(range){
+  return 'https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+encodeURIComponent(range)+'?key='+API_KEY;
+}
+function gc(rows,r,c){ return (rows[r]&&rows[r][c])?rows[r][c].toString().trim():''; }
+function pad(v){ return String(v).padStart(2,'0'); }
+
+// ── CLOCK ──────────────────────────────────────────
+function updateClock(){
+  var n=new Date();
+  document.getElementById('clockTime').textContent=pad(n.getHours())+':'+pad(n.getMinutes());
+  var dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  document.getElementById('clockDate').textContent=dias[n.getDay()]+' '+pad(n.getDate())+'/'+pad(n.getMonth()+1);
+}
+setInterval(updateClock,1000); updateClock();
+
+// ── MODE ───────────────────────────────────────────
+function getMode(){
+  var p=new URLSearchParams(window.location.search);
+  var m=p.get('modo');
+  if(m==='matamata') return 'matamata';
+  if(m==='grupos')   return 'grupos';
+  return new Date().getDay()===0?'matamata':'grupos';
+}
+
+// ── SCENES ─────────────────────────────────────────
+function buildScenes(){
+  var mode=getMode();
+  scenes = mode==='matamata' ? ['scene-matamata'] : ['scene-placar','scene-tabela'];
+  var el=document.getElementById('sceneDots');
+  el.innerHTML=scenes.length>1?scenes.map(function(_,i){ return '<div class="scene-dot'+(i===0?' active':'')+'"></div>'; }).join(''):'';
+}
+
+function showScene(idx){
+  var prev=document.querySelector('.scene.active');
+  if(prev){ prev.classList.add('leaving'); prev.classList.remove('active'); setTimeout(function(){prev.classList.remove('leaving');},550); }
+  currentScene=idx;
+  var next=document.getElementById(scenes[idx]);
+  if(next) next.classList.add('active');
+  document.querySelectorAll('.scene-dot').forEach(function(d,i){d.classList.toggle('active',i===idx);});
+}
+
+setInterval(function(){ showScene((currentScene+1)%scenes.length); }, 20000);
+
+// ── COUNTDOWN ──────────────────────────────────────
+setInterval(function(){
+  countdown--;
+  if(countdown<=0){ countdown=REFRESH; loadData(); }
+  document.getElementById('countLbl').textContent=countdown;
+  document.getElementById('progFill').style.width=(countdown/REFRESH*100)+'%';
+},1000);
+
+// ── LOAD ───────────────────────────────────────────
+function loadData(){
+  Promise.all([
+    fetch(apiUrl("'Fase de Grupos'!A1:S15")).then(function(r){return r.json();}),
+    fetch(apiUrl("'Mata-Mata'!A1:O22")).then(function(r){return r.json();})
+  ]).then(function(res){
+    var gRows=res[0].values||[];
+    var mRows=res[1].values||[];
+
+    appData.grupos=[];
+    var cfgs=[{grupo:'A',off:0},{grupo:'B',off:10}];
+    cfgs.forEach(function(c){
+      [4,5,6].forEach(function(rIdx,i){
+        var ea=gc(gRows,rIdx,1+c.off), eb=gc(gRows,rIdx,6+c.off);
+        if(!ea&&!eb) return;
+        var pA=gc(gRows,rIdx,3+c.off), pB=gc(gRows,rIdx,5+c.off);
+        var ok=pA!==''&&pB!=='';
+        appData.grupos.push({
+          grupo:c.grupo, rodada:i+1, key:c.grupo+'-'+(i+1),
+          horario:HORARIOS[c.grupo+'-'+(i+1)]||'--:--',
+          equipeA:ea, equipeB:eb,
+          ptsA:ok?parseInt(pA)||0:null,
+          ptsB:ok?parseInt(pB)||0:null,
+          status:ok?'done':'wait'
+        });
+      });
+    });
+
+    appData.matamata=[];
+    [[3,'SF1'],[8,'SF2'],[14,'Final']].forEach(function(cfg){
+      var rIdx=cfg[0], key=cfg[1];
+      var ea=gc(mRows,rIdx,1), eb=gc(mRows,rIdx,7);
+      var pA=gc(mRows,rIdx+1,1), pB=gc(mRows,rIdx+1,7);
+      var ok=pA!==''&&pB!=='';
+      appData.matamata.push({ key:key, fase:key==='Final'?'Grande Final':key.replace('SF','Semifinal '), horario:HORARIOS[key]||'', equipeA:ea||'A definir', equipeB:eb||'A definir', ptsA:ok?parseInt(pA)||0:null, ptsB:ok?parseInt(pB)||0:null });
+    });
+
+    renderAll();
+    document.getElementById('loading').classList.add('hidden');
+    var n=new Date();
+    document.getElementById('lastUpdate').textContent='Atualizado '+pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
+  }).catch(function(e){ console.warn(e); });
+}
+
+// ── CLASSIFICAÇÃO ──────────────────────────────────
+function calcClassif(grupo){
+  var times={};
+  appData.grupos.filter(function(j){return j.grupo===grupo;}).forEach(function(j){
+    [j.equipeA,j.equipeB].forEach(function(t){ if(t&&!times[t]) times[t]={nome:t,j:0,v:0,e:0,d:0,gp:0,gc:0,pts:0}; });
+    if(j.status!=='done'||j.ptsA===null) return;
+    var a=j.ptsA,b=j.ptsB;
+    var tA=times[j.equipeA],tB=times[j.equipeB];
+    if(!tA||!tB) return;
+    tA.j++;tB.j++;tA.gp+=a;tA.gc+=b;tB.gp+=b;tB.gc+=a;
+    if(a>b){tA.pts+=2;tA.v++;tB.d++;}
+    else if(a<b){tB.pts+=2;tB.v++;tA.d++;}
+    else{tA.pts++;tA.e++;tB.pts++;tB.e++;}
+  });
+  return Object.values(times).sort(function(a,b){return b.pts-a.pts||b.gp-a.gp-b.gc+a.gc;});
+}
+
+function renderClassif(grupo,id){
+  var cl=calcClassif(grupo);
+  var rk=['r1','r2','r3','rn','rn'], pc=['p1','p2','p3','',''];
+  var html='<div class="class-header"><div>#</div><div>Equipe</div><div style="text-align:center">J</div><div style="text-align:center">V</div><div style="text-align:center">D</div><div style="text-align:center">Pts</div></div>';
+  cl.forEach(function(t,i){
+    html+='<div class="class-row '+pc[i]+'" style="animation-delay:'+(i*.1)+'s">'+
+      '<div><div class="rank-num '+rk[i]+'">'+(i+1)+'</div></div>'+
+      '<div class="class-name">'+t.nome+'</div>'+
+      '<div class="class-num">'+t.j+'</div>'+
+      '<div class="class-num">'+t.v+'</div>'+
+      '<div class="class-num">'+t.d+'</div>'+
+      '<div class="class-pts">'+t.pts+'</div>'+
+    '</div>';
+  });
+  document.getElementById(id).innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:12px;">Aguardando...</div>';
+}
+
+// ── PLACAR DESTAQUE ────────────────────────────────
+function renderLiveCard(){
+  var done=appData.grupos.filter(function(j){return j.status==='done';});
+  var wait=appData.grupos.filter(function(j){return j.status==='wait';});
+  var el=document.getElementById('liveCardWrap');
+  if(!done.length&&!wait.length){ el.innerHTML=''; return; }
+
+  var j=done.length?done[done.length-1]:wait[0];
+  var isLast=done.length>0;
+  var vA=isLast&&j.ptsA>j.ptsB, vB=isLast&&j.ptsB>j.ptsA;
+
+  el.innerHTML='<div class="live-card">'+
+    '<div class="live-card-label">'+(isLast?'⚡ ÚLTIMO RESULTADO':'⏳ PRÓXIMO JOGO')+' · '+j.horario+' · '+j.grupo+' JOGO '+j.rodada+'</div>'+
+    '<div class="live-teams">'+
+      '<div class="live-team">'+
+        '<div class="live-team-icon">🏀</div>'+
+        '<div class="live-team-name'+(vA?' winner':'')+'">'+j.equipeA+'</div>'+
+      '</div>'+
+      '<div class="live-score-box">'+
+        (isLast?
+          '<div class="live-score">'+(j.ptsA)+'</div>'+
+          '<div class="live-score-sep">×</div>'+
+          '<div class="live-score">'+(j.ptsB)+'</div>'
+        :
+          '<div class="live-score-vs">VS</div>'
+        )+
+      '</div>'+
+      '<div class="live-team">'+
+        '<div class="live-team-icon">🏀</div>'+
+        '<div class="live-team-name'+(vB?' winner':'')+'">'+j.equipeB+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="live-rodada">Grupo '+j.grupo+'  ·  Jogo '+j.rodada+'</div>'+
+  '</div>';
+}
+
+// ── TABELA JOGOS ────────────────────────────────────
+function renderTabela(){
+  var html=appData.grupos.map(function(j,i){
+    var ok=j.status==='done';
+    var vA=ok&&j.ptsA>j.ptsB, vB=ok&&j.ptsB>j.ptsA;
+    return '<div class="jogo-row '+(ok?'done':'wait')+'" style="animation-delay:'+(i*.07)+'s">'+
+      '<div class="jogo-hora">'+j.horario+'</div>'+
+      '<div class="jogo-grupo">GRP '+j.grupo+'</div>'+
+      '<div class="jogo-team-a'+(vA?' w':'')+'">'+j.equipeA+'</div>'+
+      '<div class="jogo-score'+(ok?'':' vs')+'">'+(ok?j.ptsA+' × '+j.ptsB:'VS')+'</div>'+
+      '<div class="jogo-team-b'+(vB?' w':'')+'">'+j.equipeB+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('tabelaJogos').innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px;">Aguardando dados...</div>';
+}
+
+// ── MATA-MATA BRACKET ────────────────────────────────
+function renderMataMata(){
+  var mm=appData.matamata;
+  if(!mm.length){ document.getElementById('mmPanel').innerHTML='<div style="color:var(--muted);text-align:center;padding:40px;">Aguardando...</div>'; return; }
+  var sf1=mm[0]||{}, sf2=mm[1]||{}, fin=mm[2]||{};
+
+  function v1A(){ return sf1.ptsA!==null&&sf1.ptsB!==null&&sf1.ptsA>sf1.ptsB; }
+  function v1B(){ return sf1.ptsA!==null&&sf1.ptsB!==null&&sf1.ptsB>sf1.ptsA; }
+  function v2A(){ return sf2.ptsA!==null&&sf2.ptsB!==null&&sf2.ptsA>sf2.ptsB; }
+  function v2B(){ return sf2.ptsA!==null&&sf2.ptsB!==null&&sf2.ptsB>sf2.ptsA; }
+  function vfA(){ return fin.ptsA!==null&&fin.ptsB!==null&&fin.ptsA>fin.ptsB; }
+  function vfB(){ return fin.ptsA!==null&&fin.ptsB!==null&&fin.ptsB>fin.ptsA; }
+  var temCamp=fin.ptsA!==null&&fin.ptsB!==null;
+  var camp=temCamp?(fin.ptsA>fin.ptsB?fin.equipeA:fin.equipeB):'';
+
+  function sc(v,w){ return v!==null?String(v):'–'; }
+
+  var html='<div class="bk-scene">'+
+    '<div class="bk-tagline">A GLÓRIA ETERNA · '+new Date().getFullYear()+'</div>'+
+
+    // Layout horizontal: SF1 | centro | SF2
+    '<div style="display:flex;align-items:center;flex:1;gap:0;">'+
+
+    // SF1
+    '<div class="bk-sf">'+
+      '<div style="font-size:9px;font-weight:700;letter-spacing:3px;color:rgba(240,165,0,.6);text-transform:uppercase;text-align:center;margin-bottom:6px;">'+sf1.fase+(sf1.horario?' · '+sf1.horario:'')+'</div>'+
+      '<div class="bk-team-box'+(v1A()?' winner':'')+'" style="animation-delay:.1s">'+
+        '<div class="bk-tname'+(v1A()?' w':'')+'">'+sf1.equipeA+'</div>'+
+        '<div class="bk-tscore'+(v1A()?' w':sf1.ptsA===null?' p':'')+'">'+sc(sf1.ptsA,v1A())+'</div>'+
+      '</div>'+
+      '<div style="height:10px;display:flex;justify-content:flex-end;">'+
+        '<div style="width:1px;height:100%;background:rgba(240,165,0,.4);margin-right:0;"></div>'+
+      '</div>'+
+      '<div class="bk-team-box'+(v1B()?' winner':'')+'" style="animation-delay:.2s">'+
+        '<div class="bk-tname'+(v1B()?' w':'')+'">'+sf1.equipeB+'</div>'+
+        '<div class="bk-tscore'+(v1B()?' w':sf1.ptsB===null?' p':'')+'">'+sc(sf1.ptsB,v1B())+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    // Conector esquerdo
+    '<div style="width:30px;display:flex;flex-direction:column;justify-content:center;padding:0 4px;flex-shrink:0;">'+
+      '<div style="height:50%;border-right:2px solid rgba(240,165,0,.4);border-bottom:2px solid rgba(240,165,0,.4);border-radius:0 0 8px 0;"></div>'+
+      '<div style="height:50%;border-right:2px solid rgba(240,165,0,.4);"></div>'+
+    '</div>'+
+
+    // Centro
+    '<div class="bk-center">'+
+      '<div class="bk-trophy">🏀</div>'+
+      '<div class="bk-final-label">⚡ FINAL</div>'+
+      '<div class="bk-final-box'+(vfA()?' winner':'')+'" style="margin-bottom:3px;">'+
+        '<div class="bk-final-name'+(vfA()?' w':'')+'">'+fin.equipeA+'</div>'+
+        '<div class="bk-final-score'+(vfA()?' w':fin.ptsA===null?' p':'')+'">'+sc(fin.ptsA,vfA())+'</div>'+
+      '</div>'+
+      '<div class="bk-final-box'+(vfB()?' winner':'')+'">'+
+        '<div class="bk-final-name'+(vfB()?' w':'')+'">'+fin.equipeB+'</div>'+
+        '<div class="bk-final-score'+(vfB()?' w':fin.ptsB===null?' p':'')+'">'+sc(fin.ptsB,vfB())+'</div>'+
+      '</div>'+
+      (temCamp?'<div class="camp-banner" style="margin-top:8px;"><div class="camp-lbl">🥇 Campeão</div><div class="camp-name">'+camp+'</div></div>':'')+
+    '</div>'+
+
+    // Conector direito
+    '<div style="width:30px;display:flex;flex-direction:column;justify-content:center;padding:0 4px;flex-shrink:0;">'+
+      '<div style="height:50%;border-left:2px solid rgba(240,165,0,.4);border-bottom:2px solid rgba(240,165,0,.4);border-radius:0 0 0 8px;"></div>'+
+      '<div style="height:50%;border-left:2px solid rgba(240,165,0,.4);"></div>'+
+    '</div>'+
+
+    // SF2
+    '<div class="bk-sf">'+
+      '<div style="font-size:9px;font-weight:700;letter-spacing:3px;color:rgba(240,165,0,.6);text-transform:uppercase;text-align:center;margin-bottom:6px;">'+sf2.fase+(sf2.horario?' · '+sf2.horario:'')+'</div>'+
+      '<div class="bk-team-box'+(v2A()?' winner':'')+'" style="animation-delay:.1s">'+
+        '<div class="bk-tscore'+(v2A()?' w':sf2.ptsA===null?' p':'')+'">'+sc(sf2.ptsA,v2A())+'</div>'+
+        '<div class="bk-tname'+(v2A()?' w':'')+'" style="text-align:right;">'+sf2.equipeA+'</div>'+
+      '</div>'+
+      '<div style="height:10px;display:flex;justify-content:flex-start;">'+
+        '<div style="width:1px;height:100%;background:rgba(240,165,0,.4);"></div>'+
+      '</div>'+
+      '<div class="bk-team-box'+(v2B()?' winner':'')+'" style="animation-delay:.2s">'+
+        '<div class="bk-tscore'+(v2B()?' w':sf2.ptsB===null?' p':'')+'">'+sc(sf2.ptsB,v2B())+'</div>'+
+        '<div class="bk-tname'+(v2B()?' w':'')+'" style="text-align:right;">'+sf2.equipeB+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    '</div>'+ // flex row
+  '</div>'; // bk-scene
+
+  document.getElementById('mmPanel').innerHTML=html;
+  document.getElementById('mmPanel').style.cssText='padding:12px;overflow:hidden;height:calc(100vh - 200px);display:flex;flex-direction:column;';
+}
+
+function renderAll(){
+  renderLiveCard();
+  renderClassif('A','classA');
+  renderClassif('B','classB');
+  renderTabela();
+  renderMataMata();
+}
+
+// ── INIT ───────────────────────────────────────────
+setTimeout(function(){
+  buildScenes();
+  showScene(0);
+  loadData();
+}, 1500);
+</script>
+</body>
+</html>
