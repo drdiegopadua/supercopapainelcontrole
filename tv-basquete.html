@@ -412,6 +412,19 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
 @keyframes tickerRoll{from{left:100%}to{left:-300%}}
 /* ── TEAM NAME BIGGER ── */
 .live-team-name{font-size:16px;font-weight:800;text-align:center;line-height:1.1;max-width:140px;}
+/* ── PODIO MELHORADO ── */
+.podio-badge{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;background:linear-gradient(135deg,var(--maroon),#4a0a0a);border:2.5px solid rgba(240,165,0,.35);color:rgba(255,255,255,.9);flex-shrink:0;}
+.podio-slot.gold .podio-badge{width:68px;height:68px;font-size:26px;border-color:rgba(240,165,0,.9);background:linear-gradient(135deg,#5a2d00,#2a1400);box-shadow:0 0 25px rgba(240,165,0,.6);color:var(--gold2);animation:rankPulse 2s infinite;}
+.podio-slot.silver .podio-badge{border-color:rgba(192,192,192,.5);color:rgba(220,220,220,.9);}
+.gold-block{height:200px!important;width:150px!important;}
+.silver-block{height:145px!important;width:128px!important;}
+.podio-team{font-size:20px!important;max-width:160px!important;}
+.podio-slot.gold .podio-team{font-size:26px!important;max-width:180px!important;}
+/* ── BRACKET MINI BADGE ── */
+.bk-mini-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:12px;background:linear-gradient(135deg,var(--maroon),#4a0a0a);border:1.5px solid rgba(240,165,0,.3);color:rgba(255,255,255,.85);flex-shrink:0;}
+.bk-team-box.winner .bk-mini-badge{border-color:rgba(240,165,0,.8);background:linear-gradient(135deg,#5a2d00,#2a1400);color:var(--gold2);}
+/* ── BRACKET LABEL ── */
+.bk-round-lbl{font-size:10px;font-weight:800;letter-spacing:3px;color:rgba(240,165,0,.5);text-transform:uppercase;text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(240,165,0,.15);padding-bottom:5px;}
 </style>
 </head>
 <body>
@@ -509,11 +522,13 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
         <div class="podio-title">🏆 PÓDIO FINAL</div>
         <div class="podio-stage">
           <div class="podio-slot silver" id="podio2">
+            <div class="podio-badge" id="podioBadge2">?</div>
             <div class="podio-medal">🥈</div>
             <div class="podio-team" id="podioTeam2">—</div>
             <div class="podio-block silver-block"><div class="podio-pos">2º</div></div>
           </div>
           <div class="podio-slot gold" id="podio1">
+            <div class="podio-badge" id="podioBadge1">?</div>
             <div class="podio-medal">🥇</div>
             <div class="podio-team" id="podioTeam1">—</div>
             <div class="podio-block gold-block"><div class="podio-pos">1º</div></div>
@@ -855,9 +870,9 @@ function renderMataMata(){
     '<div style="display:flex;align-items:center;flex:1;gap:0;">'+
     '<div class="bk-sf">'+
       '<div style="font-size:9px;font-weight:700;letter-spacing:2px;color:rgba(240,165,0,.6);text-transform:uppercase;text-align:center;margin-bottom:6px;">'+sf1.fase+(sf1.horario?' · '+sf1.horario:'')+'</div>'+
-      '<div class="bk-team-box'+(v1A()?' winner':'')+'" style="animation-delay:.1s"><div class="bk-tname'+(v1A()?' w':'')+'">'+sf1.equipeA+'</div><div class="bk-tscore'+(v1A()?' w':sf1.ptsA===null?' p':'')+'">'+sc(sf1.ptsA)+'</div></div>'+
+      '<div class="bk-team-box'+(v1A()?' winner':'')+'" style="animation-delay:.1s"><div class="bk-mini-badge">'+getInitials(sf1.equipeA)+'</div><div class="bk-tname'+(v1A()?' w':'')+'">'+sf1.equipeA+'</div><div class="bk-tscore'+(v1A()?' w':sf1.ptsA===null?' p':'')+'">'+sc(sf1.ptsA)+'</div></div>'+
       '<div style="height:12px;display:flex;justify-content:flex-end;"><div style="width:1px;height:100%;background:rgba(240,165,0,.4);"></div></div>'+
-      '<div class="bk-team-box'+(v1B()?' winner':'')+'" style="animation-delay:.2s"><div class="bk-tname'+(v1B()?' w':'')+'">'+sf1.equipeB+'</div><div class="bk-tscore'+(v1B()?' w':sf1.ptsB===null?' p':'')+'">'+sc(sf1.ptsB)+'</div></div>'+
+      '<div class="bk-team-box'+(v1B()?' winner':'')+'" style="animation-delay:.2s"><div class="bk-mini-badge">'+getInitials(sf1.equipeB)+'</div><div class="bk-tname'+(v1B()?' w':'')+'">'+sf1.equipeB+'</div><div class="bk-tscore'+(v1B()?' w':sf1.ptsB===null?' p':'')+'">'+sc(sf1.ptsB)+'</div></div>'+
     '</div>'+
     '<div style="width:28px;display:flex;flex-direction:column;justify-content:center;flex-shrink:0;">'+
       '<div style="height:50%;border-right:2px solid rgba(240,165,0,.4);border-bottom:2px solid rgba(240,165,0,.4);border-radius:0 0 8px 0;"></div>'+
@@ -876,9 +891,9 @@ function renderMataMata(){
     '</div>'+
     '<div class="bk-sf">'+
       '<div style="font-size:9px;font-weight:700;letter-spacing:2px;color:rgba(240,165,0,.6);text-transform:uppercase;text-align:center;margin-bottom:6px;">'+sf2.fase+(sf2.horario?' · '+sf2.horario:'')+'</div>'+
-      '<div class="bk-team-box'+(v2A()?' winner':'')+'" style="animation-delay:.1s"><div class="bk-tscore'+(v2A()?' w':sf2.ptsA===null?' p':'')+'">'+sc(sf2.ptsA)+'</div><div class="bk-tname'+(v2A()?' w':'')+'" style="text-align:right;">'+sf2.equipeA+'</div></div>'+
+      '<div class="bk-team-box'+(v2A()?' winner':'')+'" style="animation-delay:.1s"><div class="bk-tscore'+(v2A()?' w':sf2.ptsA===null?' p':'')+'">'+sc(sf2.ptsA)+'</div><div class="bk-tname'+(v2A()?' w':'')+'" style="text-align:right;">'+sf2.equipeA+'</div><div class="bk-mini-badge">'+getInitials(sf2.equipeA)+'</div></div>'+
       '<div style="height:12px;display:flex;justify-content:flex-start;"><div style="width:1px;height:100%;background:rgba(240,165,0,.4);"></div></div>'+
-      '<div class="bk-team-box'+(v2B()?' winner':'')+'" style="animation-delay:.2s"><div class="bk-tscore'+(v2B()?' w':sf2.ptsB===null?' p':'')+'">'+sc(sf2.ptsB)+'</div><div class="bk-tname'+(v2B()?' w':'')+'" style="text-align:right;">'+sf2.equipeB+'</div></div>'+
+      '<div class="bk-team-box'+(v2B()?' winner':'')+'" style="animation-delay:.2s"><div class="bk-tscore'+(v2B()?' w':sf2.ptsB===null?' p':'')+'">'+sc(sf2.ptsB)+'</div><div class="bk-tname'+(v2B()?' w':'')+'" style="text-align:right;">'+sf2.equipeB+'</div><div class="bk-mini-badge">'+getInitials(sf2.equipeB)+'</div></div>'+
     '</div>'+
     '</div>'+
   '</div>';
@@ -942,6 +957,10 @@ function renderPodio(){
   n1=n1||'A DEFINIR'; n2=n2||'A DEFINIR';
   document.getElementById('podioTeam1').textContent=n1;
   document.getElementById('podioTeam2').textContent=n2;
+  var b1=document.getElementById('podioBadge1');
+  var b2=document.getElementById('podioBadge2');
+  if(b1) b1.textContent=getInitials(n1);
+  if(b2) b2.textContent=getInitials(n2);
   // CSS confetti
   var c=document.getElementById('podioCSSConfetti');
   if(c&&!c.childElementCount){
