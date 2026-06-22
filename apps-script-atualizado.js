@@ -1,454 +1,503 @@
-﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// APPS SCRIPT â€” BASQUETE (SUPERCOPA)
-// Planilha ID: 1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0
-//
-// SETUP (faÃ§a UMA VEZ apÃ³s colar o cÃ³digo):
-//   1. Cole este cÃ³digo inteiro substituindo o anterior
-//   2. Salve (Ctrl+S)
-//   3. No menu: Executar â†’ configurarTrigger
-//   4. Autorize as permissÃµes quando solicitado
-//   Isso cria o trigger automÃ¡tico a cada 30 min para o bolÃ£o.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// ============================================================
+// SUPERCOPA AFC 2026 — Apps Script da Planilha PALPITES
+// ID: 13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A
+// ============================================================
 
-var SHEET_ID = '1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0';
-var PALPITES_SHEET_ID = '13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A';
+const ABA_PALPITES  = 'PALPITES';
+const ABA_DETALHE   = 'PALPITES_DETALHE';
+const ABA_CAMPEAO   = 'CAMPEAO';
+const ABA_QUIZ      = 'QUIZ';
+const ABA_CONFIGS   = 'CONFIGS';
+const ABA_PUSH      = 'PUSH_SUBS';
 
-// â”€â”€ TRIGGER SETUP (execute uma Ãºnica vez) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function configurarTrigger() {
-  // Remove triggers antigos para evitar duplicatas
-  ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === 'verificarBolao') {
-      ScriptApp.deleteTrigger(t);
-    }
-  });
-  // Cria trigger a cada 30 minutos
-  ScriptApp.newTrigger('verificarBolao')
-    .timeBased()
-    .everyMinutes(30)
-    .create();
-  Logger.log('Trigger criado: verificarBolao a cada 30 minutos');
-}
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// VERIFICAÃ‡ÃƒO AUTOMÃTICA DO BOLÃƒO (roda a cada 30 min)
-// LÃª os resultados reais dos jogos, compara com os palpites
-// e atualiza a aba Bolao com acertos/erros e % geral.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function verificarBolao() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-
-  // â”€â”€ 1. Ler palpites do bolÃ£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  var bolaoSheet = ss.getSheetByName('Bolao');
-  if (!bolaoSheet || bolaoSheet.getLastRow() <= 1) return; // sem dados
-
-  // Garante cabeÃ§alhos com colunas extras
-  var header = bolaoSheet.getRange(1, 1, 1, 6).getValues()[0];
-  if (!header[3] || header[3] === '') {
-    bolaoSheet.getRange(1, 4).setValue('Resultado');
-    bolaoSheet.getRange(1, 5).setValue('Acerto');
-    bolaoSheet.getRange(1, 6).setValue('% Acerto Geral');
-  }
-
-  var lastRow = bolaoSheet.getLastRow();
-  // LÃª linhas de dados (a partir da linha 2)
-  var bets = bolaoSheet.getRange(2, 1, lastRow - 1, 3).getValues();
-  // bets[i] = [Nome, Time (palpite), Data]
-
-  // â”€â”€ 2. Descobrir o campeÃ£o atual (Mata-Mata) â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  var campeao = getCampeaoAtual(ss);
-
-  // â”€â”€ 3. Ler resultados da fase de grupos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Para pontuaÃ§Ã£o parcial: verificar se o time do palpite
-  // ganhou jogos na fase de grupos (1 acerto por vitÃ³ria)
-  var resultadosGrupos = getResultadosGrupos(ss);
-
-  // â”€â”€ 4. Calcular acertos por palpite â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  var totalAcertos = 0;
-  var totalValidos = 0;
-  var resultados = []; // [resultado_texto, acerto_sim_nao, %]
-
-  bets.forEach(function(bet) {
-    var nomePalpite = (bet[0] || '').toString().trim();
-    var timePalpite = (bet[1] || '').toString().trim();
-    if (!timePalpite) {
-      resultados.push(['', '', '']);
-      return;
-    }
-
-    totalValidos++;
-
-    // Verificar se hÃ¡ campeÃ£o definido
-    if (campeao) {
-      var acertouCampeao = normalizar(timePalpite) === normalizar(campeao);
-      resultados.push([
-        acertouCampeao ? 'CampeÃ£o: ' + campeao : 'Eliminado',
-        acertouCampeao ? 'SIM' : 'NÃƒO',
-        ''  // % serÃ¡ calculado apÃ³s
-      ]);
-      if (acertouCampeao) totalAcertos++;
-    } else {
-      // Fase em andamento: verificar vitÃ³rias do time escolhido
-      var vitorias = contarVitorias(timePalpite, resultadosGrupos);
-      var totalJogos = resultadosGrupos.length;
-      var status = 'Em andamento (' + vitorias + ' vitÃ³ria' + (vitorias !== 1 ? 's' : '') + ')';
-      // "Acerto parcial" = time ganhou pelo menos 1 jogo
-      var acertoParcial = vitorias > 0;
-      resultados.push([status, acertoParcial ? 'PARCIAL' : 'AGUARDANDO', '']);
-      if (acertoParcial) totalAcertos++;
-    }
-  });
-
-  // â”€â”€ 5. Calcular % geral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  var pctGeral = totalValidos > 0
-    ? Math.round((totalAcertos / totalValidos) * 100)
-    : 0;
-
-  // â”€â”€ 6. Gravar resultados na aba Bolao â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  resultados.forEach(function(r, i) {
-    var row = i + 2; // linha na planilha (dados comeÃ§am na linha 2)
-    bolaoSheet.getRange(row, 4).setValue(r[0]); // Resultado
-    bolaoSheet.getRange(row, 5).setValue(r[1]); // Acerto
-    // % sÃ³ na primeira linha de dados para referÃªncia
-    if (i === 0) {
-      bolaoSheet.getRange(row, 6).setValue(pctGeral + '%');
-    } else {
-      bolaoSheet.getRange(row, 6).setValue('');
-    }
-  });
-
-  // % geral no cabeÃ§alho da coluna F
-  bolaoSheet.getRange(1, 6).setValue('% Acerto: ' + pctGeral + '%');
-
-  // â”€â”€ 7. Salvar % na aba Config (para a TV exibir) â”€â”€â”€â”€â”€
-  salvarConfigInterno(ss, {
-    'BOLAO_PCT_ACERTO': pctGeral + '%',
-    'BOLAO_ACERTOS': totalAcertos.toString(),
-    'BOLAO_TOTAL': totalValidos.toString(),
-    'BOLAO_CAMPEAO': campeao || '',
-    'BOLAO_ATUALIZADO': Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm')
-  });
-
-  Logger.log('BolÃ£o verificado: ' + totalAcertos + '/' + totalValidos + ' (' + pctGeral + '%)');
-}
-
-// â”€â”€ Retorna o campeÃ£o do mata-mata (se houver) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function getCampeaoAtual(ss) {
-  var sheet = ss.getSheetByName('Mata-Mata');
-  if (!sheet || sheet.getLastRow() < 2) return null;
-
-  var data = sheet.getDataRange().getValues();
-  // Percorre todas as linhas procurando a final (Ãºltima linha com resultado)
-  // Estrutura esperada: Time A | Placar A | Placar B | Time B | (opcional: Fase)
-  var campeao = null;
-  data.forEach(function(row) {
-    var timeA = (row[0] || '').toString().trim();
-    var placA = parseInt(row[1]) || 0;
-    var placB = parseInt(row[2]) || 0;
-    var timeB = (row[3] || '').toString().trim();
-    var fase  = (row[4] || '').toString().toLowerCase();
-
-    // Final identificada por "final" na coluna fase, ou Ãºltima linha com placar
-    if ((fase.includes('final') || fase === 'f') && timeA && timeB && (placA > 0 || placB > 0)) {
-      campeao = placA > placB ? timeA : (placB > placA ? timeB : null);
-    }
-  });
-
-  // Se nÃ£o achou via coluna fase, pega a Ãºltima linha com dois times e placar diferente
-  if (!campeao) {
-    for (var i = data.length - 1; i >= 1; i--) {
-      var r = data[i];
-      var tA = (r[0] || '').toString().trim();
-      var pA = parseInt(r[1]) || 0;
-      var pB = parseInt(r[2]) || 0;
-      var tB = (r[3] || '').toString().trim();
-      if (tA && tB && pA !== pB) {
-        campeao = pA > pB ? tA : tB;
-        break;
-      }
-    }
-  }
-
-  return campeao;
-}
-
-// â”€â”€ LÃª resultados da fase de grupos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Retorna array de { timeA, placA, placB, timeB, vencedor }
-function getResultadosGrupos(ss) {
-  var sheet = ss.getSheetByName('Fase de Grupos');
-  if (!sheet || sheet.getLastRow() < 2) return [];
-
-  var data = sheet.getDataRange().getValues();
-  var jogos = [];
-  data.slice(1).forEach(function(row) { // pula cabeÃ§alho
-    var timeA = (row[0] || '').toString().trim();
-    var placA = parseInt(row[1]);
-    var placB = parseInt(row[2]);
-    var timeB = (row[3] || '').toString().trim();
-    if (timeA && timeB && !isNaN(placA) && !isNaN(placB)) {
-      jogos.push({
-        timeA: timeA,
-        placA: placA,
-        placB: placB,
-        timeB: timeB,
-        vencedor: placA > placB ? timeA : (placB > placA ? timeB : null)
-      });
-    }
-  });
-  return jogos;
-}
-
-// â”€â”€ Conta quantos jogos um time venceu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function contarVitorias(time, jogos) {
-  var n = normalizar(time);
-  return jogos.filter(function(j) {
-    return j.vencedor && normalizar(j.vencedor) === n;
-  }).length;
-}
-
-// â”€â”€ Normaliza string para comparaÃ§Ã£o (sem acento/maiÃºsculas) â”€
-function normalizar(str) {
-  return str.toLowerCase()
-    .normalize('NFD').replace(/[Ì€-Í¯]/g, '')
-    .replace(/[^a-z0-9 ]/g, '')
-    .trim();
-}
-
-// â”€â”€ Grava chave-valor na aba Config (uso interno) â”€â”€â”€â”€â”€â”€â”€â”€
-function salvarConfigInterno(ss, kvMap) {
-  var cfg = ss.getSheetByName('Config');
-  if (!cfg) cfg = ss.insertSheet('Config');
-
-  var values = cfg.getLastRow() > 0 ? cfg.getDataRange().getValues() : [];
-  Object.keys(kvMap).forEach(function(key) {
-    var val = kvMap[key];
-    var found = false;
-    for (var i = 0; i < values.length; i++) {
-      if (values[i][0] && values[i][0].toString().trim() === key) {
-        cfg.getRange(i + 1, 2).setValue(val);
-        values[i][1] = val;
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      cfg.appendRow([key, val]);
-      values.push([key, val]);
-    }
-  });
-}
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// doPost â€” recebe requisiÃ§Ãµes do painel de controle
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ── doPost ──────────────────────────────────────────────────
 function doPost(e) {
   try {
-    var body = JSON.parse(e.postData.contents);
-    var mode = body.mode || body.tipo || '';
-    var ss   = SpreadsheetApp.openById(SHEET_ID);
+    const ss   = SpreadsheetApp.getActiveSpreadsheet();
+    const data = JSON.parse(e.postData.contents);
 
-    // â”€â”€ salvar_config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (mode === 'salvar_config') {
-      salvarConfigInterno(ss, body.data || {});
-      return jsonResponse({ ok: true, mode: 'salvar_config' });
+    // PUSH — salvar subscrição
+    if (data.tipo === 'push_subscribe') {
+      return okJson(savePushSubscription(data.subscription));
     }
 
-    // â”€â”€ adicionar_bolao â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (mode === 'adicionar_bolao') {
-      // Verifica se o bolÃ£o do esporte estÃ¡ aberto
-      var esporte = (body.esporte || 'basquete').toUpperCase();
-      var configKey = 'BOLAO_' + esporte + '_ABERTO';
-      var cfgSheet = ss.getSheetByName('Config');
-      var bolaoAberto = false;
-      if (cfgSheet && cfgSheet.getLastRow() > 0) {
-        var cfgVals = cfgSheet.getDataRange().getValues();
-        for (var ci = 0; ci < cfgVals.length; ci++) {
-          if (cfgVals[ci][0] && cfgVals[ci][0].toString().trim() === configKey) {
-            bolaoAberto = cfgVals[ci][1].toString().trim() === 'SIM';
-            break;
-          }
+    // PUSH — remover subscrição
+    if (data.tipo === 'push_unsubscribe') {
+      return okJson(removePushSubscription(data.endpoint));
+    }
+
+    // PUSH — limpar todas
+    if (data.tipo === 'push_limpar') {
+      const sheet = ss.getSheetByName(ABA_PUSH);
+      if (sheet) sheet.clearContents();
+      return okJson({ ok: true });
+    }
+
+    // QUIZ
+    if (!data.tipo) {
+      const sh = getOrCreate(ss, ABA_QUIZ,
+        ['Data/Hora','Nome','WhatsApp','Acertos','Total','% Acerto','Tempo(s)']);
+      sh.appendRow([now(), data.nome, data.fone||'—',
+        data.acertos, data.total, data.percentual+'%', data.tempo_segundos||'—']);
+      return ok();
+    }
+
+    // BOLÃO SÁBADO (Vôlei) e BOLÃO BASQUETE — mesma lógica
+    if (data.tipo === 'bolao_sabado' || data.tipo === 'bolao_basquete') {
+      // Detecta esporte
+      let esporte = data.esporte || '';
+      if (!esporte) {
+        if (data.tipo === 'bolao_basquete') {
+          esporte = 'Basquete';
+        } else if (data.detalhe) {
+          try {
+            const det = JSON.parse(data.detalhe);
+            esporte = Array.isArray(det) && det.length <= 6 ? 'Basquete' : 'Volei';
+          } catch(e) { esporte = 'Volei'; }
+        } else {
+          esporte = 'Volei';
         }
       }
-      if (!bolaoAberto) {
-        return jsonResponse({ ok: false, erro: 'BolÃ£o ' + esporte + ' estÃ¡ fechado no momento.' });
-      }
 
-      var bolao = ss.getSheetByName('Bolao');
-      if (!bolao) {
-        bolao = ss.insertSheet('Bolao');
-        bolao.appendRow(['Nome', 'Time', 'Esporte', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
-      } else if (bolao.getLastRow() === 0) {
-        bolao.appendRow(['Nome', 'Time', 'Esporte', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
-      }
-      bolao.appendRow([body.nome || '', body.time || '', esporte, new Date(), '', '', '']);
-      verificarBolao();
-      return jsonResponse({ ok: true, mode: 'adicionar_bolao' });
+      const sh = getOrCreate(ss, ABA_PALPITES,
+        ['timestamp','PALPITE','NOME','WHATSAPP','% ACERTO','ESPORTE']);
+      sh.appendRow([now(), data.palpite, data.nome, data.fone||'—', '', esporte]);
+
+      const shD = getOrCreate(ss, ABA_DETALHE,
+        ['timestamp','Nome','WhatsApp','DetalheJSON','Esporte']);
+      shD.appendRow([now(), data.nome, data.fone||'—', data.detalhe||'', esporte]);
+
+      return ok();
     }
 
-    // â”€â”€ atualizarPlacarBasquete (modo existente) â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (mode === 'placar_basquete' || mode === 'atualizar_placar') {
-      var sheet = ss.getSheetByName('Fase de Grupos');
-      if (!sheet) return jsonResponse({ ok: false, erro: 'Aba Fase de Grupos nÃ£o encontrada' });
-
-      var linha = parseInt(body.linha);
-      if (isNaN(linha) || linha < 2) return jsonResponse({ ok: false, erro: 'Linha invÃ¡lida' });
-
-      if (body.timeA) sheet.getRange(linha, 1).setValue(body.timeA);
-      if (body.placA !== undefined) sheet.getRange(linha, 2).setValue(body.placA);
-      if (body.placB !== undefined) sheet.getRange(linha, 3).setValue(body.placB);
-      if (body.timeB) sheet.getRange(linha, 4).setValue(body.timeB);
-
-      // ApÃ³s atualizar placar, roda verificaÃ§Ã£o do bolÃ£o imediatamente
-      verificarBolao();
-
-      return jsonResponse({ ok: true, mode: 'placar_basquete', linha: linha });
+    // BOLÃO CAMPEÃO
+    if (data.tipo === 'bolao_campeao') {
+      const sh = getOrCreate(ss, ABA_CAMPEAO,
+        ['Data/Hora','Nome','WhatsApp','Palpite Campeão','Acertou?']);
+      sh.appendRow([now(), data.nome, data.fone||'—',
+        data.palpite.replace('Campeão: ',''), '']);
+      return ok();
     }
 
-    // â”€â”€ adicionar linha (modo existente) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (mode === 'adicionar_linha') {
-      var sheetName = body.aba || 'Fase de Grupos';
-      var s = ss.getSheetByName(sheetName);
-      if (!s) return jsonResponse({ ok: false, erro: 'Aba nÃ£o encontrada: ' + sheetName });
-      s.appendRow(body.dados || []);
-      return jsonResponse({ ok: true, mode: 'adicionar_linha' });
+    // ATUALIZAR PORCENTAGENS
+    if (data.tipo === 'atualizar_porcentagens') {
+      atualizarPct(ss, data.vencedores || {});
+      return ok();
     }
 
-    // â”€â”€ substituir linha (modo existente) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (mode === 'substituir_linha') {
-      var sheetName2 = body.aba || 'Fase de Grupos';
-      var s2 = ss.getSheetByName(sheetName2);
-      if (!s2) return jsonResponse({ ok: false, erro: 'Aba nÃ£o encontrada: ' + sheetName2 });
-      var ln = parseInt(body.linha);
-      var dados = body.dados || [];
-      if (!isNaN(ln) && ln >= 1 && dados.length > 0) {
-        s2.getRange(ln, 1, 1, dados.length).setValues([dados]);
-      }
-      return jsonResponse({ ok: true, mode: 'substituir_linha' });
+    // SALVAR JOGOS BLOQUEADOS/ABERTOS
+    if (data.tipo === 'blocked_games') {
+      return okJson(salvarBlockedGames(data.blocked || {}));
     }
 
-    // â”€â”€ votar_atleta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (mode === 'votar_atleta') {
-      var nomeAtleta = (body.atleta || '').toString().trim();
-      var timeAtleta = (body.time || '').toString().trim();
-      if (!nomeAtleta) return jsonResponse({ ok: false, erro: 'Nome do atleta obrigatorio' });
-
-      var ssVotos = SpreadsheetApp.openById('1VS2RWX50aGYquB_AE-X9HQCcTvHsOEJwPcFAJjvD99c');
-      var votos = ssVotos.getSheets()[0];
-      if (votos.getLastRow() === 0) {
-        votos.appendRow(['Data-Hora', 'Atleta', 'Time']);
-      }
-      var agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-      votos.appendRow([agora, nomeAtleta, timeAtleta]);
-      return jsonResponse({ ok: true, mode: 'votar_atleta' });
+    // REINICIAR PALPITE
+    if (data.tipo === 'reiniciar_palpite') {
+      return okJson(excluirPalpite(ss, data.nome));
     }
 
-    // -- ranking_atleta (GET-like via POST) ------------
-if (mode === 'ranking_atleta') {
-      var ssVotos2 = SpreadsheetApp.openById('1VS2RWX50aGYquB_AE-X9HQCcTvHsOEJwPcFAJjvD99c');
-      var votosSheet = ssVotos2.getSheets()[0];
-      if (!votosSheet || votosSheet.getLastRow() <= 1) return jsonResponse({ ok: true, ranking: [] });
-      var rows = votosSheet.getDataRange().getValues().slice(1);
-      var contagem = {};
-      rows.forEach(function(r) {
-        var key = (r[1] || '').toString().trim();
-        if (!key) return;
-        if (!contagem[key]) contagem[key] = { atleta: key, time: (r[2]||'').toString().trim(), votos: 0 };
-        contagem[key].votos++;
-      });
-      var ranking = Object.values(contagem).sort(function(a,b){ return b.votos - a.votos; }).slice(0, 10);
-      return jsonResponse({ ok: true, ranking: ranking });
-    }
-
-    // -- bolao_sabado / bolao_basquete -----------------------------------------
-    if (mode === 'bolao_sabado' || mode === 'bolao_basquete') {
-      var ssPalp = SpreadsheetApp.openById(PALPITES_SHEET_ID);
-      var pSheet = ssPalp.getSheetByName('PALPITES');
-      if (!pSheet) {
-        pSheet = ssPalp.insertSheet('PALPITES');
-        pSheet.appendRow(['TIMESTAMP','PALPITE','NOME','WHATSAPP','%ACERTO','ESPORTE']);
-      } else if (pSheet.getLastRow() === 0) {
-        pSheet.appendRow(['TIMESTAMP','PALPITE','NOME','WHATSAPP','%ACERTO','ESPORTE']);
-      }
-      var nowStr = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss');
-      var esportePalp = body.esporte || (mode === 'bolao_basquete' ? 'Basquete' : 'Volei');
-      pSheet.appendRow([nowStr, body.detalhe || '', body.nome || '', body.fone || '', '', esportePalp]);
-      return jsonResponse({ ok: true, mode: mode });
-    }
-
-    // -- blocked_games (POST) --------------------------------------------------
-    if (mode === 'blocked_games') {
-      salvarConfigInterno(ss, { 'BLOCKED_GAMES': JSON.stringify(body.blocked || {}) });
-      return jsonResponse({ ok: true, mode: 'blocked_games' });
-    }
-
-    return jsonResponse({ ok: false, erro: 'modo desconhecido: ' + mode });
-
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, erro: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+    return ok();
+  } catch(ex) { return ok(); }
 }
 
-// â”€â”€ doGet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── doGet ───────────────────────────────────────────────────
 function doGet(e) {
-  var params = (e && e.parameter) ? e.parameter : {};
-  var action = params.action || '';
-  var ss = SpreadsheetApp.openById(SHEET_ID);
+  try {
+    const action = e.parameter.action || 'ranking_sabado';
+    const sport  = (e.parameter.sport || 'volei').toString().toLowerCase();
+    const ss     = SpreadsheetApp.getActiveSpreadsheet();
 
-  // -- ranking_sabado ----------------------------------------------------------
-  if (action === 'ranking_sabado') {
-    var sport = (params.sport || 'volei').toString().toLowerCase();
-    try {
-      var ssPalp2 = SpreadsheetApp.openById(PALPITES_SHEET_ID);
-      var pSheet2 = ssPalp2.getSheetByName('PALPITES');
-      var ranking = [];
-      if (pSheet2 && pSheet2.getLastRow() > 1) {
-        var pRows = pSheet2.getDataRange().getValues().slice(1);
-        pRows.forEach(function(r) {
-          var nome = (r[2] || '').toString().trim();
-          if (!nome) return;
-          var esporte = (r[5] || '').toString().trim().toLowerCase();
-          if (!esporte) {
-            try {
-              var picks = JSON.parse(r[1] || '[]');
-              esporte = Array.isArray(picks) && picks.length <= 6 ? 'basquete' : 'volei';
-            } catch(ex) { esporte = 'volei'; }
-          }
-          if (esporte !== sport) return;
-          ranking.push({ nome: nome, detalheJSON: (r[1] || '').toString(), fone: (r[3] || '').toString() });
-        });
+    if (action === 'ranking_sabado') {
+      const shD = ss.getSheetByName(ABA_DETALHE);
+      if (!shD || shD.getLastRow() < 2) {
+        const total = sport === 'basquete' ? 6 : 12;
+        return okJson({ ranking: [], jogosComResultado: 0, totalJogos: total });
       }
-      return jsonResponse({ ok: true, ranking: ranking });
-    } catch(err2) {
-      return jsonResponse({ ok: false, ranking: [], erro: err2.message });
-    }
-  }
 
-  // -- blocked_games (GET) -----------------------------------------------------
-  if (action === 'blocked_games') {
-    var blocked = {};
-    try {
-      var cfgBk = ss.getSheetByName('Config');
-      if (cfgBk && cfgBk.getLastRow() > 0) {
-        var cfgBkVals = cfgBk.getDataRange().getValues();
-        for (var bi = 0; bi < cfgBkVals.length; bi++) {
-          if (cfgBkVals[bi][0] === 'BLOCKED_GAMES') {
-            try { blocked = JSON.parse(cfgBkVals[bi][1] || '{}'); } catch(ex) {}
-            break;
-          }
+      const rows = shD.getDataRange().getValues().slice(1);
+      const porFone = {};
+
+      rows.forEach(r => {
+        const fone = r[2].toString().trim();
+        if (!fone) return;
+
+        // Detecta esporte: coluna 4 (índice 4) tem esporte se adicionado após atualização
+        let esporteRow = (r[4] || '').toString().trim().toLowerCase();
+        if (!esporteRow) {
+          // fallback pela quantidade de palpites no JSON
+          try {
+            const det = JSON.parse(r[3] || '[]');
+            esporteRow = Array.isArray(det) && det.length <= 6 ? 'basquete' : 'volei';
+          } catch(ex) { esporteRow = 'volei'; }
         }
-      }
-    } catch(er) {}
-    return jsonResponse({ ok: true, blocked: blocked });
-  }
 
-  return ContentService
-    .createTextOutput('Supercopa Basquete Apps Script v7 OK')
-    .setMimeType(ContentService.MimeType.TEXT);
+        if (esporteRow !== sport) return;
+        if (!porFone[fone]) porFone[fone] = r;
+      });
+
+      const totalJogos = sport === 'basquete' ? 6 : 12;
+      const ranking = Object.values(porFone).map(r => ({
+        nome:        r[1].toString().trim(),
+        fone:        r[2].toString().trim(),
+        detalheJSON: r[3].toString().trim(),
+        acertos:     0,
+        pct:         null
+      }));
+
+      return okJson({ ranking, jogosComResultado: 0, totalJogos });
+    }
+
+    if (action === 'ranking_campeao') {
+      const sh = ss.getSheetByName(ABA_CAMPEAO);
+      if (!sh || sh.getLastRow() < 2) return okJson({ ranking: [], campeaoReal: null });
+      const rows = sh.getDataRange().getValues().slice(1);
+      const porFone = {};
+      rows.forEach(r => { const f = r[2].toString().trim(); if(!porFone[f]) porFone[f]=r; });
+      const ranking = Object.values(porFone).map(r => ({
+        nome: r[1].toString().trim(),
+        fone: r[2].toString().trim(),
+        palpite: r[3].toString().trim(),
+        acertou: r[4].toString().trim() === 'SIM'
+      }));
+      ranking.sort((a,b) => (b.acertou?1:0)-(a.acertou?1:0));
+      return okJson({ ranking, campeaoReal: null });
+    }
+
+    if (action === 'blocked_games') {
+      return okJson(getBlockedGames());
+    }
+
+    if (action === 'push_subscriptions') {
+      return okJson(getPushSubscriptions());
+    }
+
+    return okJson({ erro: 'ação inválida' });
+  } catch(ex) { return okJson({ erro: ex.message }); }
 }
 
-// â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function jsonResponse(obj) {
+
+// ============================================================
+//  PUSH SUBSCRIPTIONS
+// ============================================================
+
+function getPushSubscriptions() {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(ABA_PUSH);
+    if (!sheet || sheet.getLastRow() < 1) return { subscriptions: [] };
+    const rows = sheet.getDataRange().getValues();
+    const subs = rows.map(r => {
+      try { return JSON.parse(r[0]); } catch { return null; }
+    }).filter(s => s && s.endpoint);
+    return { subscriptions: subs };
+  } catch(e) {
+    return { subscriptions: [] };
+  }
+}
+
+function savePushSubscription(subJson) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet   = ss.getSheetByName(ABA_PUSH);
+    if (!sheet) sheet = ss.insertSheet(ABA_PUSH);
+    const sub = JSON.parse(subJson);
+    if (sheet.getLastRow() > 0) {
+      const rows = sheet.getDataRange().getValues();
+      const jaExiste = rows.some(r => {
+        try { return JSON.parse(r[0]).endpoint === sub.endpoint; } catch { return false; }
+      });
+      if (jaExiste) return { ok: true };
+    }
+    sheet.appendRow([subJson]);
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+function removePushSubscription(endpoint) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(ABA_PUSH);
+    if (!sheet || sheet.getLastRow() < 1) return { ok: true };
+    const rows = sheet.getDataRange().getValues();
+    for (let i = rows.length - 1; i >= 0; i--) {
+      try {
+        if (JSON.parse(rows[i][0]).endpoint === endpoint)
+          sheet.deleteRow(i + 1);
+      } catch {}
+    }
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+
+// ============================================================
+//  BLOCKED GAMES
+// ============================================================
+
+function salvarBlockedGames(blocked) {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreate(ss, ABA_CONFIGS, ['chave', 'valor', 'atualizado']);
+  const dados = sheet.getDataRange().getValues();
+  const json  = JSON.stringify(blocked);
+  const agora = new Date().toLocaleString('pt-BR');
+
+  for (let i = 1; i < dados.length; i++) {
+    if (dados[i][0] === 'blocked_games') {
+      sheet.getRange(i + 1, 2).setValue(json);
+      sheet.getRange(i + 1, 3).setValue(agora);
+      return { ok: true, blocked };
+    }
+  }
+  sheet.appendRow(['blocked_games', json, agora]);
+  return { ok: true, blocked };
+}
+
+function getBlockedGames() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(ABA_CONFIGS);
+  if (!sheet) return { blocked: {} };
+  const dados = sheet.getDataRange().getValues();
+  for (let i = 1; i < dados.length; i++) {
+    if (dados[i][0] === 'blocked_games') {
+      try { return { blocked: JSON.parse(dados[i][1] || '{}') }; } catch { return { blocked: {} }; }
+    }
+  }
+  return { blocked: {} };
+}
+
+
+// ============================================================
+//  REINICIAR PALPITE
+// ============================================================
+
+function excluirPalpite(ss, nomeBusca) {
+  if (!nomeBusca || nomeBusca.trim() === '') return { ok: false, erro: 'Nome não informado' };
+
+  const nomeLimpo = nomeBusca.trim().toLowerCase();
+  let totalExcluidos = 0;
+  const abas = [
+    { nome: ABA_PALPITES, colunaNome: 2 },
+    { nome: ABA_DETALHE,  colunaNome: 1 },
+    { nome: ABA_CAMPEAO,  colunaNome: 1 }
+  ];
+
+  abas.forEach(function(aba) {
+    const sheet = ss.getSheetByName(aba.nome);
+    if (!sheet || sheet.getLastRow() < 2) return;
+    const dados = sheet.getDataRange().getValues();
+    for (let i = dados.length - 1; i >= 1; i--) {
+      const nomeNaPlanilha = String(dados[i][aba.colunaNome] || '').trim().toLowerCase();
+      if (nomeNaPlanilha === nomeLimpo) { sheet.deleteRow(i + 1); totalExcluidos++; }
+    }
+  });
+
+  return {
+    ok: true,
+    mensagem: totalExcluidos > 0
+      ? '✅ ' + totalExcluidos + ' registro(s) de "' + nomeBusca + '" excluído(s)'
+      : '⚠️ Nenhum palpite encontrado para "' + nomeBusca + '"',
+    totalExcluidos
+  };
+}
+
+
+// ============================================================
+//  PORCENTAGENS
+// ============================================================
+
+function atualizarPct(ss, vencedores) {
+  const shPalp = ss.getSheetByName(ABA_PALPITES);
+  const shDet  = ss.getSheetByName(ABA_DETALHE);
+  if (!shPalp || !shDet || shPalp.getLastRow() < 2) return;
+
+  const porFone = {};
+  if (shDet.getLastRow() > 1) {
+    shDet.getDataRange().getValues().slice(1).forEach(r => {
+      const fone = r[2].toString().trim();
+      if (!porFone[fone]) {
+        try { porFone[fone] = JSON.parse(r[3]); } catch(e) { porFone[fone] = []; }
+      }
+    });
+  }
+
+  if (Object.keys(vencedores).length === 0) return;
+
+  const rows = shPalp.getDataRange().getValues();
+  rows.slice(1).forEach((r, i) => {
+    const fone = r[3].toString().trim();
+    const pals = porFone[fone] || [];
+    let acertos = 0;
+    pals.forEach(p => {
+      if (vencedores[p.jogo] && vencedores[p.jogo] === p.vencedor) acertos++;
+    });
+    const totalJogos = pals.length <= 6 ? 6 : 12;
+    const pct = (acertos / totalJogos * 100).toFixed(2) + '%';
+    shPalp.getRange(i + 2, 5).setValue(pct);
+  });
+}
+
+
+// ============================================================
+//  AUTO-VERIFICAÇÃO · gatilho a cada 1 minuto
+// ============================================================
+
+const VOLEI_SHEET_ID_V = "12-yxLsIplLMAj0Y9jCpzl2OGJLKPhy_lWAtvYP-Vvh8";
+const BASQ_SHEET_ID_V  = "1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0";
+const API_KEY_V        = "AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw";
+
+function lerAba_(sheetId, range) {
+  const url = "https://sheets.googleapis.com/v4/spreadsheets/"
+    + sheetId + "/values/" + encodeURIComponent(range)
+    + "?key=" + API_KEY_V;
+  const res  = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  const json = JSON.parse(res.getContentText());
+  return json.values || [];
+}
+
+function buscarVencedoresVolei_() {
+  const data = lerAba_(VOLEI_SHEET_ID_V, "'Fase de Grupos'!A1:O49");
+  const venc = {};
+  let num = 1;
+  [[10,11,12],[22,23,24],[34,35,36],[46,47,48]].forEach(function(rows) {
+    rows.forEach(function(r) {
+      const v = ((data[r] || [])[14] || "").toString().trim();
+      if (v && v !== "A DEFINIR" && v !== "—") venc[num] = v;
+      num++;
+    });
+  });
+  return venc;
+}
+
+function buscarVencedoresBasquete_() {
+  const data = lerAba_(BASQ_SHEET_ID_V, "'Fase de Grupos'!A1:S15");
+  const venc = {};
+  let num = 1;
+  [4,5,6].forEach(function(r) {
+    const v = ((data[r] || [])[8] || "").toString().trim();
+    if (v && v !== "—") venc[num] = v;
+    num++;
+  });
+  [4,5,6].forEach(function(r) {
+    const v = ((data[r] || [])[18] || "").toString().trim();
+    if (v && v !== "—") venc[num] = v;
+    num++;
+  });
+  return venc;
+}
+
+function parsearPalpiteTexto_(texto) {
+  const resultado = {};
+  if (!texto) return resultado;
+  texto.split("|").forEach(function(parte) {
+    const match = parte.trim().match(/Jogo(\d+)\([^)]+\):\s*(.+)/i);
+    if (match) resultado[parseInt(match[1])] = match[2].trim();
+  });
+  return resultado;
+}
+
+function verificarEAtualizarPorcentagens() {
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
+  const shPalp  = ss.getSheetByName(ABA_PALPITES);
+  const shDet   = ss.getSheetByName(ABA_DETALHE);
+  if (!shPalp || shPalp.getLastRow() < 2) return;
+
+  var vencVolei = {};
+  var vencBasq  = {};
+  try { vencVolei = buscarVencedoresVolei_();   } catch(e) { Logger.log("Erro vôlei: " + e);    }
+  try { vencBasq  = buscarVencedoresBasquete_(); } catch(e) { Logger.log("Erro basquete: " + e); }
+
+  const temVolei = Object.keys(vencVolei).length > 0;
+  const temBasq  = Object.keys(vencBasq).length  > 0;
+  if (!temVolei && !temBasq) { Logger.log("Nenhum resultado ainda."); return; }
+
+  const porFoneDetalhe = {};
+  if (shDet && shDet.getLastRow() > 1) {
+    shDet.getDataRange().getValues().slice(1).forEach(function(r) {
+      const fone = r[2].toString().trim();
+      if (!porFoneDetalhe[fone]) {
+        try { porFoneDetalhe[fone] = JSON.parse(r[3]); } catch(e) { porFoneDetalhe[fone] = []; }
+      }
+    });
+  }
+
+  const rows = shPalp.getDataRange().getValues();
+  rows.slice(1).forEach(function(row, i) {
+    const textoPalpite = (row[1] || "").toString();
+    const fone         = (row[3] || "").toString().trim();
+    const esporteLinha = (row[5] || "").toString().trim().toLowerCase();
+    if (!textoPalpite) return;
+
+    var palpitesArr = porFoneDetalhe[fone] || [];
+    if (palpitesArr.length === 0) {
+      const parsed = parsearPalpiteTexto_(textoPalpite);
+      palpitesArr = Object.keys(parsed).map(function(j) {
+        return { jogo: parseInt(j), vencedor: parsed[j] };
+      });
+    }
+    if (palpitesArr.length === 0) return;
+
+    const ehBasquete = esporteLinha === 'basquete' ||
+      (esporteLinha !== 'volei' && palpitesArr.length <= 6);
+
+    if (!esporteLinha) {
+      shPalp.getRange(i + 2, 6).setValue(ehBasquete ? 'Basquete' : 'Volei');
+    }
+
+    const totalJogos = ehBasquete ? 6 : 12;
+    const vencedores = ehBasquete ? vencBasq : vencVolei;
+    if (Object.keys(vencedores).length === 0) return;
+
+    var acertos = 0;
+    palpitesArr.forEach(function(p) {
+      const vReal = vencedores[p.jogo] || "";
+      if (vReal && vReal.toLowerCase() === (p.vencedor || "").toLowerCase()) acertos++;
+    });
+
+    shPalp.getRange(i + 2, 5).setValue((acertos / totalJogos * 100).toFixed(2) + "%");
+  });
+
+  Logger.log("✅ Porcentagens atualizadas: " + new Date().toLocaleString("pt-BR"));
+}
+
+function criarGatilho() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === "verificarEAtualizarPorcentagens") ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("verificarEAtualizarPorcentagens")
+    .timeBased().everyMinutes(1).create();
+  Logger.log("✅ Gatilho criado!");
+}
+
+
+// ============================================================
+//  HELPERS
+// ============================================================
+
+function getOrCreate(ss, name, headers) {
+  let sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.appendRow(headers);
+    sh.getRange(1,1,1,headers.length)
+      .setFontWeight('bold')
+      .setBackground('#0E3B78')
+      .setFontColor('#ffffff');
+  }
+  return sh;
+}
+
+function now() { return new Date().toLocaleString('pt-BR'); }
+
+function ok() {
+  return ContentService
+    .createTextOutput(JSON.stringify({status:'ok'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function okJson(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
