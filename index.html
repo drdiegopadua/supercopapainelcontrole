@@ -1649,7 +1649,7 @@ async function loadVoleiFromSheet(manual=false) {
           id: 'volei_' + g.grp + '_' + i,
           sport: 'volei',
           equipeA, equipeB,
-          data, hora: '',
+          data: data || '28/11', hora: '13:00',
           rodada: g.label + ' · Rodada ' + (i+1),
           status: status.toLowerCase().includes('ao vivo') ? 'live' : status.toLowerCase().includes('encerr') ? 'done' : 'upcoming',
           placar: {
@@ -1677,7 +1677,7 @@ async function loadVoleiFromSheet(manual=false) {
           id: 'volei_mata_' + rIdx + '_' + i,
           sport: 'volei',
           equipeA: ea, equipeB: eb,
-          data: '29/11', hora: '',
+          data: '28/11', hora: '13:00',
           rodada: fases[rIdx] + ' · Jogo ' + (i+1),
           status: 'upcoming',
           placar: { sets: [{a:s1a,b:s1b},{a:s2a,b:s2b},{a:'',b:''}] }
@@ -1727,7 +1727,7 @@ async function loadBasqueteFromSheet(manual=false) {
           id: 'basq_' + g + '_' + i,
           sport: 'basquete',
           equipeA: ea, equipeB: eb,
-          data: '', hora: '',
+          data: '25/07', hora: '13:00',
           rodada: 'Grupo ' + g + ' · Jogo ' + (i+1),
           status: 'upcoming',
           placar: {
@@ -1749,7 +1749,7 @@ async function loadBasqueteFromSheet(manual=false) {
         id: 'basq_mata_' + rIdx,
         sport: 'basquete',
         equipeA: ea, equipeB: eb,
-        data: '29/11', hora: '',
+        data: '25/07', hora: '13:00',
         rodada: fase,
         status: 'upcoming',
         placar: { ptsA: q1a, ptsB: q1b }
