@@ -3335,19 +3335,29 @@ async function setBolaoStatus(esporte, status) {
       if (d && d.blocked) blocked = d.blocked;
     } catch(e) {}
 
-    const prefix = esporte === 'basquete' ? 'b_basq_' : 'b_volei_';
+    // Garante que os jogos estão carregados antes de operar
+    if (!state.jogos[esporte] || state.jogos[esporte].length === 0) {
+      if (esporte === 'basquete') await loadBasqueteFromSheet();
+      else await loadVoleiFromSheet();
+    }
     const jogos = (state.jogos || {})[esporte] || [];
 
     if (status === 'NAO') {
       // FECHAR: bloqueia TODOS os jogos do esporte
       jogos.forEach(j => { blocked['b_' + j.id] = true; });
     } else {
-      // ABRIR: desbloqueia jogos SEM placar; mantém bloqueados os que têm placar
+      // ABRIR: remove do blocked todos os jogos do esporte SEM placar
+      // Jogos COM placar permanecem bloqueados
       jogos.forEach(j => {
         const temPlacar = esporte === 'basquete'
           ? (j.placar && (j.placar.ptsA || j.placar.ptsB))
           : (j.placar && j.placar.sets && j.placar.sets.some(s => s.a || s.b));
         if (!temPlacar) delete blocked['b_' + j.id];
+      });
+      // Remove também quaisquer chaves do esporte que não têm mais jogo correspondente
+      const prefix = esporte === 'basquete' ? 'b_basq_' : 'b_volei_';
+      Object.keys(blocked).forEach(k => {
+        if (k.startsWith(prefix) && !jogos.find(j => 'b_' + j.id === k)) delete blocked[k];
       });
     }
 
