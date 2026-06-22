@@ -950,15 +950,31 @@
       <div id="tab-bolao">
         <div class="card">
           <div class="card-title"><i class='bx bxs-bar-chart-alt-2'></i> Ranking do Bolão</div>
-          <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
             <button class="refresh-btn" onclick="loadBolaoRanking(true)"><i class='bx bx-refresh'></i> Atualizar Ranking</button>
+            <div style="display:flex;gap:6px;margin-left:auto;">
+              <button id="bk-sport-volei" onclick="setBolaoSport('volei')" style="padding:6px 14px;border-radius:8px;border:none;background:#1565C0;color:#fff;font-weight:700;font-size:12px;cursor:pointer;">🏐 Vôlei</button>
+              <button id="bk-sport-basq" onclick="setBolaoSport('basquete')" style="padding:6px 14px;border-radius:8px;border:1px solid #ccc;background:#f5f5f5;color:#666;font-weight:700;font-size:12px;cursor:pointer;">🏀 Basquete</button>
+            </div>
           </div>
-          <table class="ranking-table" id="bolao-table">
-            <thead><tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr></thead>
-            <tbody id="bolao-tbody">
-              <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Carregando ranking do bolão...</p></div></td></tr>
-            </tbody>
-          </table>
+          <div id="bolao-volei-section">
+            <div style="font-size:11px;font-weight:700;color:#1565C0;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🏐 Vôlei</div>
+            <table class="ranking-table">
+              <thead><tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr></thead>
+              <tbody id="bolao-volei-tbody">
+                <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Carregando ranking do bolão...</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="bolao-basq-section" style="display:none;">
+            <div style="font-size:11px;font-weight:700;color:#C8960C;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🏀 Basquete</div>
+            <table class="ranking-table">
+              <thead><tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr></thead>
+              <tbody id="bolao-basq-tbody">
+                <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Carregando ranking do bolão...</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       <div id="tab-quiz" style="display:none">
@@ -1845,31 +1861,46 @@ async function loadNoticiasFromSheet(manual=false) {
 async function loadBolaoRanking(manual=false) {
   if (manual) showLoading(true);
   try {
-    // Lê direto da planilha PALPITES: cols A=timestamp B=palpite C=NOME D=WHATSAPP E=%ACERTO
-    const rows = await sheetRead('13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A', "'PALPITES'!A2:E500");
+    // Lê cols A=timestamp B=palpite C=NOME D=WHATSAPP E=%ACERTO F=ESPORTE
+    const rows = await sheetRead('13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A', "'PALPITES'!A2:F500");
 
-    state.bolao = rows
-      .filter(r => r[2] && r[2].trim()) // precisa ter NOME
+    const mapped = rows
+      .filter(r => r[2] && r[2].trim())
       .map((r, i) => {
         const pct = parseFloat((r[4] || '0').toString().replace('%','').replace(',','.')) || 0;
-        return {
-          id: 'bolao_' + i,
-          nome: r[2].trim(),
-          whatsapp: r[3] || '',
-          acertos: pct,
-          pontos: pct
-        };
-      })
-      .sort((a, b) => b.pontos - a.pontos);
+        let esporte = (r[5] || '').trim().toLowerCase();
+        // fallback: detecta pelo número de palpites (≤6 = basquete)
+        if (!esporte) {
+          try {
+            const det = JSON.parse(r[1] || '[]');
+            esporte = Array.isArray(det) && det.length <= 6 ? 'basquete' : 'volei';
+          } catch(e) { esporte = 'volei'; }
+        }
+        return { id: 'bolao_' + i, nome: r[2].trim(), whatsapp: r[3] || '', acertos: pct, pontos: pct, esporte };
+      });
+
+    state.bolao = mapped;
+    state.bolaoVolei = mapped.filter(p => p.esporte !== 'basquete').sort((a,b) => b.pontos - a.pontos);
+    state.bolaoBasq  = mapped.filter(p => p.esporte === 'basquete').sort((a,b) => b.pontos - a.pontos);
 
     renderRanking();
-    if (manual) showToast('Ranking do bolão atualizado! (' + state.bolao.length + ' participantes)');
+    if (manual) showToast('Ranking atualizado! Vôlei: ' + state.bolaoVolei.length + ' · Basquete: ' + state.bolaoBasq.length);
   } catch(e) {
     console.warn('Erro bolão:', e);
     if (manual) showToast('Erro ao carregar bolão: ' + e.message, 'error');
   } finally {
     if (manual) showLoading(false);
   }
+}
+
+let _bolaoSport = 'volei';
+function setBolaoSport(s) {
+  _bolaoSport = s;
+  document.getElementById('bolao-volei-section').style.display = s === 'volei' ? '' : 'none';
+  document.getElementById('bolao-basq-section').style.display  = s === 'basquete' ? '' : 'none';
+  const bv = document.getElementById('bk-sport-volei'), bb = document.getElementById('bk-sport-basq');
+  if (bv) { bv.style.background = s==='volei'?'#1565C0':'#f5f5f5'; bv.style.color = s==='volei'?'#fff':'#666'; bv.style.border = s==='volei'?'none':'1px solid #ccc'; }
+  if (bb) { bb.style.background = s==='basquete'?'#C8960C':'#f5f5f5'; bb.style.color = s==='basquete'?'#fff':'#666'; bb.style.border = s==='basquete'?'none':'1px solid #ccc'; }
 }
 
 // ════════════════════════════════════════════════════════
@@ -2825,12 +2856,36 @@ function salvarRanking() {
 }
 
 function renderRanking() {
-  renderRankingTable('bolao', state.bolao);
+  renderRankingTableById('bolao-volei-tbody', state.bolaoVolei || [], 'bolao');
+  renderRankingTableById('bolao-basq-tbody',  state.bolaoBasq  || [], 'bolao');
   renderRankingTable('quiz', state.quiz);
+}
+
+function renderRankingTableById(tbodyId, list, tipo) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Sem participantes.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((p, i) => {
+    const posClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n';
+    return `<tr>
+      <td><div class="rank-pos ${posClass}">${i+1}</div></td>
+      <td><strong>${p.nome}</strong></td>
+      <td>${p.acertos > 0 ? p.acertos + '%' : '0%'}</td>
+      <td><span class="pts-badge">${p.pontos > 0 ? p.pontos + '%' : '0%'}</span></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRanking('${p.id}','${tipo}')"><i class='bx bx-edit'></i></button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="excluirRanking('${p.id}','${tipo}')"><i class='bx bx-trash'></i></button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function renderRankingTable(tipo, list) {
   const tbody = document.getElementById(tipo + '-tbody');
+  if (!tbody) return;
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Sem participantes.</p></div></td></tr>`;
     return;
