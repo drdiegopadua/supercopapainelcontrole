@@ -11,6 +11,7 @@
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 var SHEET_ID = '1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0';
+var PALPITES_SHEET_ID = '13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A';
 
 // â”€â”€ TRIGGER SETUP (execute uma Ãºnica vez) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function configurarTrigger() {
@@ -357,6 +358,28 @@ if (mode === 'ranking_atleta') {
       return jsonResponse({ ok: true, ranking: ranking });
     }
 
+    // -- bolao_sabado / bolao_basquete -----------------------------------------
+    if (mode === 'bolao_sabado' || mode === 'bolao_basquete') {
+      var ssPalp = SpreadsheetApp.openById(PALPITES_SHEET_ID);
+      var pSheet = ssPalp.getSheetByName('PALPITES');
+      if (!pSheet) {
+        pSheet = ssPalp.insertSheet('PALPITES');
+        pSheet.appendRow(['TIMESTAMP','PALPITE','NOME','WHATSAPP','%ACERTO','ESPORTE']);
+      } else if (pSheet.getLastRow() === 0) {
+        pSheet.appendRow(['TIMESTAMP','PALPITE','NOME','WHATSAPP','%ACERTO','ESPORTE']);
+      }
+      var nowStr = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss');
+      var esportePalp = body.esporte || (mode === 'bolao_basquete' ? 'Basquete' : 'Volei');
+      pSheet.appendRow([nowStr, body.detalhe || '', body.nome || '', body.fone || '', '', esportePalp]);
+      return jsonResponse({ ok: true, mode: mode });
+    }
+
+    // -- blocked_games (POST) --------------------------------------------------
+    if (mode === 'blocked_games') {
+      salvarConfigInterno(ss, { 'BLOCKED_GAMES': JSON.stringify(body.blocked || {}) });
+      return jsonResponse({ ok: true, mode: 'blocked_games' });
+    }
+
     return jsonResponse({ ok: false, erro: 'modo desconhecido: ' + mode });
 
   } catch(err) {
@@ -368,8 +391,59 @@ if (mode === 'ranking_atleta') {
 
 // â”€â”€ doGet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function doGet(e) {
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action || '';
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+
+  // -- ranking_sabado ----------------------------------------------------------
+  if (action === 'ranking_sabado') {
+    var sport = (params.sport || 'volei').toString().toLowerCase();
+    try {
+      var ssPalp2 = SpreadsheetApp.openById(PALPITES_SHEET_ID);
+      var pSheet2 = ssPalp2.getSheetByName('PALPITES');
+      var ranking = [];
+      if (pSheet2 && pSheet2.getLastRow() > 1) {
+        var pRows = pSheet2.getDataRange().getValues().slice(1);
+        pRows.forEach(function(r) {
+          var nome = (r[2] || '').toString().trim();
+          if (!nome) return;
+          var esporte = (r[5] || '').toString().trim().toLowerCase();
+          if (!esporte) {
+            try {
+              var picks = JSON.parse(r[1] || '[]');
+              esporte = Array.isArray(picks) && picks.length <= 6 ? 'basquete' : 'volei';
+            } catch(ex) { esporte = 'volei'; }
+          }
+          if (esporte !== sport) return;
+          ranking.push({ nome: nome, detalheJSON: (r[1] || '').toString(), fone: (r[3] || '').toString() });
+        });
+      }
+      return jsonResponse({ ok: true, ranking: ranking });
+    } catch(err2) {
+      return jsonResponse({ ok: false, ranking: [], erro: err2.message });
+    }
+  }
+
+  // -- blocked_games (GET) -----------------------------------------------------
+  if (action === 'blocked_games') {
+    var blocked = {};
+    try {
+      var cfgBk = ss.getSheetByName('Config');
+      if (cfgBk && cfgBk.getLastRow() > 0) {
+        var cfgBkVals = cfgBk.getDataRange().getValues();
+        for (var bi = 0; bi < cfgBkVals.length; bi++) {
+          if (cfgBkVals[bi][0] === 'BLOCKED_GAMES') {
+            try { blocked = JSON.parse(cfgBkVals[bi][1] || '{}'); } catch(ex) {}
+            break;
+          }
+        }
+      }
+    } catch(er) {}
+    return jsonResponse({ ok: true, blocked: blocked });
+  }
+
   return ContentService
-    .createTextOutput('Supercopa Basquete Apps Script v6 OK')
+    .createTextOutput('Supercopa Basquete Apps Script v7 OK')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
