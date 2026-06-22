@@ -643,7 +643,9 @@ function getMode(){ return new URLSearchParams(window.location.search).get('modo
 function buildScenes(){
   // Todas as cenas entram sempre no ciclo — mostram estado vazio se sem dados
   if(getMode()==='matamata'){
-    scenes = ['scene-matamata','scene-podio','scene-mvp','scene-bolao'];
+    scenes = ['scene-matamata','scene-bolao'];
+    if(appData.config['PODIO_1']) scenes.push('scene-podio');
+    if(appData.config['MVP_NOME']) scenes.push('scene-mvp');
     if(fotosArr.length > 0) scenes.push('scene-fotos');
   } else {
     scenes = ['scene-placar','scene-tabela','scene-bolao'];
@@ -1050,13 +1052,16 @@ function renderBolao(){
         return;
       }
       // col A=timestamp(0), B=palpite(1), C=nome(2), D=whatsapp(3), E=%acerto(4), F=esporte(5)
-      var temEsporte=rows.some(function(r){return (r[5]||'').trim().length>0;});
       var seen={};
       var participants=[];
       rows.forEach(function(r){
         var esporte=(r[5]||'').trim().toLowerCase();
-        // Se a coluna ESPORTE já tem dados, filtra por basquete; se ainda vazia, mostra todos
-        if(temEsporte && esporte !== 'basquete') return;
+        // Se coluna F está vazia, detecta pelo número de palpites (≤6 = basquete)
+        if(!esporte){
+          try{var det=JSON.parse(r[1]||'[]');esporte=Array.isArray(det)&&det.length<=6?'basquete':'volei';}
+          catch(e){esporte='volei';}
+        }
+        if(esporte !== 'basquete') return;
         var nome=(r[2]||'').trim();
         var pct=parseFloat((r[4]||'0').replace('%','').replace(',','.'));
         if(!nome)return;

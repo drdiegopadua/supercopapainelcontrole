@@ -802,6 +802,10 @@
       <!-- Pódio -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title" style="color:var(--gold)"><i class='bx bxs-trophy'></i> Pódio Final</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+          <button id="podioSportVolei" onclick="setPodioSport('volei')" style="flex:1;padding:8px;border-radius:8px;border:none;background:#1565C0;color:#fff;font-weight:700;font-size:12px;cursor:pointer;">🏐 Vôlei</button>
+          <button id="podioSportBasq" onclick="setPodioSport('basquete')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ccc;background:#f5f5f5;color:#666;font-weight:700;font-size:12px;cursor:pointer;">🏀 Basquete</button>
+        </div>
         <div id="podioAutoStatus" style="display:none;font-size:12px;margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(72,187,120,.12);color:#48bb78;border:1px solid rgba(72,187,120,.3);"></div>
         <div class="destaque-form">
           <div class="form-group">
@@ -991,6 +995,19 @@
           </table>
         </div>
       </div>
+
+      <!-- ═══ ATLETA DA GALERA RANKING ═══ -->
+      <div class="card" style="margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="font-size:22px">🗳️</div>
+          <div>
+            <div class="card-title" style="margin-bottom:0">Atleta da Galera</div>
+            <div style="font-size:12px;color:var(--dark-grey)">Top 5 mais votados pelo público</div>
+          </div>
+          <button onclick="carregarRankingGalera()" style="margin-left:auto;background:#7C3AED;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
+        </div>
+        <div id="adminGaleraRanking" style="font-size:13px;color:var(--dark-grey);text-align:center;padding:20px">Clique em Atualizar para carregar</div>
+      </div>
     </div>
 
     <!-- ─── NOTÍCIAS ─── -->
@@ -1122,19 +1139,7 @@
       </div>
     </div>
 
-  
-<!-- ═══ ATLETA DA GALERA RANKING ═══ -->
-<div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:20px;margin:20px 0;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-    <div style="font-size:22px">🗳️</div>
-    <div>
-      <div style="font-size:15px;font-weight:800;color:#111">Atleta da Galera</div>
-      <div style="font-size:12px;color:#9ca3af">Top 5 mais votados pelo público</div>
-    </div>
-    <button onclick="carregarRankingGalera()" style="margin-left:auto;background:#7C3AED;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
-  </div>
-  <div id="adminGaleraRanking" style="font-size:13px;color:#9ca3af;text-align:center;padding:20px">Clique em Atualizar para carregar</div>
-</div></main>
+</main>
 </section>
 
 <!-- ═══ MODALS ═══ -->
@@ -1913,12 +1918,12 @@ async function loadQuizRanking(manual=false) {
     const rows = await sheetRead(PALPITES_SHEET_ID, "'QUIZ'!A2:G200");
     state.quiz = rows
       .filter(r => r[1] && r[1].toString().trim())
-      .map((r, i) => ({
-        id: 'q' + i,
-        nome: r[1] || '—',
-        acertos: r[3] || '—',
-        pontos: r[5] || '—'
-      }));
+      .map((r, i) => {
+        const acertosNum = parseInt((r[3] || '0').toString().replace(/[^\d]/g, '')) || 0;
+        const totalPerguntas = 40;
+        const pct = parseFloat((acertosNum / totalPerguntas * 100).toFixed(2));
+        return { id: 'q' + i, nome: r[1] || '—', acertos: acertosNum + '/' + totalPerguntas, pontos: pct };
+      });
     renderRanking();
     if (manual) showToast('Ranking do quiz atualizado!');
   } catch(e) {
@@ -3141,11 +3146,30 @@ async function salvarBolaoTV(nome, time) {
   }
 }
 
+let _podioSport = 'volei';
+function setPodioSport(s) {
+  _podioSport = s;
+  const bv = document.getElementById('podioSportVolei'), bb = document.getElementById('podioSportBasq');
+  if (bv) { bv.style.background = s==='volei'?'#1565C0':'#f5f5f5'; bv.style.color = s==='volei'?'#fff':'#666'; bv.style.border = s==='volei'?'none':'1px solid #ccc'; }
+  if (bb) { bb.style.background = s==='basquete'?'#C8960C':'#f5f5f5'; bb.style.color = s==='basquete'?'#fff':'#666'; bb.style.border = s==='basquete'?'none':'1px solid #ccc'; }
+  // Carrega pódio salvo para esse esporte
+  const cfg = state.config || {};
+  const k1 = s==='volei' ? 'PODIO_VOLEI_1' : 'PODIO_1';
+  const k2 = s==='volei' ? 'PODIO_VOLEI_2' : 'PODIO_2';
+  document.getElementById('inputPodio1').value = cfg[k1] || '';
+  document.getElementById('inputPodio2').value = cfg[k2] || '';
+  const st = document.getElementById('podioAutoStatus');
+  if(st) st.style.display = 'none';
+}
+
 function salvarPodio() {
   const v1 = document.getElementById('inputPodio1').value.trim();
   const v2 = document.getElementById('inputPodio2').value.trim();
   if (!v1 || !v2) { showToast('Preencha 1º e 2º lugar.', 'error'); return; }
-  salvarConfig({ PODIO_1: v1, PODIO_2: v2 });
+  const k1 = _podioSport==='volei' ? 'PODIO_VOLEI_1' : 'PODIO_1';
+  const k2 = _podioSport==='volei' ? 'PODIO_VOLEI_2' : 'PODIO_2';
+  salvarConfig({ [k1]: v1, [k2]: v2 });
+  showToast(`Pódio ${_podioSport === 'volei' ? 'Vôlei' : 'Basquete'} salvo!`);
 }
 
 function salvarMvp() {
@@ -3237,46 +3261,50 @@ async function loadBolaoTV() {
 async function buscarCampeaoDaPlanilha() {
   const statusEl = document.getElementById('podioAutoStatus');
   statusEl.style.display = 'block';
+  statusEl.style.background = 'rgba(72,187,120,.12)'; statusEl.style.color = '#48bb78'; statusEl.style.borderColor = 'rgba(72,187,120,.3)';
   statusEl.textContent = '🔍 Buscando resultado final na planilha...';
+  let campeao = '', vice = '';
   try {
-    const rows = await sheetRead(BASQ_SHEET_ID, "'Mata-Mata'!A1:E22");
-    if (!rows || rows.length < 2) {
-      statusEl.style.background = 'rgba(245,101,101,.12)';
-      statusEl.style.color = '#fc8181';
-      statusEl.style.borderColor = 'rgba(245,101,101,.3)';
-      statusEl.textContent = '⚠️ Aba Mata-Mata não encontrada ou sem dados.';
-      return;
-    }
-    // Procura linha da Final (coluna E = "Final" ou "F")
-    let campeao = '', vice = '';
-    for (let i = rows.length - 1; i >= 1; i--) {
-      const r = rows[i];
-      const tA = (r[0] || '').trim();
-      const pA = parseInt(r[1]) || 0;
-      const pB = parseInt(r[2]) || 0;
-      const tB = (r[3] || '').trim();
-      const fase = (r[4] || '').toLowerCase();
-      if (tA && tB && pA !== pB && (fase.includes('final') || i === rows.length - 1)) {
-        campeao = pA > pB ? tA : tB;
-        vice    = pA > pB ? tB : tA;
-        break;
+    if (_podioSport === 'basquete') {
+      // Basquete: colunas A=equipeA, B=ptsA, C=ptsB, D=equipeB, E=fase
+      const rows = await sheetRead(BASQ_SHEET_ID, "'Mata-Mata'!A1:E22");
+      if (!rows || rows.length < 2) throw new Error('Aba Mata-Mata vazia');
+      for (let i = rows.length - 1; i >= 1; i--) {
+        const r = rows[i];
+        const tA = (r[0] || '').trim(), pA = parseInt(r[1]) || 0;
+        const pB = parseInt(r[2]) || 0, tB = (r[3] || '').trim();
+        const fase = (r[4] || '').toLowerCase();
+        if (tA && tB && pA !== pB && (fase.includes('final') || i === rows.length - 1)) {
+          campeao = pA > pB ? tA : tB; vice = pA > pB ? tB : tA; break;
+        }
+      }
+    } else {
+      // Vôlei: linha 17 (0-indexed) = Final; col 1 = equipeA, col 11 = equipeB, cols 12-16 = sets A/B
+      const rows = await sheetRead(INDEX_VOLEI_SHEET_ID, "'Mata-Mata'!A1:Q21");
+      if (!rows || rows.length < 18) throw new Error('Aba Mata-Mata vazia');
+      const finalRow = rows[17] || [];
+      const tA = (finalRow[1] || '').trim(), tB = (finalRow[11] || '').trim();
+      if (tA && tB) {
+        // Conta sets: cols 12=s1A,13=s1B,14=s2A,15=s2B,16=s3A,17=s3B (dentro da linha)
+        let setsA = 0, setsB = 0;
+        [[12,13],[14,15],[16,17]].forEach(([ca,cb]) => {
+          const sa = parseInt(finalRow[ca]) || 0, sb = parseInt(finalRow[cb]) || 0;
+          if (sa > 0 || sb > 0) { if (sa > sb) setsA++; else if (sb > sa) setsB++; }
+        });
+        if (setsA > setsB) { campeao = tA; vice = tB; }
+        else if (setsB > setsA) { campeao = tB; vice = tA; }
       }
     }
     if (campeao) {
       document.getElementById('inputPodio1').value = campeao;
       document.getElementById('inputPodio2').value = vice;
-      statusEl.style.background = 'rgba(72,187,120,.12)';
-      statusEl.style.color = '#48bb78';
-      statusEl.style.borderColor = 'rgba(72,187,120,.3)';
-      statusEl.textContent = `✅ Campeão encontrado: ${campeao}  ·  Vice: ${vice || '—'}  (clique Salvar Pódio para confirmar)`;
+      statusEl.textContent = `✅ Campeão: ${campeao}  ·  Vice: ${vice || '—'}  (clique Salvar Pódio para confirmar)`;
     } else {
-      statusEl.style.background = 'rgba(246,173,85,.12)';
-      statusEl.style.color = '#f6ad55';
-      statusEl.style.borderColor = 'rgba(246,173,85,.3)';
+      statusEl.style.background = 'rgba(246,173,85,.12)'; statusEl.style.color = '#f6ad55'; statusEl.style.borderColor = 'rgba(246,173,85,.3)';
       statusEl.textContent = '⏳ Final ainda não tem placar definido na planilha.';
     }
   } catch(e) {
-    statusEl.style.color = '#fc8181';
+    statusEl.style.background = 'rgba(245,101,101,.12)'; statusEl.style.color = '#fc8181'; statusEl.style.borderColor = 'rgba(245,101,101,.3)';
     statusEl.textContent = '❌ Erro ao buscar: ' + e.message;
   }
 }
@@ -3292,10 +3320,50 @@ function renderStatusBolao(esporte, valor) {
 }
 
 async function setBolaoStatus(esporte, status) {
-  const key = 'BOLAO_' + esporte.toUpperCase() + '_ABERTO';
-  await salvarConfig({ [key]: status });
-  renderStatusBolao(esporte === 'basquete' ? 'Basquete' : 'Volei', status);
-  showToast(`Bolão ${esporte} ${status === 'SIM' ? 'ABERTO' : 'FECHADO'}!`);
+  showLoading(true);
+  try {
+    // 1. Salva flag na config sheet
+    const key = 'BOLAO_' + esporte.toUpperCase() + '_ABERTO';
+    await salvarConfig({ [key]: status });
+    renderStatusBolao(esporte === 'basquete' ? 'Basquete' : 'Volei', status);
+
+    // 2. Busca blocked_games atual do servidor
+    let blocked = {};
+    try {
+      const res = await fetch(BOLAO_SHEETS_URL + '?action=blocked_games');
+      const d = await res.json();
+      if (d && d.blocked) blocked = d.blocked;
+    } catch(e) {}
+
+    const prefix = esporte === 'basquete' ? 'b_basq_' : 'b_volei_';
+    const jogos = (state.jogos || {})[esporte] || [];
+
+    if (status === 'NAO') {
+      // FECHAR: bloqueia TODOS os jogos do esporte
+      jogos.forEach(j => { blocked['b_' + j.id] = true; });
+    } else {
+      // ABRIR: desbloqueia jogos SEM placar; mantém bloqueados os que têm placar
+      jogos.forEach(j => {
+        const temPlacar = esporte === 'basquete'
+          ? (j.placar && (j.placar.ptsA || j.placar.ptsB))
+          : (j.placar && j.placar.sets && j.placar.sets.some(s => s.a || s.b));
+        if (!temPlacar) delete blocked['b_' + j.id];
+      });
+    }
+
+    // 3. Envia blocked_games atualizado para o servidor
+    await fetch(BOLAO_SHEETS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo: 'blocked_games', blocked, data: new Date().toLocaleString('pt-BR') })
+    });
+
+    showToast(`Bolão ${esporte} ${status === 'SIM' ? 'ABERTO ✅' : 'FECHADO 🔒'} — jogos atualizados!`);
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
 }
 
 
