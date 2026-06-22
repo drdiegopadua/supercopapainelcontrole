@@ -1040,7 +1040,7 @@ function renderFotos(){
 function renderBolao(){
   var el=document.getElementById('bolaoPanel');
   el.innerHTML='<div style="text-align:center;padding:18px 16px;"><div style="font-size:32px;margin-bottom:6px;">⏳</div><div style="font-size:13px;font-weight:700;color:var(--muted);">Carregando ranking...</div></div>';
-  var pUrl='https://sheets.googleapis.com/v4/spreadsheets/13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A/values/'+encodeURIComponent("'PALPITES'!A2:E200")+'?key='+API_KEY;
+  var pUrl='https://sheets.googleapis.com/v4/spreadsheets/13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A/values/'+encodeURIComponent("'PALPITES'!A2:F200")+'?key='+API_KEY;
   fetch(pUrl)
     .then(function(r){return r.json();})
     .then(function(data){
@@ -1049,10 +1049,14 @@ function renderBolao(){
         el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🎯</div><div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div></div>';
         return;
       }
-      // col C=nome(idx2), col E=%acerto(idx4)
+      // col A=timestamp(0), B=palpite(1), C=nome(2), D=whatsapp(3), E=%acerto(4), F=esporte(5)
+      var temEsporte=rows.some(function(r){return (r[5]||'').trim().length>0;});
       var seen={};
       var participants=[];
       rows.forEach(function(r){
+        var esporte=(r[5]||'').trim().toLowerCase();
+        // Se a coluna ESPORTE já tem dados, filtra por basquete; se ainda vazia, mostra todos
+        if(temEsporte && esporte !== 'basquete') return;
         var nome=(r[2]||'').trim();
         var pct=parseFloat((r[4]||'0').replace('%','').replace(',','.'));
         if(!nome)return;
