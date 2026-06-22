@@ -568,6 +568,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
 var SHEET_ID = '1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0';
 var API_KEY  = 'AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw';
 var REFRESH  = 30;
+var BOLAO_API_URL = 'https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nnl9pNkRKUDZJwkONqY7VEHOrxf7TW7QSZRn2-bTun0C_1HzPs5dIEQ/exec';
 
 var HORARIOS = {
   'A-1':'08:00','A-2':'09:30','A-3':'11:00',
@@ -970,6 +971,42 @@ function renderFotos(){
 
 // ── BOLÃO ──────────────────────────────────────────
 function renderBolao(){
+  var el=document.getElementById('bolaoPanel');
+  el.innerHTML='<div style="text-align:center;padding:18px 16px;"><div style="font-size:32px;margin-bottom:6px;">⏳</div><div style="font-size:13px;font-weight:700;color:var(--muted);">Carregando ranking...</div></div>';
+
+  fetch(BOLAO_API_URL+'?action=ranking_sabado&sport=basquete')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var ranking=data.ranking||[];
+      if(!ranking.length){
+        el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🎯</div><div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div></div>';
+        return;
+      }
+      var top=ranking.slice(0,8).map(function(p){
+        var pct=p.pct!==null&&p.pct!==undefined?parseFloat(p.pct):null;
+        return {nome:p.nome||'?',pct:pct};
+      });
+      top.sort(function(a,b){if(a.pct===null&&b.pct===null)return 0;if(a.pct===null)return 1;if(b.pct===null)return -1;return b.pct-a.pct;});
+      var medals=['🥇','🥈','🥉'];
+      var maxPct=top.reduce(function(mx,p){return p.pct!==null&&p.pct>mx?p.pct:mx;},0.01);
+      var html='<div class="bolao-wrap"><div class="bolao-title-row"><span style="font-size:13px;font-weight:800;letter-spacing:1px;">🏆 RANKING</span><span class="bolao-subtitle">'+ranking.length+' PARTICIPANTES</span></div><div class="bolao-bars">';
+      top.forEach(function(p,i){
+        var pctVal=p.pct!==null?p.pct.toFixed(2)+'%':'—';
+        var barW=p.pct!==null?Math.round(p.pct/maxPct*100):0;
+        var medal=i<3?medals[i]:(i+1)+'.';
+        var fillCls=i===0?'gold':'maroon';
+        html+='<div class="bolao-bar-row"><div class="bolao-bar-label">'+medal+' '+p.nome+'</div><div class="bolao-bar-track"><div class="bolao-bar-fill '+fillCls+'" style="--bar-target:'+barW+'%"></div></div><div class="bolao-bar-meta">'+pctVal+'</div></div>';
+      });
+      html+='</div></div>';
+      el.innerHTML=html;
+      setTimeout(function(){el.querySelectorAll('.bolao-bar-fill').forEach(function(b){b.style.animation='none';void b.offsetWidth;b.style.animation='barGrow .9s ease both';});},100);
+    })
+    .catch(function(){
+      el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🎯</div><div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div></div>';
+    });
+}
+
+function renderBolaoLegacy(){
   var el=document.getElementById('bolaoPanel');
   var pctGeral=appData.config['BOLAO_PCT_ACERTO']||'';
   var totalConf=appData.config['BOLAO_TOTAL']||'';
