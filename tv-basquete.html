@@ -686,7 +686,7 @@ function loadData(){
         var ea=gc(gRows,rIdx,1+c.off), eb=gc(gRows,rIdx,6+c.off);
         if(!ea&&!eb) return;
         var pA=gc(gRows,rIdx,3+c.off), pB=gc(gRows,rIdx,5+c.off);
-        var ok=pA!==''&&pB!=='';
+        var ok=pA!==''&&pB!==''&&(parseInt(pA)||0)+(parseInt(pB)||0)>0;
         appData.grupos.push({
           grupo:c.grupo, rodada:i+1, key:c.grupo+'-'+(i+1),
           horario:HORARIOS[c.grupo+'-'+(i+1)]||'--:--',
