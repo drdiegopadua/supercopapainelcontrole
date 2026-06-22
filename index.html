@@ -3343,21 +3343,20 @@ async function setBolaoStatus(esporte, status) {
     const jogos = (state.jogos || {})[esporte] || [];
 
     if (status === 'NAO') {
-      // FECHAR: bloqueia TODOS os jogos do esporte
-      jogos.forEach(j => { blocked['b_' + j.id] = true; });
+      // FECHAR: bloqueia TODOS os jogos usando o formato de chave do app
+      if (esporte === 'basquete') {
+        ['A','B'].forEach(g => { ['j1','j2','j3'].forEach(j => { blocked[`b_b_grupo${g}_${j}`] = true; }); });
+      } else {
+        ['A','B','C','D'].forEach(g => { ['j1','j2','j3'].forEach(j => { blocked[`v_grupo${g}_${j}`] = true; }); });
+      }
     } else {
-      // ABRIR: remove do blocked todos os jogos do esporte SEM placar
-      // Jogos COM placar permanecem bloqueados
-      jogos.forEach(j => {
-        const temPlacar = esporte === 'basquete'
-          ? (j.placar && (j.placar.ptsA || j.placar.ptsB))
-          : (j.placar && j.placar.sets && j.placar.sets.some(s => s.a || s.b));
-        if (!temPlacar) delete blocked['b_' + j.id];
-      });
-      // Remove também quaisquer chaves do esporte que não têm mais jogo correspondente
-      const prefix = esporte === 'basquete' ? 'b_basq_' : 'b_volei_';
+      // ABRIR: remove TODOS os blocked do esporte (qualquer formato de chave)
       Object.keys(blocked).forEach(k => {
-        if (k.startsWith(prefix) && !jogos.find(j => 'b_' + j.id === k)) delete blocked[k];
+        if (esporte === 'basquete') {
+          if (k.startsWith('b_b_grupo') || k.startsWith('b_basq_')) delete blocked[k];
+        } else {
+          if (k.startsWith('v_grupo') || k.startsWith('b_volei_')) delete blocked[k];
+        }
       });
     }
 
