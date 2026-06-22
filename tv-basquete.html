@@ -99,10 +99,10 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
   padding:12px 16px;
   opacity:0; pointer-events:none; overflow:hidden;
 }
-.scene.active  { opacity:1; pointer-events:auto; animation:sceneIn .55s ease both; }
-.scene.leaving { animation:sceneOut .45s ease forwards; }
-@keyframes sceneIn  { from{opacity:0;transform:translateY(14px)scale(.985)} to{opacity:1;transform:none} }
-@keyframes sceneOut { from{opacity:1;transform:none} to{opacity:0;transform:translateY(-14px)scale(.985)} }
+.scene.active  { opacity:1; pointer-events:auto; animation:sceneIn .55s cubic-bezier(.22,.68,0,1.1) both; }
+.scene.leaving { animation:sceneOut .4s ease forwards; }
+@keyframes sceneIn  { from{opacity:0;transform:translateX(48px)scale(.97)} to{opacity:1;transform:none} }
+@keyframes sceneOut { from{opacity:1;transform:none} to{opacity:0;transform:translateX(-32px)scale(.97)} }
 
 /* ── PANEL ── */
 .panel {
@@ -394,6 +394,24 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
 .bolao-bar-fill.maroon { background:linear-gradient(90deg,var(--maroon),rgba(107,21,21,.7)); }
 .bolao-bar-meta { font-size:11px; color:var(--muted); min-width:60px; text-align:right; white-space:nowrap; }
 .bolao-total { font-size:10px; color:var(--muted); text-align:center; letter-spacing:2px; margin-top:4px; flex-shrink:0; }
+
+/* ── TEAM BADGE ── */
+.team-badge{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:23px;letter-spacing:1px;background:linear-gradient(135deg,var(--maroon),#4a0a0a);border:2.5px solid rgba(240,165,0,.35);flex-shrink:0;color:rgba(255,255,255,.9);animation:iconSpin 8s linear infinite;}
+.team-badge.win{border-color:rgba(240,165,0,.9);background:linear-gradient(135deg,#5a2d00,#2a1400);box-shadow:0 0 22px rgba(240,165,0,.55);color:var(--gold2);}
+/* ── SCORE PTS LABEL ── */
+.live-score-wrap{display:flex;flex-direction:column;align-items:center;}
+.live-pts-lbl{font-size:8px;font-weight:800;letter-spacing:3px;color:rgba(240,165,0,.4);text-transform:uppercase;margin-top:-2px;}
+/* ── QUAL DOT ── */
+.qual-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);vertical-align:middle;margin-right:5px;flex-shrink:0;}
+.class-row.p2 .qual-dot{background:rgba(192,192,192,.7);}
+/* ── TICKER ── */
+.tv-ticker{flex-shrink:0;height:30px;background:rgba(0,0,0,.75);border-top:1px solid rgba(240,165,0,.2);display:flex;align-items:stretch;overflow:hidden;}
+.ticker-label{flex-shrink:0;background:var(--gold3);color:var(--maroon2);font-size:9px;font-weight:900;letter-spacing:2px;padding:0 14px;display:flex;align-items:center;text-transform:uppercase;white-space:nowrap;gap:5px;}
+.ticker-track{flex:1;overflow:hidden;position:relative;}
+.ticker-text{position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap;font-size:11px;font-weight:600;color:rgba(255,255,255,.8);letter-spacing:.5px;}
+@keyframes tickerRoll{from{left:100%}to{left:-300%}}
+/* ── TEAM NAME BIGGER ── */
+.live-team-name{font-size:16px;font-weight:800;text-align:center;line-height:1.1;max-width:140px;}
 </style>
 </head>
 <body>
@@ -538,6 +556,12 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
   </div>
 
   <div class="scene-dots" id="sceneDots"></div>
+
+  <!-- TICKER -->
+  <div class="tv-ticker">
+    <div class="ticker-label">🏀 Resultados</div>
+    <div class="ticker-track"><div class="ticker-text" id="tickerText">Aguardando resultados...</div></div>
+  </div>
 
   <!-- FOOTER -->
   <div class="tv-footer">
@@ -735,7 +759,7 @@ function renderClassif(grupo,id){
   cl.forEach(function(t,i){
     html+='<div class="class-row '+pc[i]+'" style="animation-delay:'+(i*.08)+'s">'+
       '<div><div class="rank-num '+rk[i]+'">'+(i+1)+'</div></div>'+
-      '<div class="class-name">'+t.nome+'</div>'+
+      '<div class="class-name">'+(i<2?'<span class="qual-dot"></span>':'')+t.nome+'</div>'+
       '<div class="class-num">'+t.j+'</div>'+
       '<div class="class-num">'+t.v+'</div>'+
       '<div class="class-num">'+t.d+'</div>'+
@@ -743,6 +767,13 @@ function renderClassif(grupo,id){
     '</div>';
   });
   document.getElementById(id).innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:10px;font-size:12px;">Aguardando...</div>';
+}
+
+// ── INICIAIS DO TIME ───────────────────────────────
+function getInitials(name){
+  if(!name)return'?';
+  var w=name.trim().toUpperCase().split(/\s+/);
+  return w.length>1?w[0][0]+w[1][0]:w[0].substring(0,2);
 }
 
 // ── PLACAR DESTAQUE ────────────────────────────────
@@ -758,18 +789,18 @@ function renderLiveCard(){
     '<div class="live-card-label">'+(isLast?'⚡ ÚLTIMO RESULTADO':'⏳ PRÓXIMO JOGO')+' · '+j.horario+' · GRUPO '+j.grupo+' · JOGO '+j.rodada+'</div>'+
     '<div class="live-teams">'+
       '<div class="live-team">'+
-        '<div class="live-team-icon">🏀</div>'+
+        '<div class="team-badge'+(vA?' win':'')+'">'+getInitials(j.equipeA)+'</div>'+
         '<div class="live-team-name'+(vA?' winner':'')+'">'+j.equipeA+'</div>'+
       '</div>'+
       '<div class="live-score-box">'+
         (isLast?
-          '<div class="live-score score-anim" data-val="'+j.ptsA+'">'+j.ptsA+'</div>'+
+          '<div class="live-score-wrap"><div class="live-score score-anim" data-val="'+j.ptsA+'">'+j.ptsA+'</div><div class="live-pts-lbl">PTS</div></div>'+
           '<div class="live-score-sep">×</div>'+
-          '<div class="live-score score-anim" data-val="'+j.ptsB+'">'+j.ptsB+'</div>'
+          '<div class="live-score-wrap"><div class="live-score score-anim" data-val="'+j.ptsB+'">'+j.ptsB+'</div><div class="live-pts-lbl">PTS</div></div>'
         :'<div class="live-score-vs">VS</div>')+
       '</div>'+
       '<div class="live-team">'+
-        '<div class="live-team-icon">🏀</div>'+
+        '<div class="team-badge'+(vB?' win':'')+'">'+getInitials(j.equipeB)+'</div>'+
         '<div class="live-team-name'+(vB?' winner':'')+'">'+j.equipeB+'</div>'+
       '</div>'+
     '</div>'+
@@ -854,6 +885,22 @@ function renderMataMata(){
   document.getElementById('mmPanel').innerHTML=html;
 }
 
+// ── TICKER ─────────────────────────────────────────
+function renderTicker(){
+  var el=document.getElementById('tickerText');
+  if(!el)return;
+  var parts=appData.grupos.filter(function(j){return j.status==='done';}).map(function(j){
+    return 'GRP '+j.grupo+' J'+j.rodada+': '+j.equipeA+' '+j.ptsA+' × '+j.ptsB+' '+j.equipeB;
+  });
+  if(!parts.length){el.style.animation='none';el.textContent='Aguardando resultados...';return;}
+  var txt=parts.join('     ·     ')+'     ·     ';
+  el.textContent=txt;
+  var dur=Math.max(18,txt.length*0.32);
+  el.style.animation='none';
+  void el.offsetWidth;
+  el.style.cssText='position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap;font-size:11px;font-weight:600;color:rgba(255,255,255,.8);letter-spacing:.5px;animation:tickerRoll '+dur+'s linear infinite;';
+}
+
 function renderAll(){
   renderLiveCard();
   renderClassif('A','classA');
@@ -864,6 +911,7 @@ function renderAll(){
   renderMvp();
   renderFotos();
   renderBolao();
+  renderTicker();
   buildScenes();
   if(getMode()==='matamata'){
     var fin=appData.matamata[2]||{};
