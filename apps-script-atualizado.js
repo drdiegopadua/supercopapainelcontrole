@@ -134,14 +134,33 @@ function doGet(e) {
         if (!porFone[fone]) porFone[fone] = r;
       });
 
+      // Fallback: incluir pessoas que estão no PALPITES mas não no PALPITES_DETALHE
+      const shP = ss.getSheetByName(ABA_PALPITES);
+      if (shP && shP.getLastRow() >= 2) {
+        const rowsP = shP.getDataRange().getValues().slice(1);
+        rowsP.forEach(rp => {
+          const fone = (rp[3]||'').toString().trim();
+          if (!fone || porFone[fone]) return;
+          let esp = (rp[5]||'').toString().trim().toLowerCase();
+          if (!esp) esp = 'volei';
+          if (esp !== sport) return;
+          let pctPre = parseFloat((rp[4]||'0').toString().replace('%','').replace(',','.')) || 0;
+          if (pctPre > 0 && pctPre <= 1) pctPre = Math.round(pctPre * 10000) / 100;
+          porFone[fone] = {_fb: true, nome: (rp[2]||'').toString().trim(), fone, pctPre};
+        });
+      }
+
       const totalJogos = sport === 'basquete' ? 6 : 12;
-      const ranking = Object.values(porFone).map(r => ({
-        nome:        r[1].toString().trim(),
-        fone:        r[2].toString().trim(),
-        detalheJSON: r[3].toString().trim(),
-        acertos:     0,
-        pct:         null
-      }));
+      const ranking = Object.values(porFone).map(r => {
+        if (r._fb) return {nome: r.nome, fone: r.fone, detalheJSON: '[]', acertos: 0, pct: null, pctPre: r.pctPre};
+        return {
+          nome:        r[1].toString().trim(),
+          fone:        r[2].toString().trim(),
+          detalheJSON: r[3].toString().trim(),
+          acertos:     0,
+          pct:         null
+        };
+      });
 
       return okJson({ ranking, jogosComResultado: 0, totalJogos });
     }
@@ -174,14 +193,18 @@ function doGet(e) {
         const pctEx = parseFloat((porFone[fone]?.[5]||'0').toString().replace('%','')) || 0;
         if (!porFone[fone] || pct > pctEx) porFone[fone] = r;
       });
-      const ranking = Object.values(porFone).map(r => ({
-        nome:    r[1].toString().trim(),
-        fone:    r[2].toString().trim(),
-        acertos: parseInt(r[3]||0),
-        total:   parseInt(r[4]||0),
-        pct:     r[5].toString().replace('%','').trim(),
-        tempo:   r[6].toString().trim()
-      }));
+      const ranking = Object.values(porFone).map(r => {
+        let pctNum = parseFloat((r[5]||'0').toString().replace('%','').replace(',','.')) || 0;
+        if (pctNum > 0 && pctNum <= 1) pctNum = Math.round(pctNum * 10000) / 100;
+        return {
+          nome:    r[1].toString().trim(),
+          fone:    r[2].toString().trim(),
+          acertos: parseInt(r[3]||0),
+          total:   parseInt(r[4]||0),
+          pct:     pctNum.toFixed(2),
+          tempo:   r[6].toString().trim()
+        };
+      });
       ranking.sort((a,b) => (parseFloat(b.pct)||0)-(parseFloat(a.pct)||0) || (parseFloat(a.tempo)||999)-(parseFloat(b.tempo)||999));
       return okJson({ ranking });
     }
