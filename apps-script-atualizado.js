@@ -162,6 +162,30 @@ function doGet(e) {
       return okJson({ ranking, campeaoReal: null });
     }
 
+    if (action === 'ranking_quiz') {
+      const sh = ss.getSheetByName(ABA_QUIZ);
+      if (!sh || sh.getLastRow() < 2) return okJson({ ranking: [] });
+      const rows = sh.getDataRange().getValues().slice(1);
+      const porFone = {};
+      rows.forEach(r => {
+        const fone = r[2].toString().trim();
+        if (!fone) return;
+        const pct = parseFloat((r[5]||'0').toString().replace('%','')) || 0;
+        const pctEx = parseFloat((porFone[fone]?.[5]||'0').toString().replace('%','')) || 0;
+        if (!porFone[fone] || pct > pctEx) porFone[fone] = r;
+      });
+      const ranking = Object.values(porFone).map(r => ({
+        nome:    r[1].toString().trim(),
+        fone:    r[2].toString().trim(),
+        acertos: parseInt(r[3]||0),
+        total:   parseInt(r[4]||0),
+        pct:     r[5].toString().replace('%','').trim(),
+        tempo:   r[6].toString().trim()
+      }));
+      ranking.sort((a,b) => (parseFloat(b.pct)||0)-(parseFloat(a.pct)||0) || (parseFloat(a.tempo)||999)-(parseFloat(b.tempo)||999));
+      return okJson({ ranking });
+    }
+
     if (action === 'blocked_games') {
       return okJson(getBlockedGames());
     }
