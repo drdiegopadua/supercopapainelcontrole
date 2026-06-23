@@ -131,7 +131,7 @@ function doGet(e) {
         }
 
         if (esporteRow !== sport) return;
-        if (!porFone[fone]) porFone[fone] = r;
+        porFone[fone] = r; // sempre sobrescreve: mantém a submissão mais recente
       });
 
       // Fallback: incluir pessoas que estão no PALPITES mas não no PALPITES_DETALHE
@@ -146,13 +146,20 @@ function doGet(e) {
           if (esp !== sport) return;
           let pctPre = parseFloat((rp[4]||'0').toString().replace('%','').replace(',','.')) || 0;
           if (pctPre > 0 && pctPre <= 1) pctPre = Math.round(pctPre * 10000) / 100;
-          porFone[fone] = {_fb: true, nome: (rp[2]||'').toString().trim(), fone, pctPre};
+          // Parsear texto "Jogo1(GA): EQUIPE | Jogo2(GA): EQUIPE | ..." em detalheJSON
+          const palpiteText = (rp[1]||'').toString();
+          const detalhe = [];
+          palpiteText.split('|').forEach(part => {
+            const m = part.trim().match(/Jogo(\d+)\(G([A-Z])\):\s*(.+)/);
+            if (m) detalhe.push({jogo: parseInt(m[1]), grupo: m[2], vencedor: m[3].trim()});
+          });
+          porFone[fone] = {_fb: true, nome: (rp[2]||'').toString().trim(), fone, pctPre, detalhe: JSON.stringify(detalhe)};
         });
       }
 
       const totalJogos = sport === 'basquete' ? 6 : 12;
       const ranking = Object.values(porFone).map(r => {
-        if (r._fb) return {nome: r.nome, fone: r.fone, detalheJSON: '[]', acertos: 0, pct: null, pctPre: r.pctPre};
+        if (r._fb) return {nome: r.nome, fone: r.fone, detalheJSON: r.detalhe || '[]', acertos: 0, pct: null, pctPre: r.pctPre};
         return {
           nome:        r[1].toString().trim(),
           fone:        r[2].toString().trim(),
