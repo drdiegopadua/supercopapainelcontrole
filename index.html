@@ -962,22 +962,16 @@
             </div>
           </div>
           <div id="bolao-volei-section">
-            <div style="font-size:11px;font-weight:700;color:#1565C0;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🏐 Vôlei</div>
-            <table class="ranking-table">
-              <thead><tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr></thead>
-              <tbody id="bolao-volei-tbody">
-                <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Carregando ranking do bolão...</p></div></td></tr>
-              </tbody>
-            </table>
+            <div style="font-size:11px;font-weight:700;color:#1565C0;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🏐 Vôlei</div>
+            <div id="bolao-volei-cards" style="display:flex;flex-direction:column;gap:8px;">
+              <div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Carregando...</div>
+            </div>
           </div>
           <div id="bolao-basq-section" style="display:none;">
-            <div style="font-size:11px;font-weight:700;color:#C8960C;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🏀 Basquete</div>
-            <table class="ranking-table">
-              <thead><tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr></thead>
-              <tbody id="bolao-basq-tbody">
-                <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Carregando ranking do bolão...</p></div></td></tr>
-              </tbody>
-            </table>
+            <div style="font-size:11px;font-weight:700;color:#C8960C;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🏀 Basquete</div>
+            <div id="bolao-basq-cards" style="display:flex;flex-direction:column;gap:8px;">
+              <div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Carregando...</div>
+            </div>
           </div>
         </div>
       </div>
@@ -987,12 +981,9 @@
           <div style="display:flex;gap:10px;margin-bottom:14px;">
             <button class="refresh-btn" onclick="loadQuizRanking(true)"><i class='bx bx-refresh'></i> Atualizar Ranking</button>
           </div>
-          <table class="ranking-table" id="quiz-table">
-            <thead><tr><th>#</th><th>Participante</th><th>Acertos</th><th>Pontos</th><th>Ações</th></tr></thead>
-            <tbody id="quiz-tbody">
-              <tr><td colspan="5"><div class="empty-state"><i class='bx bxs-brain'></i><p>Carregando ranking do quiz...</p></div></td></tr>
-            </tbody>
-          </table>
+          <div id="quiz-cards" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Carregando...</div>
+          </div>
         </div>
       </div>
 
@@ -1861,32 +1852,51 @@ async function loadNoticiasFromSheet(manual=false) {
 }
 
 // ════════════════════════════════════════════════════════
-// SOCIAL / BOLÃO — Carregar da Planilha Palpites
+// SOCIAL / BOLÃO — Carregar via endpoint + calcular acertos com vencedores reais
 // ════════════════════════════════════════════════════════
 async function loadBolaoRanking(manual=false) {
   if (manual) showLoading(true);
   try {
-    // Lê cols A=timestamp B=palpite C=NOME D=WHATSAPP E=%ACERTO F=ESPORTE
-    const rows = await sheetRead('13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A', "'PALPITES'!A2:F500");
+    const [voleiRes, basqRes, voleiSheet, basqSheet] = await Promise.all([
+      fetch(BOLAO_SHEETS_URL + '?action=ranking_sabado&sport=volei').then(r => r.json()),
+      fetch(BOLAO_SHEETS_URL + '?action=ranking_sabado&sport=basquete').then(r => r.json()),
+      sheetRead(INDEX_VOLEI_SHEET_ID, "'Fase de Grupos'!A1:O49"),
+      sheetRead(BASQ_SHEET_ID, "'Fase de Grupos'!A1:S15")
+    ]);
 
-    const mapped = rows
-      .filter(r => r[2] && r[2].trim())
-      .map((r, i) => {
-        const pct = parseFloat((r[4] || '0').toString().replace('%','').replace(',','.')) || 0;
-        let esporte = (r[5] || '').trim().toLowerCase();
-        // fallback: detecta pelo número de palpites (≤6 = basquete)
-        if (!esporte) {
-          try {
-            const det = JSON.parse(r[1] || '[]');
-            esporte = Array.isArray(det) && det.length <= 6 ? 'basquete' : 'volei';
-          } catch(e) { esporte = 'volei'; }
-        }
-        return { id: 'bolao_' + i, nome: r[2].trim(), whatsapp: r[3] || '', acertos: pct, pontos: pct, esporte };
+    // Vencedores vôlei (linhas 11,12,13 por grupo, col O índice 14)
+    const vencV = {}; let nV = 1;
+    [[11,12,13],[23,24,25],[35,36,37],[47,48,49]].forEach(rows => {
+      rows.forEach(r => {
+        const v = ((voleiSheet[r-1]||[])[14]||'').toString().trim();
+        if (v && !['A DEFINIR','—','VENCEDOR'].includes(v) && v.toUpperCase() !== 'EMPATE') vencV[nV] = v;
+        nV++;
       });
+    });
 
-    state.bolao = mapped;
-    state.bolaoVolei = mapped.filter(p => p.esporte !== 'basquete').sort((a,b) => b.pontos - a.pontos);
-    state.bolaoBasq  = mapped.filter(p => p.esporte === 'basquete').sort((a,b) => b.pontos - a.pontos);
+    // Vencedores basquete (col 8 e 18, parse "V: TEAM")
+    const vencB = {}; let nB = 1;
+    const bpv = raw => { const m = raw.match(/^[A-Za-z]+:\s*(.+)/); return m ? m[1].trim() : raw; };
+    const bok = v => v && v !== '—' && v.toLowerCase() !== 'empate';
+    [4,5,6].forEach(r => { const v = bpv(((basqSheet[r]||[])[8]||'').toString().trim()); if(bok(v)) vencB[nB]=v; nB++; });
+    [4,5,6].forEach(r => { const v = bpv(((basqSheet[r]||[])[18]||'').toString().trim()); if(bok(v)) vencB[nB]=v; nB++; });
+
+    const apV = Object.keys(vencV).length, apB = Object.keys(vencB).length;
+
+    const compute = (ranking, venc, totalJogos, apurados, sport) =>
+      ranking.map((p, idx) => {
+        let a = []; try { a = JSON.parse(p.detalheJSON||'[]'); } catch(e) {}
+        let acertos = 0;
+        a.forEach(x => { const jn = parseInt(x.jogo); if(venc[jn] && venc[jn]===x.vencedor) acertos++; });
+        const pct = (apurados>0 && a.length>0) ? Math.round(acertos/totalJogos*10000)/100
+                  : (p.pctPre != null ? parseFloat(p.pctPre)||0 : 0);
+        return { id: sport+'_'+idx, nome: p.nome, acertos, pct,
+                 acertosStr: `${acertos} acertos de ${totalJogos} jogos · ${apurados} apurados` };
+      }).sort((a,b) => b.pct - a.pct);
+
+    state.bolaoVolei = compute(voleiRes.ranking||[], vencV, 12, apV, 'volei');
+    state.bolaoBasq  = compute(basqRes.ranking||[], vencB, 6, apB, 'basquete');
+    state.bolao = [...state.bolaoVolei, ...state.bolaoBasq];
 
     renderRanking();
     if (manual) showToast('Ranking atualizado! Vôlei: ' + state.bolaoVolei.length + ' · Basquete: ' + state.bolaoBasq.length);
@@ -1909,21 +1919,19 @@ function setBolaoSport(s) {
 }
 
 // ════════════════════════════════════════════════════════
-// QUIZ — Carregar da Planilha Quiz
+// QUIZ — Carregar via endpoint
 // ════════════════════════════════════════════════════════
 async function loadQuizRanking(manual=false) {
   if (manual) showLoading(true);
   try {
-    const PALPITES_SHEET_ID = '13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A';
-    const rows = await sheetRead(PALPITES_SHEET_ID, "'QUIZ'!A2:G200");
-    state.quiz = rows
-      .filter(r => r[1] && r[1].toString().trim())
-      .map((r, i) => {
-        const acertosNum = parseInt((r[3] || '0').toString().replace(/[^\d]/g, '')) || 0;
-        const totalPerguntas = 40;
-        const pct = parseFloat((acertosNum / totalPerguntas * 100).toFixed(2));
-        return { id: 'q' + i, nome: r[1] || '—', acertos: acertosNum + '/' + totalPerguntas, pontos: pct };
-      });
+    const data = await fetch(BOLAO_SHEETS_URL + '?action=ranking_quiz').then(r => r.json());
+    state.quiz = (data.ranking || []).map((p, i) => {
+      const pct = parseFloat(p.pct) || 0;
+      return {
+        id: 'q' + i, nome: p.nome, acertos: p.acertos, total: p.total, pct,
+        acertosStr: `${p.acertos} de ${p.total} perguntas · ${p.tempo}s`
+      };
+    });
     renderRanking();
     if (manual) showToast('Ranking do quiz atualizado!');
   } catch(e) {
@@ -2861,9 +2869,35 @@ function salvarRanking() {
 }
 
 function renderRanking() {
-  renderRankingTableById('bolao-volei-tbody', state.bolaoVolei || [], 'bolao');
-  renderRankingTableById('bolao-basq-tbody',  state.bolaoBasq  || [], 'bolao');
-  renderRankingTable('quiz', state.quiz);
+  renderRankingCards('bolao-volei-cards', state.bolaoVolei || [], '#1565C0', 'bolao');
+  renderRankingCards('bolao-basq-cards',  state.bolaoBasq  || [], '#C8960C', 'bolao');
+  renderRankingCards('quiz-cards',        state.quiz       || [], '#6C3483', 'quiz');
+}
+
+function renderRankingCards(containerId, list, accentColor, tipo) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--dark-grey);font-size:13px;"><i class=\'bx bxs-bar-chart-alt-2\' style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>Sem participantes ainda.</div>';
+    return;
+  }
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = list.map((p, i) => {
+    const top = i < 3;
+    const medal = medals[i] || `${i+1}º`;
+    const pct = p.pct != null ? Number(p.pct).toFixed(2) + '%' : '—';
+    const sub = p.acertosStr || (p.acertos != null ? `${p.acertos} acertos` : '');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;
+      background:${top ? 'linear-gradient(135deg,rgba(244,197,66,.1),rgba(14,59,120,.06))' : 'var(--light-grey,#f7f7f7)'};
+      border:2px solid ${top ? accentColor : '#e8e8e8'};">
+      <div style="font-size:${top ? '22px' : '13px'};min-width:30px;text-align:center;font-weight:800;color:${top ? accentColor : '#999'};">${medal}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;color:var(--dark,#1a1a1a);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nome}</div>
+        ${sub ? `<div style="font-size:10px;color:#888;margin-top:2px;">${sub}</div>` : ''}
+      </div>
+      <div style="font-size:18px;font-weight:800;color:${accentColor};">${pct}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderRankingTableById(tbodyId, list, tipo) {

@@ -563,8 +563,16 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
     <!-- CENA BOLÃO -->
     <div class="scene" id="scene-bolao">
       <div class="panel" style="flex:1;">
-        <div class="panel-head">🎯 BOLÃO — QUEM VAI GANHAR?</div>
+        <div class="panel-head">🎯 BOLÃO BASQUETE — RANKING</div>
         <div class="panel-body" id="bolaoPanel" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+
+    <!-- CENA QUIZ -->
+    <div class="scene" id="scene-quiz">
+      <div class="panel" style="flex:1;">
+        <div class="panel-head">🧠 QUIZ — RANKING</div>
+        <div class="panel-body" id="quizPanel" style="display:flex;flex-direction:column;gap:6px;"></div>
       </div>
     </div>
 
@@ -643,12 +651,12 @@ function getMode(){ return new URLSearchParams(window.location.search).get('modo
 function buildScenes(){
   // Todas as cenas entram sempre no ciclo — mostram estado vazio se sem dados
   if(getMode()==='matamata'){
-    scenes = ['scene-matamata','scene-bolao'];
+    scenes = ['scene-matamata','scene-bolao','scene-quiz'];
     if(appData.config['PODIO_1']) scenes.push('scene-podio');
     if(appData.config['MVP_NOME']) scenes.push('scene-mvp');
     if(fotosArr.length > 0) scenes.push('scene-fotos');
   } else {
-    scenes = ['scene-placar','scene-tabela','scene-bolao'];
+    scenes = ['scene-placar','scene-tabela','scene-bolao','scene-quiz'];
     if(appData.config['PODIO_1']) scenes.push('scene-podio');
     if(appData.config['MVP_NOME']) scenes.push('scene-mvp');
     if(fotosArr.length > 0) scenes.push('scene-fotos');
@@ -928,6 +936,7 @@ function renderAll(){
   renderMvp();
   renderFotos();
   renderBolao();
+  renderQuiz();
   renderTicker();
   buildScenes();
   if(getMode()==='matamata'){
@@ -1042,54 +1051,71 @@ function renderFotos(){
 function renderBolao(){
   var el=document.getElementById('bolaoPanel');
   el.innerHTML='<div style="text-align:center;padding:18px 16px;"><div style="font-size:32px;margin-bottom:6px;">⏳</div><div style="font-size:13px;font-weight:700;color:var(--muted);">Carregando ranking...</div></div>';
-  var pUrl='https://sheets.googleapis.com/v4/spreadsheets/13tlftQg-pxNUaaFq0Q4xoNi9HmeTtROesg7asZoLz7A/values/'+encodeURIComponent("'PALPITES'!A2:F200")+'?key='+API_KEY;
-  fetch(pUrl)
-    .then(function(r){return r.json();})
-    .then(function(data){
-      var rows=data.values||[];
-      if(!rows.length){
-        el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🎯</div><div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div></div>';
-        return;
-      }
-      // col A=timestamp(0), B=palpite(1), C=nome(2), D=whatsapp(3), E=%acerto(4), F=esporte(5)
-      var seen={};
-      var participants=[];
-      rows.forEach(function(r){
-        var esporte=(r[5]||'').trim().toLowerCase();
-        // Se coluna F está vazia, detecta pelo número de palpites (≤6 = basquete)
-        if(!esporte){
-          try{var det=JSON.parse(r[1]||'[]');esporte=Array.isArray(det)&&det.length<=6?'basquete':'volei';}
-          catch(e){esporte='volei';}
-        }
-        if(esporte !== 'basquete') return;
-        var nome=(r[2]||'').trim();
-        var pct=parseFloat((r[4]||'0').replace('%','').replace(',','.'));
-        if(!nome)return;
-        var key=nome.toLowerCase();
-        if(!seen[key]){seen[key]=true;participants.push({nome:nome,pct:isNaN(pct)?0:pct});}
+  var rankUrl=BOLAO_API_URL+'?action=ranking_sabado&sport=basquete';
+  var sheetUrl='https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+encodeURIComponent("'Fase de Grupos'!A1:S15")+'?key='+API_KEY;
+  Promise.all([fetch(rankUrl).then(function(r){return r.json();}),fetch(sheetUrl).then(function(r){return r.json();})])
+    .then(function(res){
+      var data=res[0];var shData=(res[1].values||[]);
+      var venc={};var num=1;
+      function bpv(raw){var m=raw.match(/^[A-Za-z]+:\s*(.+)/);return m?m[1].trim():raw;}
+      function bok(v){return v&&v!=='—'&&v.toLowerCase()!=='empate';}
+      [4,5,6].forEach(function(r){var v=bpv(((shData[r]||[])[8]||'').toString().trim());if(bok(v))venc[num]=v;num++;});
+      [4,5,6].forEach(function(r){var v=bpv(((shData[r]||[])[18]||'').toString().trim());if(bok(v))venc[num]=v;num++;});
+      var apurados=Object.keys(venc).length;
+      var participants=(data.ranking||[]).map(function(p){
+        var a=[];try{a=JSON.parse(p.detalheJSON||'[]');}catch(e){}
+        var acertos=0;
+        a.forEach(function(x){var jn=parseInt(x.jogo);if(venc[jn]&&venc[jn]===x.vencedor)acertos++;});
+        var pct=apurados>0&&a.length>0?Math.round(acertos/6*10000)/100:(p.pctPre!=null?parseFloat(p.pctPre)||0:0);
+        return {nome:p.nome,pct:pct,meta:acertos+' acertos / '+apurados+' apurados'};
       });
-      if(!participants.length){
-        el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🎯</div><div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div></div>';
-        return;
-      }
       participants.sort(function(a,b){return b.pct-a.pct;});
-      var top=participants.slice(0,8);
-      var medals=['🥇','🥈','🥉'];
-      var maxPct=top[0].pct||0.01;
-      var html='<div class="bolao-wrap"><div class="bolao-title-row"><span style="font-size:13px;font-weight:800;letter-spacing:1px;">🏆 RANKING BOLÃO</span><span class="bolao-subtitle">'+participants.length+' PARTICIPANTES</span></div><div class="bolao-bars">';
-      top.forEach(function(p,i){
-        var pctVal=p.pct.toFixed(2)+'%';
-        var barW=Math.round(p.pct/maxPct*100);
-        var medal=i<3?medals[i]:(i+1)+'.';
-        var fillCls=i===0?'gold':'maroon';
-        html+='<div class="bolao-bar-row"><div class="bolao-bar-label">'+medal+' '+p.nome+'</div><div class="bolao-bar-track"><div class="bolao-bar-fill '+fillCls+'" style="--bar-target:'+barW+'%"></div></div><div class="bolao-bar-meta">'+pctVal+'</div></div>';
-      });
-      html+='</div></div>';
-      el.innerHTML=html;
-      setTimeout(function(){el.querySelectorAll('.bolao-bar-fill').forEach(function(b){b.style.animation='none';void b.offsetWidth;b.style.animation='barGrow .9s ease both';});},100);
+      renderBolaoChart(el,participants,'🎯 RANKING BOLÃO');
     })
     .catch(function(){
       el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🎯</div><div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div></div>';
+    });
+}
+
+function renderBolaoChart(el,participants,title){
+  if(!participants||!participants.length){
+    el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">📋</div><div style="font-size:15px;font-weight:700;">Sem participantes ainda.</div></div>';
+    return;
+  }
+  var top=participants.slice(0,8);
+  var medals=['🥇','🥈','🥉'];
+  var maxPct=top[0].pct||0.01;
+  var html='<div class="bolao-wrap"><div class="bolao-title-row"><span style="font-size:13px;font-weight:800;letter-spacing:1px;">'+title+'</span><span class="bolao-subtitle">'+participants.length+' PARTICIPANTES</span></div><div class="bolao-bars">';
+  top.forEach(function(p,i){
+    var pctVal=p.pct.toFixed(2)+'%';
+    var barW=Math.round(p.pct/maxPct*100)||1;
+    var medal=i<3?medals[i]:(i+1)+'.';
+    var fillCls=i===0?'gold':'maroon';
+    var meta=p.meta?'<span style="font-size:9px;color:var(--muted);margin-left:6px;">'+p.meta+'</span>':'';
+    html+='<div class="bolao-bar-row"><div class="bolao-bar-label">'+medal+' '+p.nome+meta+'</div><div class="bolao-bar-track"><div class="bolao-bar-fill '+fillCls+'" style="--bar-target:'+barW+'%"></div></div><div class="bolao-bar-meta">'+pctVal+'</div></div>';
+  });
+  html+='</div></div>';
+  el.innerHTML=html;
+  setTimeout(function(){el.querySelectorAll('.bolao-bar-fill').forEach(function(b){b.style.animation='none';void b.offsetWidth;b.style.animation='barGrow .9s ease both';});},120);
+}
+
+function renderQuiz(){
+  var el=document.getElementById('quizPanel');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:18px 16px;"><div style="font-size:32px;margin-bottom:6px;">⏳</div><div style="font-size:13px;font-weight:700;color:var(--muted);">Carregando quiz...</div></div>';
+  fetch(BOLAO_API_URL+'?action=ranking_quiz')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var participants=(data.ranking||[]).map(function(p){
+        var pct=parseFloat(p.pct)||0;
+        if(pct>0&&pct<=1)pct*=100;
+        return {nome:p.nome,pct:pct,meta:p.acertos+'/'+p.total+' · '+p.tempo+'s'};
+      });
+      participants.sort(function(a,b){return b.pct-a.pct;});
+      renderBolaoChart(el,participants,'🧠 RANKING QUIZ');
+    })
+    .catch(function(){
+      el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🧠</div><div style="font-size:15px;font-weight:700;">Sem respostas ainda.</div></div>';
     });
 }
 function renderBolaoLegacy(){
