@@ -888,9 +888,19 @@
         </div>
       </div>
 
+      <!-- Toggle Naipe -->
+      <div style="display:flex;background:rgba(0,0,0,0.06);border-radius:12px;padding:4px;margin-bottom:16px;gap:4px;max-width:340px;">
+        <button id="handBtnMasc" onclick="setHandNaipe('masc')" style="flex:1;border:none;border-radius:8px;padding:10px 16px;font-family:var(--poppins);font-size:13px;font-weight:600;cursor:pointer;background:#1B5E20;color:#fff;transition:all .2s;">
+          ♂ Masculino
+        </button>
+        <button id="handBtnFem" onclick="setHandNaipe('fem')" style="flex:1;border:none;border-radius:8px;padding:10px 16px;font-family:var(--poppins);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#888;transition:all .2s;">
+          ♀ Feminino
+        </button>
+      </div>
+
       <!-- Placares -->
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title" style="color:#1B5E20"><i class='bx bx-handball'></i> Entrada de Placares — AFOHAND</div>
+        <div class="card-title" style="color:#1B5E20"><i class='bx bx-handball'></i> Entrada de Placares — AFOHAND <span id="handNaipeLabel" style="font-size:12px;font-weight:500;margin-left:8px;color:#888;">(Masculino)</span></div>
         <div class="jogos-grid" id="handebol-jogos-grid">
           <div class="empty-state"><i class='bx bx-handball'></i><p>Carregando jogos...</p></div>
         </div>
@@ -2021,8 +2031,9 @@ async function sendPush() {
 // CLASSIFICAÇÃO HANDEBOL (aba Classificação do painel)
 // ════════════════════════════════════════════════════════
 async function loadClassHandebol() {
+  const sufixo = handNaipe === 'fem' ? '-Fem' : '';
   try {
-    const res  = await fetch(HAND_API("'Fase de Grupos'!A5:S7"));
+    const res  = await fetch(HAND_API(`'Fase de Grupos${sufixo}'!A5:S7`));
     const data = await res.json();
     const rows = data.values || [];
 
@@ -2085,6 +2096,22 @@ async function loadClassHandebol() {
 }
 
 // ════════════════════════════════════════════════════════
+// HANDEBOL NAIPE TOGGLE
+// ════════════════════════════════════════════════════════
+let handNaipe = 'masc';
+
+function setHandNaipe(n) {
+  handNaipe = n;
+  const isFem = n === 'fem';
+  document.getElementById('handBtnMasc').style.background = isFem ? 'transparent' : '#1B5E20';
+  document.getElementById('handBtnMasc').style.color      = isFem ? '#888' : '#fff';
+  document.getElementById('handBtnFem').style.background  = isFem ? '#8B0000' : 'transparent';
+  document.getElementById('handBtnFem').style.color       = isFem ? '#fff' : '#888';
+  document.getElementById('handNaipeLabel').textContent   = isFem ? '(Feminino)' : '(Masculino)';
+  loadHandebolFromSheet(true);
+}
+
+// ════════════════════════════════════════════════════════
 // HANDEBOL
 // ════════════════════════════════════════════════════════
 const HAND_API = (range) =>
@@ -2092,10 +2119,11 @@ const HAND_API = (range) =>
 
 async function loadHandebolFromSheet(manual = false) {
   if (manual) showLoading(true);
+  const sufixo = handNaipe === 'fem' ? '-Fem' : '';
   try {
     const [grRes, mmRes] = await Promise.all([
-      fetch(HAND_API("'Fase de Grupos'!A5:S7")),
-      fetch(HAND_API("'Mata-Mata'!A4:M17")),
+      fetch(HAND_API(`'Fase de Grupos${sufixo}'!A5:S7`)),
+      fetch(HAND_API(`'Mata-Mata${sufixo}'!A4:M17`)),
     ]);
     const grData = await grRes.json();
     const mmData = await mmRes.json();
@@ -2252,15 +2280,17 @@ async function salvarPlacarHandebol(id) {
     // Fase de Grupos: Grupo A → cols D/F; Grupo B → cols N/P
     const colA = j.grupo === 'A' ? 'D' : 'N';
     const colB = j.grupo === 'A' ? 'F' : 'P';
+    const abaGrupos = handNaipe === 'fem' ? 'Fase de Grupos-Fem' : 'Fase de Grupos';
     payload = {
       tipo: 'placar_handebol',
-      range: `'Fase de Grupos'!${colA}${j.rowIdx}:${colB}${j.rowIdx}`,
+      range: `'${abaGrupos}'!${colA}${j.rowIdx}:${colB}${j.rowIdx}`,
       valores: [[ga, '', gb]],
     };
   } else {
-    // Mata-Mata: gols em B{row} e H{row}
+    const abaMM = handNaipe === 'fem' ? 'Mata-Mata-Fem' : 'Mata-Mata';
     payload = {
       tipo: 'placar_handebol_mm',
+      aba: abaMM,
       golRow: j.sheetGolRow,
       golsA: ga, golsB: gb,
     };
