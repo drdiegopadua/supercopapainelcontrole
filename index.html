@@ -1535,7 +1535,7 @@ function _cc(rows, rowIdx, colIdx) {
 // STATE
 // ════════════════════════════════════════════════════════
 const state = {
-  jogos: { volei: [], basquete: [], handebol: [] },
+  jogos: { volei: [], basquete: [], handebol: [], handebolMasc: [], handebolFem: [] },
   destaques: [],
   bolao: [],
   quiz: [],
@@ -1898,11 +1898,13 @@ async function loadBolaoRanking(manual=false) {
         let a = []; try { a = JSON.parse(p.detalheJSON||'[]'); } catch(e) {}
         let acertos = 0;
         a.forEach(x => { const jn = parseInt(x.jogo); if(venc[jn] && venc[jn]===x.vencedor) acertos++; });
-        const pct = (apurados>0 && a.length>0) ? Math.round(acertos/totalJogos*10000)/100
+        const pct = (apurados>0 && a.length>0) ? Math.round(acertos/apurados*10000)/100
                   : (p.pctPre != null ? parseFloat(p.pctPre)||0 : 0);
-        return { id: sport+'_'+idx, nome: p.nome, acertos, pct,
-                 acertosStr: `${acertos} acertos de ${totalJogos} jogos · ${apurados} apurados` };
-      }).sort((a,b) => b.pct - a.pct);
+        const acertosStr = apurados>0
+          ? `${acertos} de ${apurados} apurados · ${pct.toFixed(1)}% (${totalJogos} jogos no total)`
+          : `Aguardando jogos`;
+        return { id: sport+'_'+idx, nome: p.nome, acertos, pct, acertosStr };
+      }).sort((a,b) => b.pct - a.pct || b.acertos - a.acertos);
 
     state.bolaoVolei = compute(voleiRes.ranking||[], vencV, 12, apV, 'volei');
     state.bolaoBasq  = compute(basqRes.ranking||[], vencB, 6, apB, 'basquete');
@@ -2151,9 +2153,6 @@ async function loadHandebolFromSheet(manual = false) {
     });
 
     // ── Mata-Mata ──
-    // SF1: mmRows[0]=nomes(col1=B,col7=H), mmRows[1]=gols
-    // SF2: mmRows[5]=nomes, mmRows[6]=gols
-    // Final: mmRows[11]=nomes, mmRows[12]=gols
     const mmConfig = [
       { id:'hand_sf1', fase:'Semifinal 1', nameRow:0, golRow:1, sheetGolRow:5 },
       { id:'hand_sf2', fase:'Semifinal 2', nameRow:5, golRow:6, sheetGolRow:10 },
@@ -2173,8 +2172,13 @@ async function loadHandebolFromSheet(manual = false) {
       });
     });
 
+    // Salva no naipe correspondente para o contador global
+    if (handNaipe === 'fem') state.jogos.handebolFem = [...state.jogos.handebol];
+    else state.jogos.handebolMasc = [...state.jogos.handebol];
+
     renderHandebolJogos();
     renderHandebolClassif();
+    updateStats();
     if (manual) showToast('Handebol atualizado!');
   } catch(e) {
     console.warn('Erro handebol:', e);
@@ -3089,7 +3093,7 @@ function excluirPush(id) {
 // STATS / DASHBOARD
 // ════════════════════════════════════════════════════════
 function updateStats() {
-  document.getElementById('stat-jogos').textContent = state.jogos.volei.length + state.jogos.basquete.length + state.jogos.handebol.length;
+  document.getElementById('stat-jogos').textContent = state.jogos.volei.length + state.jogos.basquete.length + state.jogos.handebolMasc.length + state.jogos.handebolFem.length;
   document.getElementById('stat-destaques').textContent = state.destaques.length;
   document.getElementById('stat-noticias').textContent = state.noticias.length;
   document.getElementById('stat-notifs').textContent = state.pushLog.length;
