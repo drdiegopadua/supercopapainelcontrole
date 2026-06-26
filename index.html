@@ -1426,6 +1426,15 @@ function doLogin(e) {
       loadNoticiasFromSheet();
       loadBolaoRanking();
       loadQuizRanking();
+      // Carrega handebol masc e fem silenciosamente para o contador do dashboard
+      const _naipeAtual = handNaipe;
+      handNaipe = 'masc';
+      loadHandebolFromSheet(false).then(() => {
+        handNaipe = 'fem';
+        loadHandebolFromSheet(false).then(() => {
+          handNaipe = _naipeAtual;
+        });
+      });
     }, 500);
   } else {
     errorEl.classList.add('show');
