@@ -3089,21 +3089,21 @@ function excluirPush(id) {
 // STATS / DASHBOARD
 // ════════════════════════════════════════════════════════
 function updateStats() {
-  document.getElementById('stat-jogos').textContent = state.jogos.volei.length + state.jogos.basquete.length;
+  document.getElementById('stat-jogos').textContent = state.jogos.volei.length + state.jogos.basquete.length + state.jogos.handebol.length;
   document.getElementById('stat-destaques').textContent = state.destaques.length;
   document.getElementById('stat-noticias').textContent = state.noticias.length;
   document.getElementById('stat-notifs').textContent = state.pushLog.length;
 }
 
 function updateDashboard() {
-  const allJogos = [...state.jogos.volei, ...state.jogos.basquete];
+  const allJogos = [...state.jogos.volei, ...state.jogos.basquete, ...state.jogos.handebol];
   const djl = document.getElementById('dash-jogos-list');
   if (!allJogos.length) {
     djl.innerHTML = `<div class="empty-state"><i class='bx bx-calendar'></i><p>Nenhum jogo cadastrado.</p></div>`;
   } else {
     djl.innerHTML = allJogos.slice(0, 4).map(j => `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grey)">
-        <span style="font-size:18px">${j.sport === 'volei' ? '🏐' : '🏀'}</span>
+        <span style="font-size:18px">${j.sport === 'volei' ? '🏐' : j.sport === 'basquete' ? '🏀' : '🤾'}</span>
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">${j.equipeA} × ${j.equipeB}</div>
         <div style="font-size:11px;color:var(--dark-grey)">${j.rodada || ''} · ${j.data || '—'}</div></div>
         <div class="status-badge ${j.status === 'live' ? 'status-live' : j.status === 'done' ? 'status-done' : 'status-upcoming'}" style="font-size:10px;padding:2px 8px">${j.status === 'live' ? 'Ao Vivo' : j.status === 'done' ? 'Encerrado' : 'Agendado'}</div>
