@@ -1430,7 +1430,6 @@ async function sheetWriteAtleta(payload) {
   } catch(e) { return { ok: false, erro: e.message }; }
 }
 
-}
 
 function _cc(rows, rowIdx, colIdx) {
   return rows[rowIdx] && rows[rowIdx][colIdx] != null ? String(rows[rowIdx][colIdx]).trim() : '';
