@@ -776,6 +776,18 @@
         </div>
       </div>
 
+      <!-- ═══ TELAS DA TV ═══ -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:#1565C0"><i class='bx bx-slideshow'></i> Telas da TV — Rotação</div>
+        <p style="font-size:12px;color:var(--dark-grey);margin:0 0 16px;">Selecione quais telas vão rodar na TV. As telas de Campeão ativam automaticamente quando houver resultado.</p>
+        <div id="tv-scene-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" onclick="salvarCenasTv()"><i class='bx bx-save'></i> Salvar Seleção</button>
+          <button class="btn" style="background:#7C3AED;color:#fff;" onclick="gerarLinkTv()"><i class='bx bx-link-external'></i> Gerar Link TV</button>
+          <button class="btn" style="background:rgba(255,255,255,.08);color:var(--text);" onclick="abrirTv()"><i class='bx bx-tv'></i> Abrir TV</button>
+        </div>
+        <div id="tv-link-box" style="display:none;margin-top:12px;padding:10px 14px;background:#f5f5f5;border-radius:10px;font-size:12px;word-break:break-all;color:#333;border:1px solid #ddd;"></div>
+      </div>
 
 
       <!-- Pódio -->
@@ -1505,6 +1517,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
+  if (page === 'tvconfig') initTvSceneGrid();
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   return false;
@@ -3014,6 +3027,102 @@ async function salvarNoticia() {
 }
 
 // ════════════════════════════════════════════════════════
+// TV CONFIG — Telas da TV
+// ════════════════════════════════════════════════════════
+const TV_URL = 'https://drdiegopadua.github.io/afohandapp/tv.html';
+
+const TV_SCENES_DEF = [
+  { id:'s-masc-class', label:'Classificação Masculino',  icon:'🤾‍♂️', desc:'Tabela dos Grupos A e B masculino com pontos, vitórias e saldo de gols.' },
+  { id:'s-masc-jogos', label:'Jogos Masculino',           icon:'🏐', desc:'Lista de jogos masculinos com placar, horário e status (realizado / pendente).' },
+  { id:'s-fem-class',  label:'Classificação Feminino',    icon:'🤾‍♀️', desc:'Tabela dos Grupos A e B feminino com pontos, vitórias e saldo de gols.' },
+  { id:'s-fem-jogos',  label:'Jogos Feminino',            icon:'🎽', desc:'Lista de jogos femininos com placar, horário e status.' },
+  { id:'s-matamata',   label:'Mata-Mata (Masc + Fem)',    icon:'🏆', desc:'Chaveamento das semifinais e final de ambas as categorias lado a lado.' },
+  { id:'s-galera',     label:'Destaque da Galera',        icon:'⭐', desc:'Top 10 atletas mais votados pelo público, separado por Masculino e Feminino.' },
+];
+
+function initTvSceneGrid() {
+  const saved = getTvScenes();
+  const grid  = document.getElementById('tv-scene-grid');
+  if (!grid) return;
+  grid.innerHTML = TV_SCENES_DEF.map(s => {
+    const on = saved.includes(s.id);
+    return `<div id="tvcard-${s.id}" onclick="toggleTvScene('${s.id}')" style="
+        cursor:pointer;padding:14px 16px;border-radius:14px;border:2px solid ${on?'#1565C0':'#e0e0e0'};
+        background:${on?'rgba(21,101,192,.07)':'#fafafa'};transition:.2s;user-select:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="font-size:22px;">${s.icon}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;color:${on?'#1565C0':'#333'}">${s.label}</div>
+        </div>
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'#1565C0':'#ccc'};
+            background:${on?'#1565C0':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':''}
+        </div>
+      </div>
+      <div style="font-size:11px;color:#888;line-height:1.4;">${s.desc}</div>
+    </div>`;
+  }).join('');
+  // Nota sobre cenas automáticas
+  grid.innerHTML += `<div style="grid-column:1/-1;padding:10px 14px;background:#fff8e1;border-radius:10px;border:1px solid #ffe082;font-size:12px;color:#795548;">
+    🏅 <strong>Campeão Masculino</strong> e <strong>Campeã Feminino</strong> ativam automaticamente quando a final tiver resultado — não precisam ser selecionadas.
+  </div>`;
+}
+
+function getTvScenes() {
+  try {
+    const raw = localStorage.getItem('afohand_tv_scenes');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return ['s-masc-class','s-masc-jogos','s-fem-class','s-fem-jogos','s-matamata','s-galera'];
+}
+
+function toggleTvScene(id) {
+  let scenes = getTvScenes();
+  if (scenes.includes(id)) scenes = scenes.filter(s => s !== id);
+  else scenes.push(id);
+  localStorage.setItem('afohand_tv_scenes', JSON.stringify(scenes));
+  // Re-render card
+  const card = document.getElementById('tvcard-' + id);
+  if (!card) return;
+  const on = scenes.includes(id);
+  card.style.borderColor = on ? '#1565C0' : '#e0e0e0';
+  card.style.background  = on ? 'rgba(21,101,192,.07)' : '#fafafa';
+  const title = card.querySelector('div > div > div');
+  if (title) title.style.color = on ? '#1565C0' : '#333';
+  const circle = card.querySelectorAll('div > div')[1];
+  if (circle) {
+    circle.style.borderColor  = on ? '#1565C0' : '#ccc';
+    circle.style.background   = on ? '#1565C0' : 'transparent';
+    circle.innerHTML = on ? '<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>' : '';
+  }
+}
+
+function salvarCenasTv() {
+  const scenes = getTvScenes();
+  if (!scenes.length) { showToast('Selecione ao menos uma tela.', 'error'); return; }
+  showToast('✅ Seleção salva! Ao abrir a TV, ela usará estas telas.');
+}
+
+function gerarLinkTv() {
+  const scenes = getTvScenes();
+  const url = TV_URL + '?scenes=' + scenes.join(',');
+  const box = document.getElementById('tv-link-box');
+  box.style.display = '';
+  box.innerHTML = `<strong>Link para a TV:</strong><br>${url}<br>
+    <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('Link copiado!'))"
+      style="margin-top:8px;padding:6px 14px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">
+      📋 Copiar Link
+    </button>`;
+}
+
+function abrirTv() {
+  const scenes = getTvScenes();
+  window.open(TV_URL + '?scenes=' + scenes.join(','), '_blank');
+}
+
+// Inicializa o grid ao entrar na página TV Config
+const _origNavTo = typeof navTo === 'function' ? navTo : null;
+
 // TV CONFIG — Pódio, MVP, Fotos
 // ════════════════════════════════════════════════════════
 async function salvarConfig(kvMap) {
