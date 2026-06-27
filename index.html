@@ -924,6 +924,22 @@
         </div>
 
       </div>
+      <!-- ═══ QUIZ RANKING ═══ -->
+      <div class="tabs" style="margin-bottom:0">
+        <button class="tab-btn active" id="tab-btn-quiz" onclick="switchSocialTab('quiz')">❓ Quiz</button>
+      </div>
+      <div id="tab-quiz">
+        <div class="card">
+          <div class="card-title"><i class='bx bxs-brain'></i> Ranking do Quiz</div>
+          <div style="display:flex;gap:10px;margin-bottom:14px;">
+            <button class="refresh-btn" onclick="loadQuizRanking(true)"><i class='bx bx-refresh'></i> Atualizar Ranking</button>
+          </div>
+          <div id="quiz-cards" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Clique em Atualizar para carregar</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ═══ ATLETA DA GALERA RANKING ═══ -->
       <div class="card" style="margin-top:16px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
@@ -1331,6 +1347,7 @@ function doLogin(e) {
       loadBasqueteFromSheet();
       loadAtletasFromSheet();
       loadNoticiasFromSheet();
+      loadQuizRanking();
       // Carrega handebol masc e fem silenciosamente para o contador do dashboard
       const _naipeAtual = handNaipe;
       handNaipe = 'masc';
@@ -1441,6 +1458,7 @@ function _cc(rows, rowIdx, colIdx) {
 const state = {
   jogos: { volei: [], basquete: [], handebol: [], handebolMasc: [], handebolFem: [] },
   destaques: [],
+  quiz: [],
   noticias: [],
   pushLog: [],
   pushType: 'geral'
@@ -1752,6 +1770,46 @@ async function loadNoticiasFromSheet(manual=false) {
     console.error('Erro ao carregar notícias:', e);
     updateSheetStatus(false);
     if (manual) showToast('Erro ao carregar notícias: ' + e.message, 'error');
+  } finally {
+    if (manual) showLoading(false);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// QUIZ — Ranking
+// ════════════════════════════════════════════════════════
+function switchSocialTab(tab) {
+  document.getElementById('tab-quiz').style.display = tab === 'quiz' ? '' : 'none';
+}
+
+async function loadQuizRanking(manual=false) {
+  if (manual) showLoading(true);
+  try {
+    const data = await fetch(QUIZ_SHEETS_URL + '?action=ranking_quiz').then(r => r.json());
+    state.quiz = (data.ranking || []).map((p, i) => ({
+      id: 'q' + i, nome: p.nome, acertos: p.acertos, total: p.total,
+      pct: parseFloat(p.pct) || 0,
+      acertosStr: `${p.acertos} de ${p.total} perguntas · ${p.tempo}s`
+    }));
+    const container = document.getElementById('quiz-cards');
+    if (!container) return;
+    if (!state.quiz.length) {
+      container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Nenhum participante ainda</div>';
+      return;
+    }
+    container.innerHTML = state.quiz.map((p, i) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f9fa;border-radius:10px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:${i===0?'#C8960C':i===1?'#888':i===2?'#a05c3b':'#6C3483'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${i+1}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px;">${p.nome}</div>
+          <div style="font-size:11px;color:var(--dark-grey);">${p.acertosStr}</div>
+        </div>
+        <div style="font-weight:700;font-size:14px;color:#6C3483;">${p.pct}%</div>
+      </div>`).join('');
+    if (manual) showToast('Ranking do quiz atualizado!');
+  } catch(e) {
+    console.warn('Erro quiz:', e);
+    if (manual) showToast('Erro ao carregar quiz.', 'error');
   } finally {
     if (manual) showLoading(false);
   }
