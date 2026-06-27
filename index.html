@@ -776,28 +776,7 @@
         </div>
       </div>
 
-      <!-- Controle dos Bolões -->
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-title" style="color:var(--gold)"><i class='bx bx-toggle-left'></i> Controle dos Bolões</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:16px;">
-            <div style="font-weight:700;font-size:15px;margin-bottom:6px;">🏀 Bolão Basquete</div>
-            <div id="statusBolaoBasquete" style="font-size:13px;margin-bottom:12px;font-weight:600;">—</div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-gold" style="flex:1" onclick="setBolaoStatus('basquete','SIM')"><i class='bx bx-lock-open-alt'></i> Abrir</button>
-              <button class="btn" style="flex:1;background:#c53030;color:#fff;" onclick="setBolaoStatus('basquete','NAO')"><i class='bx bx-lock-alt'></i> Fechar</button>
-            </div>
-          </div>
-          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:16px;">
-            <div style="font-weight:700;font-size:15px;margin-bottom:6px;">🏐 Bolão Vôlei</div>
-            <div id="statusBolaoVolei" style="font-size:13px;margin-bottom:12px;font-weight:600;">—</div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-gold" style="flex:1" onclick="setBolaoStatus('volei','SIM')"><i class='bx bx-lock-open-alt'></i> Abrir</button>
-              <button class="btn" style="flex:1;background:#c53030;color:#fff;" onclick="setBolaoStatus('volei','NAO')"><i class='bx bx-lock-alt'></i> Fechar</button>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Pódio -->
       <div class="card" style="margin-bottom:16px;">
@@ -862,19 +841,7 @@
         </div>
       </div>
 
-      <!-- Bolão -->
-      <div class="card">
-        <div class="card-title" style="color:var(--gold)">
-          <i class='bx bxs-bar-chart-alt-2'></i> Bolão — Ranking dos Apostadores
-          <button class="refresh-btn" style="margin-left:auto;" onclick="loadBolaoTV()"><i class='bx bx-refresh'></i> Atualizar</button>
-        </div>
-        <div id="bolaoTvResumo" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;"></div>
-        <table class="ranking-table" id="bolaoTvTable">
-          <thead><tr><th>#</th><th>Apostador</th><th>Time Apostado</th><th>Resultado</th><th>Acerto</th></tr></thead>
-          <tbody id="bolaoTvTbody"><tr><td colspan="5" style="padding:16px;color:var(--dark-grey);text-align:center">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+</div>
 
     <!-- ─── HANDEBOL ─── -->
     <div class="page" id="page-handebol">
@@ -955,48 +922,8 @@
           <h1>Social</h1>
           <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Social</span></div>
         </div>
-        <button class="btn btn-primary" onclick="openModalRanking()"><i class='bx bx-plus'></i> Adicionar Participante</button>
-      </div>
-      <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('bolao')">🏆 Bolão</button>
-        <button class="tab-btn" onclick="switchTab('quiz')">❓ Quiz</button>
-      </div>
-      <div id="tab-bolao">
-        <div class="card">
-          <div class="card-title"><i class='bx bxs-bar-chart-alt-2'></i> Ranking do Bolão</div>
-          <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
-            <button class="refresh-btn" onclick="loadBolaoRanking(true)"><i class='bx bx-refresh'></i> Atualizar Ranking</button>
-            <div style="display:flex;gap:6px;margin-left:auto;">
-              <button id="bk-sport-volei" onclick="setBolaoSport('volei')" style="padding:6px 14px;border-radius:8px;border:none;background:#1565C0;color:#fff;font-weight:700;font-size:12px;cursor:pointer;">🏐 Vôlei</button>
-              <button id="bk-sport-basq" onclick="setBolaoSport('basquete')" style="padding:6px 14px;border-radius:8px;border:1px solid #ccc;background:#f5f5f5;color:#666;font-weight:700;font-size:12px;cursor:pointer;">🏀 Basquete</button>
-            </div>
-          </div>
-          <div id="bolao-volei-section">
-            <div style="font-size:11px;font-weight:700;color:#1565C0;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🏐 Vôlei</div>
-            <div id="bolao-volei-cards" style="display:flex;flex-direction:column;gap:8px;">
-              <div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Carregando...</div>
-            </div>
-          </div>
-          <div id="bolao-basq-section" style="display:none;">
-            <div style="font-size:11px;font-weight:700;color:#C8960C;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🏀 Basquete</div>
-            <div id="bolao-basq-cards" style="display:flex;flex-direction:column;gap:8px;">
-              <div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Carregando...</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="tab-quiz" style="display:none">
-        <div class="card">
-          <div class="card-title"><i class='bx bxs-brain'></i> Ranking do Quiz</div>
-          <div style="display:flex;gap:10px;margin-bottom:14px;">
-            <button class="refresh-btn" onclick="loadQuizRanking(true)"><i class='bx bx-refresh'></i> Atualizar Ranking</button>
-          </div>
-          <div id="quiz-cards" style="display:flex;flex-direction:column;gap:8px;">
-            <div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">Carregando...</div>
-          </div>
-        </div>
-      </div>
 
+      </div>
       <!-- ═══ ATLETA DA GALERA RANKING ═══ -->
       <div class="card" style="margin-top:16px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
@@ -1068,7 +995,7 @@
                 <option value="all">Todos os usuários</option>
                 <option value="volei">Seguidores de Vôlei</option>
                 <option value="basquete">Seguidores de Basquete</option>
-                <option value="bolao">Participantes do Bolão</option>
+
               </select>
             </div>
           </div>
@@ -1209,25 +1136,6 @@
   </div>
 </div>
 
-<!-- Modal: Ranking -->
-<div class="modal-overlay" id="modal-ranking">
-  <div class="modal">
-    <div class="modal-title"><i class='bx bxs-bar-chart-alt-2'></i> Adicionar / Editar Participante</div>
-    <input type="hidden" id="rank-edit-id" value="">
-    <input type="hidden" id="rank-tipo" value="bolao">
-    <div class="destaque-form">
-      <div class="form-group"><label>Participante *</label><input type="text" class="form-control" id="rank-nome" placeholder="Nome"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="form-group"><label>Acertos</label><input type="number" class="form-control" id="rank-acertos" min="0" value="0"></div>
-        <div class="form-group"><label>Pontos</label><input type="number" class="form-control" id="rank-pontos" min="0" value="0"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-ranking')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarRanking()"><i class='bx bx-save'></i> Salvar</button>
-    </div>
-  </div>
-</div>
 
 <!-- Modal: Notícia -->
 <div class="modal-overlay" id="modal-noticia">
@@ -1265,7 +1173,6 @@ const INDEX_VOLEI_SHEET_ID = "12-yxLsIplLMAj0Y9jCpzl2OGJLKPhy_lWAtvYP-Vvh8";
 const BASQ_SHEET_ID = "1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0";
 const APP_SHEET_ID = "1nC7pAvf9dhXNLtzyXxWo_plrNJjvtLFVssbARBTaxAA";
 const GOOGLE_API_KEY = "AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw";
-const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nnl9pNkRKUDZJwkONqY7VEHOrxf7TW7QSZRn2-bTun0C_1HzPsgF_BA/exec";
 const QUIZ_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzg9nL9j0cqHr9PlyWAa_YMDphe6FD0Ahnhmh6nzpQXrlYZGGLAFmRlMqJey1IEiyEk/exec";
 const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/enviar";
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
@@ -1424,8 +1331,6 @@ function doLogin(e) {
       loadBasqueteFromSheet();
       loadAtletasFromSheet();
       loadNoticiasFromSheet();
-      loadBolaoRanking();
-      loadQuizRanking();
       // Carrega handebol masc e fem silenciosamente para o contador do dashboard
       const _naipeAtual = handNaipe;
       handNaipe = 'masc';
@@ -1525,15 +1430,6 @@ async function sheetWriteAtleta(payload) {
   } catch(e) { return { ok: false, erro: e.message }; }
 }
 
-async function postToBolao(data) {
-  try {
-    await fetch(BOLAO_SHEETS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-  } catch(e) { console.warn('Bolao post error:', e); }
 }
 
 function _cc(rows, rowIdx, colIdx) {
@@ -1546,8 +1442,6 @@ function _cc(rows, rowIdx, colIdx) {
 const state = {
   jogos: { volei: [], basquete: [], handebol: [], handebolMasc: [], handebolFem: [] },
   destaques: [],
-  bolao: [],
-  quiz: [],
   noticias: [],
   pushLog: [],
   pushType: 'geral'
@@ -1558,7 +1452,6 @@ const state = {
 // ════════════════════════════════════════════════════════
 function navTo(page, el) {
   if (page === 'classificacao') loadClassificacao();
-  if (page === 'tvconfig') loadBolaoTV();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
@@ -1621,11 +1514,6 @@ function showToast(msg, type='success') {
   setTimeout(() => t.className = '', 3000);
 }
 
-function switchTab(tab) {
-  document.getElementById('tab-bolao').style.display = tab === 'bolao' ? '' : 'none';
-  document.getElementById('tab-quiz').style.display = tab === 'quiz' ? '' : 'none';
-  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', (i===0&&tab==='bolao')||(i===1&&tab==='quiz')));
-}
 
 // ════════════════════════════════════════════════════════
 // VÔLEI — Carregar da Planilha Google
@@ -1865,99 +1753,6 @@ async function loadNoticiasFromSheet(manual=false) {
     console.error('Erro ao carregar notícias:', e);
     updateSheetStatus(false);
     if (manual) showToast('Erro ao carregar notícias: ' + e.message, 'error');
-  } finally {
-    if (manual) showLoading(false);
-  }
-}
-
-// ════════════════════════════════════════════════════════
-// SOCIAL / BOLÃO — Carregar via endpoint + calcular acertos com vencedores reais
-// ════════════════════════════════════════════════════════
-async function loadBolaoRanking(manual=false) {
-  if (manual) showLoading(true);
-  try {
-    const [voleiRes, basqRes, voleiSheet, basqSheet] = await Promise.all([
-      fetch(BOLAO_SHEETS_URL + '?action=ranking_sabado&sport=volei').then(r => r.json()),
-      fetch(BOLAO_SHEETS_URL + '?action=ranking_sabado&sport=basquete').then(r => r.json()),
-      sheetRead(INDEX_VOLEI_SHEET_ID, "'Fase de Grupos'!A1:O49"),
-      sheetRead(BASQ_SHEET_ID, "'Fase de Grupos'!A1:S15")
-    ]);
-
-    // Vencedores vôlei (linhas 11,12,13 por grupo, col O índice 14)
-    const vencV = {}; let nV = 1;
-    [[11,12,13],[23,24,25],[35,36,37],[47,48,49]].forEach(rows => {
-      rows.forEach(r => {
-        const v = ((voleiSheet[r-1]||[])[14]||'').toString().trim();
-        if (v && !['A DEFINIR','—','VENCEDOR'].includes(v) && v.toUpperCase() !== 'EMPATE') vencV[nV] = v;
-        nV++;
-      });
-    });
-
-    // Vencedores basquete (col 8 e 18, parse "V: TEAM")
-    const vencB = {}; let nB = 1;
-    const bpv = raw => { const m = raw.match(/^[A-Za-z]+:\s*(.+)/); return m ? m[1].trim() : raw; };
-    const bok = v => v && v !== '—' && v.toLowerCase() !== 'empate';
-    [4,5,6].forEach(r => { const v = bpv(((basqSheet[r]||[])[8]||'').toString().trim()); if(bok(v)) vencB[nB]=v; nB++; });
-    [4,5,6].forEach(r => { const v = bpv(((basqSheet[r]||[])[18]||'').toString().trim()); if(bok(v)) vencB[nB]=v; nB++; });
-
-    const apV = Object.keys(vencV).length, apB = Object.keys(vencB).length;
-
-    const compute = (ranking, venc, totalJogos, apurados, sport) =>
-      ranking.map((p, idx) => {
-        let a = []; try { a = JSON.parse(p.detalheJSON||'[]'); } catch(e) {}
-        let acertos = 0;
-        a.forEach(x => { const jn = parseInt(x.jogo); if(venc[jn] && venc[jn]===x.vencedor) acertos++; });
-        const pct = (apurados>0 && a.length>0) ? Math.round(acertos/apurados*10000)/100
-                  : (p.pctPre != null ? parseFloat(p.pctPre)||0 : 0);
-        const acertosStr = apurados>0
-          ? `${acertos} de ${apurados} apurados · ${pct.toFixed(1)}% (${totalJogos} jogos no total)`
-          : `Aguardando jogos`;
-        return { id: sport+'_'+idx, nome: p.nome, acertos, pct, acertosStr };
-      }).sort((a,b) => b.pct - a.pct || b.acertos - a.acertos);
-
-    state.bolaoVolei = compute(voleiRes.ranking||[], vencV, 12, apV, 'volei');
-    state.bolaoBasq  = compute(basqRes.ranking||[], vencB, 6, apB, 'basquete');
-    state.bolao = [...state.bolaoVolei, ...state.bolaoBasq];
-
-    renderRanking();
-    if (manual) showToast('Ranking atualizado! Vôlei: ' + state.bolaoVolei.length + ' · Basquete: ' + state.bolaoBasq.length);
-  } catch(e) {
-    console.warn('Erro bolão:', e);
-    if (manual) showToast('Erro ao carregar bolão: ' + e.message, 'error');
-  } finally {
-    if (manual) showLoading(false);
-  }
-}
-
-let _bolaoSport = 'volei';
-function setBolaoSport(s) {
-  _bolaoSport = s;
-  document.getElementById('bolao-volei-section').style.display = s === 'volei' ? '' : 'none';
-  document.getElementById('bolao-basq-section').style.display  = s === 'basquete' ? '' : 'none';
-  const bv = document.getElementById('bk-sport-volei'), bb = document.getElementById('bk-sport-basq');
-  if (bv) { bv.style.background = s==='volei'?'#1565C0':'#f5f5f5'; bv.style.color = s==='volei'?'#fff':'#666'; bv.style.border = s==='volei'?'none':'1px solid #ccc'; }
-  if (bb) { bb.style.background = s==='basquete'?'#C8960C':'#f5f5f5'; bb.style.color = s==='basquete'?'#fff':'#666'; bb.style.border = s==='basquete'?'none':'1px solid #ccc'; }
-}
-
-// ════════════════════════════════════════════════════════
-// QUIZ — Carregar via endpoint
-// ════════════════════════════════════════════════════════
-async function loadQuizRanking(manual=false) {
-  if (manual) showLoading(true);
-  try {
-    const data = await fetch(BOLAO_SHEETS_URL + '?action=ranking_quiz').then(r => r.json());
-    state.quiz = (data.ranking || []).map((p, i) => {
-      const pct = parseFloat(p.pct) || 0;
-      return {
-        id: 'q' + i, nome: p.nome, acertos: p.acertos, total: p.total, pct,
-        acertosStr: `${p.acertos} de ${p.total} perguntas · ${p.tempo}s`
-      };
-    });
-    renderRanking();
-    if (manual) showToast('Ranking do quiz atualizado!');
-  } catch(e) {
-    console.warn('Erro quiz:', e);
-    if (manual) showToast('Erro ao carregar quiz.', 'error');
   } finally {
     if (manual) showLoading(false);
   }
@@ -2879,133 +2674,6 @@ function renderDestaques() {
 }
 
 // ════════════════════════════════════════════════════════
-// RANKING (BOLÃO / QUIZ)
-// ════════════════════════════════════════════════════════
-function openModalRanking() {
-  const tab = document.getElementById('tab-bolao').style.display === 'none' ? 'quiz' : 'bolao';
-  document.getElementById('rank-edit-id').value = '';
-  document.getElementById('rank-tipo').value = tab;
-  document.getElementById('rank-nome').value = '';
-  document.getElementById('rank-acertos').value = 0;
-  document.getElementById('rank-pontos').value = 0;
-  openModal('modal-ranking');
-}
-
-function salvarRanking() {
-  const nome = document.getElementById('rank-nome').value.trim();
-  if (!nome) { showToast('Digite o nome do participante.', 'error'); return; }
-  const tipo = document.getElementById('rank-tipo').value;
-  const editId = document.getElementById('rank-edit-id').value;
-  const entry = {
-    id: editId || Date.now().toString(),
-    nome, acertos: parseInt(document.getElementById('rank-acertos').value) || 0,
-    pontos: parseInt(document.getElementById('rank-pontos').value) || 0
-  };
-  const list = tipo === 'bolao' ? state.bolao : state.quiz;
-  if (editId) {
-    const idx = list.findIndex(x => x.id === editId);
-    if (idx > -1) list[idx] = entry;
-  } else { list.push(entry); }
-  renderRanking();
-  closeModal('modal-ranking');
-  showToast('Ranking atualizado!');
-}
-
-function renderRanking() {
-  renderRankingCards('bolao-volei-cards', state.bolaoVolei || [], '#1565C0', 'bolao');
-  renderRankingCards('bolao-basq-cards',  state.bolaoBasq  || [], '#C8960C', 'bolao');
-  renderRankingCards('quiz-cards',        state.quiz       || [], '#6C3483', 'quiz');
-}
-
-function renderRankingCards(containerId, list, accentColor, tipo) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  if (!list.length) {
-    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--dark-grey);font-size:13px;"><i class=\'bx bxs-bar-chart-alt-2\' style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>Sem participantes ainda.</div>';
-    return;
-  }
-  const medals = ['🥇','🥈','🥉'];
-  el.innerHTML = list.map((p, i) => {
-    const top = i < 3;
-    const medal = medals[i] || `${i+1}º`;
-    const pct = p.pct != null ? Number(p.pct).toFixed(2) + '%' : '—';
-    const sub = p.acertosStr || (p.acertos != null ? `${p.acertos} acertos` : '');
-    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;
-      background:${top ? 'linear-gradient(135deg,rgba(244,197,66,.1),rgba(14,59,120,.06))' : 'var(--light-grey,#f7f7f7)'};
-      border:2px solid ${top ? accentColor : '#e8e8e8'};">
-      <div style="font-size:${top ? '22px' : '13px'};min-width:30px;text-align:center;font-weight:800;color:${top ? accentColor : '#999'};">${medal}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:800;color:var(--dark,#1a1a1a);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nome}</div>
-        ${sub ? `<div style="font-size:10px;color:#888;margin-top:2px;">${sub}</div>` : ''}
-      </div>
-      <div style="font-size:18px;font-weight:800;color:${accentColor};">${pct}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderRankingTableById(tbodyId, list, tipo) {
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Sem participantes.</p></div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = list.map((p, i) => {
-    const posClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n';
-    return `<tr>
-      <td><div class="rank-pos ${posClass}">${i+1}</div></td>
-      <td><strong>${p.nome}</strong></td>
-      <td>${p.acertos > 0 ? p.acertos + '%' : '0%'}</td>
-      <td><span class="pts-badge">${p.pontos > 0 ? p.pontos + '%' : '0%'}</span></td>
-      <td style="display:flex;gap:6px;">
-        <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRanking('${p.id}','${tipo}')"><i class='bx bx-edit'></i></button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="excluirRanking('${p.id}','${tipo}')"><i class='bx bx-trash'></i></button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function renderRankingTable(tipo, list) {
-  const tbody = document.getElementById(tipo + '-tbody');
-  if (!tbody) return;
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class='bx bxs-bar-chart-alt-2'></i><p>Sem participantes.</p></div></td></tr>`;
-    return;
-  }
-  const sorted = [...list].sort((a, b) => b.pontos - a.pontos);
-  tbody.innerHTML = sorted.map((p, i) => {
-    const posClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n';
-    return `<tr>
-      <td><div class="rank-pos ${posClass}">${i+1}</div></td>
-      <td><strong>${p.nome}</strong></td>
-      <td>${p.acertos > 0 ? p.acertos + '%' : '0%'}</td>
-      <td><span class="pts-badge">${p.pontos > 0 ? p.pontos + '%' : '0%'}</span></td>
-      <td style="display:flex;gap:6px;">
-        <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRanking('${p.id}','${tipo}')"><i class='bx bx-edit'></i></button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="excluirRanking('${p.id}','${tipo}')"><i class='bx bx-trash'></i></button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function editRanking(id, tipo) {
-  const list = tipo === 'bolao' ? state.bolao : state.quiz;
-  const p = list.find(x => x.id === id); if (!p) return;
-  document.getElementById('rank-edit-id').value = id;
-  document.getElementById('rank-tipo').value = tipo;
-  document.getElementById('rank-nome').value = p.nome;
-  document.getElementById('rank-acertos').value = p.acertos;
-  document.getElementById('rank-pontos').value = p.pontos;
-  openModal('modal-ranking');
-}
-function excluirRanking(id, tipo) {
-  if (!confirm('Remover participante?')) return;
-  if (tipo === 'bolao') state.bolao = state.bolao.filter(x => x.id !== id);
-  else state.quiz = state.quiz.filter(x => x.id !== id);
-  renderRanking(); showToast('Removido.');
-}
-
-// ════════════════════════════════════════════════════════
 // NOTÍCIAS RENDER
 // ════════════════════════════════════════════════════════
 function renderNoticias() {
@@ -3148,8 +2816,6 @@ if (sessionStorage.getItem('supercopa_logged') === 'true') {
     loadBasqueteFromSheet();
     loadAtletasFromSheet();
     loadNoticiasFromSheet();
-    loadBolaoRanking();
-    loadQuizRanking();
   }, 500);
 }
 
@@ -3193,7 +2859,7 @@ async function salvarNoticia() {
 }
 
 // ════════════════════════════════════════════════════════
-// TV CONFIG — Pódio, MVP, Fotos, Bolão
+// TV CONFIG — Pódio, MVP, Fotos
 // ════════════════════════════════════════════════════════
 async function salvarConfig(kvMap) {
   try {
@@ -3209,18 +2875,6 @@ async function salvarConfig(kvMap) {
   }
 }
 
-async function salvarBolaoTV(nome, time) {
-  try {
-    await fetch(BASQ_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      mode: 'no-cors',
-      body: JSON.stringify({ mode: 'adicionar_bolao', nome: nome, time: time })
-    });
-    showToast('Aposta registrada: ' + nome + ' → ' + time);
-  } catch(e) {
-    showToast('Erro ao registrar aposta.', 'error');
-  }
 }
 
 let _podioSport = 'volei';
@@ -3265,75 +2919,7 @@ function salvarFotos() {
 }
 
 
-async function loadBolaoTV() {
-  try {
-    // Carrega apostas (colunas A=Nome, B=Time, C=Esporte, D=Data, E=Resultado, F=Acerto, G=%)
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Bolao'!A1:G200")}?key=${GOOGLE_API_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const rows = (data.values || []).slice(1).filter(r => r[0] || r[1]);
-    const tbody = document.getElementById('bolaoTvTbody');
 
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;color:var(--dark-grey);text-align:center">Nenhuma aposta ainda.</td></tr>';
-    } else {
-      // Ordena: SIM primeiro, depois PARCIAL, depois restantes
-      const ordem = { 'SIM': 0, 'PARCIAL': 1, 'AGUARDANDO': 2, 'NÃO': 3, '': 4 };
-      rows.sort((a, b) => (ordem[a[5]] ?? 4) - (ordem[b[5]] ?? 4));
-
-      tbody.innerHTML = rows.map((r, i) => {
-        const acerto = r[5] || '';
-        const chip = acerto === 'SIM'
-          ? '<span style="background:#276749;color:#9ae6b4;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">✓ ACERTOU</span>'
-          : acerto === 'PARCIAL'
-          ? '<span style="background:#744210;color:#fbd38d;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">~ PARCIAL</span>'
-          : acerto === 'NÃO'
-          ? '<span style="background:#63171b;color:#feb2b2;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">✗ ERROU</span>'
-          : '<span style="color:var(--dark-grey);font-size:11px;">Em jogo</span>';
-        return `<tr>
-          <td>${i + 1}</td>
-          <td style="font-weight:600">${r[0] || '—'}</td>
-          <td>${r[1] || '—'}</td>
-          <td style="font-size:11px;color:var(--dark-grey)">${r[4] || '—'}</td>
-          <td>${chip}</td>
-        </tr>`;
-      }).join('');
-
-      // Resumo: total, acertos, %
-      const total = rows.length;
-      const acertos = rows.filter(r => r[5] === 'SIM').length;
-      const pct = total > 0 ? Math.round(acertos / total * 100) : 0;
-      const resumo = document.getElementById('bolaoTvResumo');
-      if (resumo) {
-        resumo.innerHTML = `
-          <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px 16px;text-align:center;min-width:80px;">
-            <div style="font-size:22px;font-weight:800;color:var(--gold)">${total}</div>
-            <div style="font-size:11px;color:var(--dark-grey)">Apostadores</div>
-          </div>
-          <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px 16px;text-align:center;min-width:80px;">
-            <div style="font-size:22px;font-weight:800;color:#48bb78">${acertos}</div>
-            <div style="font-size:11px;color:var(--dark-grey)">Acertos</div>
-          </div>
-          <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px 16px;text-align:center;min-width:80px;">
-            <div style="font-size:22px;font-weight:800;color:var(--gold)">${pct}%</div>
-            <div style="font-size:11px;color:var(--dark-grey)">% Acerto</div>
-          </div>`;
-      }
-    }
-
-    // Carrega status dos bolões da aba Config
-    const cfgUrl = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Config'!A1:B50")}?key=${GOOGLE_API_KEY}`;
-    const cfgRes = await fetch(cfgUrl);
-    const cfgData = await cfgRes.json();
-    const cfg = {};
-    (cfgData.values || []).forEach(r => { if (r[0]) cfg[r[0].trim()] = (r[1] || '').trim(); });
-    renderStatusBolao('Basquete', cfg['BOLAO_BASQUETE_ABERTO'] || 'NAO');
-    renderStatusBolao('Volei',    cfg['BOLAO_VOLEI_ABERTO']    || 'NAO');
-
-  } catch(e) {
-    console.warn('Erro bolao TV:', e);
-  }
-}
 
 async function buscarCampeaoDaPlanilha() {
   const statusEl = document.getElementById('podioAutoStatus');
@@ -3385,74 +2971,6 @@ async function buscarCampeaoDaPlanilha() {
     statusEl.textContent = '❌ Erro ao buscar: ' + e.message;
   }
 }
-
-function renderStatusBolao(esporte, valor) {
-  const el = document.getElementById('statusBolao' + esporte);
-  if (!el) return;
-  if (valor === 'SIM') {
-    el.innerHTML = '<span style="color:#48bb78">🟢 ABERTO — apostas liberadas</span>';
-  } else {
-    el.innerHTML = '<span style="color:#fc8181">🔴 FECHADO — apostas bloqueadas</span>';
-  }
-}
-
-async function setBolaoStatus(esporte, status) {
-  showLoading(true);
-  try {
-    // 1. Salva flag na config sheet
-    const key = 'BOLAO_' + esporte.toUpperCase() + '_ABERTO';
-    await salvarConfig({ [key]: status });
-    renderStatusBolao(esporte === 'basquete' ? 'Basquete' : 'Volei', status);
-
-    // 2. Busca blocked_games atual do servidor
-    let blocked = {};
-    try {
-      const res = await fetch(BOLAO_SHEETS_URL + '?action=blocked_games');
-      const d = await res.json();
-      if (d && d.blocked) blocked = d.blocked;
-    } catch(e) {}
-
-    // Garante que os jogos estão carregados antes de operar
-    if (!state.jogos[esporte] || state.jogos[esporte].length === 0) {
-      if (esporte === 'basquete') await loadBasqueteFromSheet();
-      else await loadVoleiFromSheet();
-    }
-    const jogos = (state.jogos || {})[esporte] || [];
-
-    if (status === 'NAO') {
-      // FECHAR: bloqueia TODOS os jogos usando o formato de chave do app
-      if (esporte === 'basquete') {
-        ['A','B'].forEach(g => { ['j1','j2','j3'].forEach(j => { blocked[`b_b_grupo${g}_${j}`] = true; }); });
-      } else {
-        ['A','B','C','D'].forEach(g => { ['j1','j2','j3'].forEach(j => { blocked[`v_grupo${g}_${j}`] = true; }); });
-      }
-    } else {
-      // ABRIR: remove TODOS os blocked do esporte (qualquer formato de chave)
-      Object.keys(blocked).forEach(k => {
-        if (esporte === 'basquete') {
-          if (k.startsWith('b_b_grupo') || k.startsWith('b_basq_')) delete blocked[k];
-        } else {
-          if (k.startsWith('v_grupo') || k.startsWith('b_volei_')) delete blocked[k];
-        }
-      });
-    }
-
-    // 3. Envia blocked_games atualizado para o servidor
-    await fetch(BOLAO_SHEETS_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo: 'blocked_games', blocked, data: new Date().toLocaleString('pt-BR') })
-    });
-
-    showToast(`Bolão ${esporte} ${status === 'SIM' ? 'ABERTO ✅' : 'FECHADO 🔒'} — jogos atualizados!`);
-  } catch(e) {
-    showToast('Erro: ' + e.message, 'error');
-  } finally {
-    showLoading(false);
-  }
-}
-
-
 
 
 </script>
