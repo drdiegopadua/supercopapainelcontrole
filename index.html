@@ -1816,6 +1816,65 @@ async function loadQuizRanking(manual=false) {
 }
 
 // ════════════════════════════════════════════════════════
+// DESTAQUE DA GALERA — Ranking de votos
+// ════════════════════════════════════════════════════════
+const GALERA_SHEET_ID = '1jGuJHUHyY3p-PQHm7HmNjcYry_xPheuOT2RmVFHh_Go';
+
+async function carregarRankingGalera() {
+  const el = document.getElementById('adminGaleraRanking');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">⏳ Carregando...</div>';
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GALERA_SHEET_ID}/values/${encodeURIComponent("Página1!A2:F")}?key=${GOOGLE_API_KEY}`;
+    const data = await fetch(url).then(r => r.json());
+    const rows = data.values || [];
+
+    // Agrupa votos por naipe → atleta+time
+    const counts = { masc: {}, fem: {} };
+    rows.forEach(row => {
+      const naipe  = (row[3]||'').toLowerCase().includes('fem') ? 'fem' : 'masc';
+      const time   = row[4] || '';
+      const atleta = row[5] || '';
+      if (!atleta) return;
+      const key = atleta + '|||' + time;
+      if (!counts[naipe][key]) counts[naipe][key] = { atleta, time, votos: 0 };
+      counts[naipe][key].votos++;
+    });
+
+    const medals = ['🥇','🥈','🥉'];
+    let html = '';
+    const naipes = [
+      { key:'masc', label:'🤾‍♂️ Masculino', color:'#1565C0' },
+      { key:'fem',  label:'🤾‍♀️ Feminino',  color:'#C2185B' }
+    ];
+    naipes.forEach(({ key, label, color }) => {
+      const sorted = Object.values(counts[key]).sort((a,b) => b.votos - a.votos).slice(0, 10);
+      html += `<div style="font-size:12px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;">${label}</div>`;
+      if (!sorted.length) {
+        html += `<div style="text-align:center;padding:12px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#999;">Nenhum voto registrado</div>`;
+      } else {
+        sorted.forEach((item, i) => {
+          const medal = medals[i] || `${i+1}`;
+          html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${i===0?'#fff8e1':i===1?'#f3f3f3':i===2?'#fbe9e7':'#fafafa'};border-radius:10px;margin-bottom:6px;border:1px solid ${i<3?color+'33':'#eee'};">
+            <div style="font-size:18px;width:28px;text-align:center;">${medal}</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:13px;">${item.atleta}</div>
+              <div style="font-size:11px;color:#888;">${item.time}</div>
+            </div>
+            <div style="font-weight:800;font-size:15px;color:${color};">${item.votos}<span style="font-size:10px;font-weight:400;color:#aaa;"> voto${item.votos>1?'s':''}</span></div>
+          </div>`;
+        });
+      }
+    });
+
+    el.innerHTML = html || '<div style="text-align:center;padding:20px;color:#999;font-size:13px;">Sem votos ainda</div>';
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:#e53935;font-size:13px;">⚠️ Erro ao carregar ranking</div>';
+    console.warn('Erro galera ranking:', e);
+  }
+}
+
+// ════════════════════════════════════════════════════════
 // NOTIFICAÇÕES PUSH — Código do app
 // ════════════════════════════════════════════════════════
 function selectNotifType(el, type) {
