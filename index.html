@@ -1061,22 +1061,52 @@
 
       <!-- HANDEBOL -->
       <div id="classHand" style="display:none;">
-        <div class="card">
-          <div class="card-title" style="color:#1B5E20"><i class='bx bxs-hand-right'></i> Classificação AFOHAND</div>
-          <div class="hand-classif-wrap">
-            <div>
-              <div class="hand-grupo-title">🟢 Grupo A</div>
-              <table class="hand-classif-table">
-                <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
-                <tbody id="classHandA"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
-              </table>
+        <!-- Sub-tabs Masculino / Feminino -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button id="classHandTabMasc" class="tab-btn active" onclick="switchHandClassTab('masc')">🤾‍♂️ Masculino</button>
+          <button id="classHandTabFem"  class="tab-btn"        onclick="switchHandClassTab('fem')">🤾‍♀️ Feminino</button>
+        </div>
+        <!-- Masculino -->
+        <div id="classHandMasc">
+          <div class="card">
+            <div class="card-title" style="color:#1565C0"><i class='bx bxs-hand-right'></i> Classificação Masculino</div>
+            <div class="hand-classif-wrap">
+              <div>
+                <div class="hand-grupo-title">🔵 Grupo A</div>
+                <table class="hand-classif-table">
+                  <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+                  <tbody id="classHandMascA"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
+                </table>
+              </div>
+              <div>
+                <div class="hand-grupo-title">🔵 Grupo B</div>
+                <table class="hand-classif-table">
+                  <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+                  <tbody id="classHandMascB"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
+                </table>
+              </div>
             </div>
-            <div>
-              <div class="hand-grupo-title">🟢 Grupo B</div>
-              <table class="hand-classif-table">
-                <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
-                <tbody id="classHandB"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
-              </table>
+          </div>
+        </div>
+        <!-- Feminino -->
+        <div id="classHandFem" style="display:none;">
+          <div class="card">
+            <div class="card-title" style="color:#C2185B"><i class='bx bxs-hand-right'></i> Classificação Feminino</div>
+            <div class="hand-classif-wrap">
+              <div>
+                <div class="hand-grupo-title">🩷 Grupo A</div>
+                <table class="hand-classif-table">
+                  <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+                  <tbody id="classHandFemA"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
+                </table>
+              </div>
+              <div>
+                <div class="hand-grupo-title">🩷 Grupo B</div>
+                <table class="hand-classif-table">
+                  <thead><tr><th>Pos</th><th>Equipe</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>PTS</th></tr></thead>
+                  <tbody id="classHandFemB"><tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Carregando...</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1952,20 +1982,30 @@ async function sendPush() {
 // ════════════════════════════════════════════════════════
 // CLASSIFICAÇÃO HANDEBOL (aba Classificação do painel)
 // ════════════════════════════════════════════════════════
-async function loadClassHandebol() {
-  const sufixo = handNaipe === 'fem' ? '-Fem' : '';
+function switchHandClassTab(naipe) {
+  document.getElementById('classHandMasc').style.display = naipe === 'masc' ? '' : 'none';
+  document.getElementById('classHandFem').style.display  = naipe === 'fem'  ? '' : 'none';
+  document.getElementById('classHandTabMasc').classList.toggle('active', naipe === 'masc');
+  document.getElementById('classHandTabFem').classList.toggle('active',  naipe === 'fem');
+  loadClassHandebol(naipe);
+}
+
+async function loadClassHandebol(naipe) {
+  if (!naipe) { loadClassHandebol('masc'); loadClassHandebol('fem'); return; }
+  const sufixo   = naipe === 'fem' ? '-Fem' : '';
+  const tbodySufx = naipe === 'fem' ? 'Fem' : 'Masc';
+  const cor      = naipe === 'fem' ? '#C2185B' : '#1565C0';
   try {
     const res  = await fetch(HAND_API(`'Fase de Grupos${sufixo}'!A5:S7`));
     const data = await res.json();
     const rows = data.values || [];
 
     const jogos = [];
-    rows.forEach((row, ri) => {
-      const configs = [
+    rows.forEach(row => {
+      [
         { grupo:'A', e1:1, g1:3, g2:5, e2:6 },
         { grupo:'B', e1:11, g1:13, g2:15, e2:16 },
-      ];
-      configs.forEach(({ grupo, e1, g1, g2, e2 }) => {
+      ].forEach(({ grupo, e1, g1, g2, e2 }) => {
         const ea = row[e1] || '', eb = row[e2] || '';
         if (ea && eb) jogos.push({ grupo, equipeA:ea, equipeB:eb, golsA:row[g1]||'', golsB:row[g2]||'' });
       });
@@ -1994,8 +2034,7 @@ async function loadClassHandebol() {
         b.pts-a.pts || b.v-a.v || b.sg-a.sg || b.gp-a.gp
       );
       const medals = ['🥇','🥈','🥉'];
-      const tbodyId = g === 'A' ? 'classHandA' : 'classHandB';
-      const tbody = document.getElementById(tbodyId);
+      const tbody = document.getElementById('classHand' + tbodySufx + g);
       if (!tbody) return;
       tbody.innerHTML = sorted.length
         ? sorted.map((t,i) => `<tr>
@@ -2005,12 +2044,12 @@ async function loadClassHandebol() {
             <td>${t.e}</td><td style="color:var(--red)">${t.d}</td>
             <td>${t.gp}</td><td>${t.gc}</td>
             <td>${t.sg>0?'+':''}${t.sg}</td>
-            <td style="font-weight:800;color:#1B5E20">${t.pts}</td>
+            <td style="font-weight:800;color:${cor}">${t.pts}</td>
           </tr>`).join('')
         : '<tr><td colspan="10" style="padding:16px;color:var(--dark-grey)">Sem dados</td></tr>';
     });
   } catch(e) {
-    ['classHandA','classHandB'].forEach(id => {
+    ['classHand'+tbodySufx+'A', 'classHand'+tbodySufx+'B'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = '<tr><td colspan="10" style="color:var(--red);padding:12px">Erro ao carregar</td></tr>';
     });
