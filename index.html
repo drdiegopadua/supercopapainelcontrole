@@ -789,6 +789,21 @@
         <div id="tv-link-box" style="display:none;margin-top:12px;padding:10px 14px;background:#f5f5f5;border-radius:10px;font-size:12px;word-break:break-all;color:#333;border:1px solid #ddd;"></div>
       </div>
 
+      <!-- ═══ TELAS DA TV — BASQUETE ═══ -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:#FF6B00"><i class='bx bx-tv'></i> Telas da TV — Basquete</div>
+        <p style="font-size:12px;color:var(--dark-grey);margin:0 0 16px;">Selecione quais telas vão rodar na TV de basquete.</p>
+        <div id="tvSceneGridBasq" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px;"></div>
+        <div style="margin-bottom:12px;padding:10px 14px;background:rgba(255,107,0,.08);border:1px solid rgba(255,107,0,.3);border-radius:10px;font-size:12px;">
+          <strong style="color:#FF6B00;">🏆 Campeão</strong> pode ser selecionada manualmente para exibir na TV quando quiser revelar o resultado.
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" style="background:#FF6B00;border-color:#FF6B00;" onclick="salvarCenasTvBasq()"><i class='bx bx-save'></i> Salvar Seleção</button>
+          <button class="btn" style="background:#7C3AED;color:#fff;" onclick="gerarLinkTvBasq()"><i class='bx bx-link-external'></i> Gerar Link TV</button>
+          <button class="btn" style="background:rgba(255,255,255,.08);color:var(--text);" onclick="abrirTvBasq()"><i class='bx bx-tv'></i> Abrir TV</button>
+        </div>
+        <div id="tv-link-box-basq" style="display:none;margin-top:12px;padding:10px 14px;background:#f5f5f5;border-radius:10px;font-size:12px;word-break:break-all;color:#333;border:1px solid #ddd;"></div>
+      </div>
 
       <!-- Pódio -->
       <div class="card" style="margin-bottom:16px;">
@@ -1517,7 +1532,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
-  if (page === 'tvconfig') initTvSceneGrid();
+  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   return false;
@@ -3038,6 +3053,8 @@ const TV_SCENES_DEF = [
   { id:'s-fem-jogos',  label:'Jogos Feminino',            icon:'🎽', desc:'Lista de jogos femininos com placar, horário e status.' },
   { id:'s-matamata',   label:'Mata-Mata (Masc + Fem)',    icon:'🏆', desc:'Chaveamento das semifinais e final de ambas as categorias lado a lado.' },
   { id:'s-galera',     label:'Destaque da Galera',        icon:'⭐', desc:'Top 10 atletas mais votados pelo público, separado por Masculino e Feminino.' },
+  { id:'s-camp-m',    label:'Campeão Masculino',         icon:'🥇', desc:'Tela de campeão masculino com confetti (selecione quando quiser revelar).' },
+  { id:'s-camp-f',    label:'Campeã Feminino',           icon:'🥇', desc:'Tela de campeã feminino com confetti (selecione quando quiser revelar).' },
 ];
 
 function initTvSceneGrid() {
@@ -3234,6 +3251,77 @@ async function buscarCampeaoDaPlanilha() {
   }
 }
 
+
+// ════════════════════════════════════════════════════════
+// TV CONFIG — Basquete
+// ════════════════════════════════════════════════════════
+const BASQ_TV_URL = 'https://drdiegopadua.github.io/supercopa-app/tv.html';
+const BASQ_TV_SCENES_DEF = [
+  {id:'s-class-a', icon:'📊', label:'Classificação Grupo A', desc:'Ranking do Grupo A com pontos, vitórias e saldo.'},
+  {id:'s-class-b', icon:'📊', label:'Classificação Grupo B', desc:'Ranking do Grupo B com pontos, vitórias e saldo.'},
+  {id:'s-jogos',   icon:'🏀', label:'Jogos', desc:'Todos os jogos com placar, horário e status.'},
+  {id:'s-matamata',icon:'⚔️', label:'Mata-Mata', desc:'Chaveamento das semifinais e final.'},
+  {id:'s-galera',  icon:'⭐', label:'Destaque da Galera', desc:'Top 10 atletas mais votados pelo público.'},
+  {id:'s-campeao', icon:'🏆', label:'Campeão', desc:'Tela de campeão com confetti (selecione quando quiser revelar).'},
+];
+let _tvScenesBasq = new Set(['s-class-a','s-class-b','s-jogos','s-matamata','s-galera']);
+
+function initTvSceneGridBasq(){
+  try{const s=localStorage.getItem('supercopa_tv_basq_scenes');if(s){_tvScenesBasq=new Set(JSON.parse(s));}}catch(e){}
+  const grid=document.getElementById('tvSceneGridBasq');
+  if(!grid)return;
+  grid.innerHTML=BASQ_TV_SCENES_DEF.map(sc=>{
+    const on=_tvScenesBasq.has(sc.id);
+    return `<div id="tvsb-${sc.id}" onclick="toggleTvSceneBasq('${sc.id}')" style="
+        cursor:pointer;padding:14px 16px;border-radius:14px;border:2px solid ${on?'#FF6B00':'#e0e0e0'};
+        background:${on?'rgba(255,107,0,.07)':'#fafafa'};transition:.2s;user-select:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="font-size:22px;">${sc.icon}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;color:${on?'#FF6B00':'#333'}">${sc.label}</div>
+        </div>
+        <div id="chkb-${sc.id}" style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'#FF6B00':'#ccc'};
+            background:${on?'#FF6B00':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':''}
+        </div>
+      </div>
+      <div style="font-size:11px;color:#888;line-height:1.4;">${sc.desc}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTvSceneBasq(id){
+  if(_tvScenesBasq.has(id))_tvScenesBasq.delete(id);else _tvScenesBasq.add(id);
+  const card=document.getElementById('tvsb-'+id);
+  const chk=document.getElementById('chkb-'+id);
+  const on=_tvScenesBasq.has(id);
+  if(card){card.style.borderColor=on?'#FF6B00':'#e0e0e0';card.style.background=on?'rgba(255,107,0,.07)':'#fafafa';const title=card.querySelector('div>div>div');if(title)title.style.color=on?'#FF6B00':'#333';}
+  if(chk){chk.style.borderColor=on?'#FF6B00':'#ccc';chk.style.background=on?'#FF6B00':'transparent';chk.innerHTML=on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':'';}
+}
+
+function getTvScenesBasq(){return[..._tvScenesBasq];}
+
+function salvarCenasTvBasq(){
+  localStorage.setItem('supercopa_tv_basq_scenes',JSON.stringify(getTvScenesBasq()));
+  showToast('✅ Configuração de TV Basquete salva!');
+}
+
+function gerarLinkTvBasq(){
+  const s=getTvScenesBasq();
+  const url=BASQ_TV_URL+'?scenes='+s.join(',');
+  const box=document.getElementById('tv-link-box-basq');
+  box.style.display='';
+  box.innerHTML=`<strong>Link para a TV Basquete:</strong><br>${url}<br>
+    <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('Link copiado!'))"
+      style="margin-top:8px;padding:6px 14px;background:#FF6B00;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">
+      📋 Copiar Link
+    </button>`;
+}
+
+function abrirTvBasq(){
+  const s=getTvScenesBasq();
+  window.open(BASQ_TV_URL+'?scenes='+s.join(','),'_blank');
+}
 
 </script>
 </body>
