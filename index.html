@@ -2577,7 +2577,7 @@ async function salvarPlacarBasquete(id) {
     if (match) {
       grupo = match[1];
       jogoIdx = parseInt(match[2]);
-      rowIndex = 5 + jogoIdx; // Grupo A e B usam as mesmas linhas 5, 6, 7
+      rowIndex = grupo === 'A' ? 2 + jogoIdx : 5 + jogoIdx; // Grupo A=2-4, Grupo B=5-7
     }
 
     const ptsA = parseInt(j.placar.ptsA || 0);
@@ -2629,11 +2629,12 @@ async function salvarPlacarBasquete(id) {
 
     // Enviar para o Google Apps Script de basquete
     const res = await sheetWriteBasquete({
-      modo: 'atualizar_placar_basquete',
-      aba: 'Fase de Grupos',
+      mode: 'placar_basquete',
       linha: rowIndex,
-      colStart: colStart,
-      dados: dados
+      timeA: j.equipeA,
+      placA: ptsA,
+      placB: ptsB,
+      timeB: j.equipeB
     });
 
     if (res && res.ok) {
@@ -3326,4 +3327,5 @@ function abrirTvBasq(){
 </script>
 </body>
 </html>
+
 
