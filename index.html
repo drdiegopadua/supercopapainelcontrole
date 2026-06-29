@@ -2577,7 +2577,7 @@ async function salvarPlacarBasquete(id) {
     if (match) {
       grupo = match[1];
       jogoIdx = parseInt(match[2]);
-      rowIndex = grupo === 'A' ? 2 + jogoIdx : 5 + jogoIdx; // Grupo A=2-4, Grupo B=5-7
+      rowIndex = 5 + jogoIdx; // Ambos grupos usam linhas 5-7 (colunas diferentes)
     }
 
     const ptsA = parseInt(j.placar.ptsA || 0);
@@ -2631,6 +2631,7 @@ async function salvarPlacarBasquete(id) {
     const res = await sheetWriteBasquete({
       mode: 'placar_basquete',
       linha: rowIndex,
+      grupo: grupo,
       timeA: j.equipeA,
       placA: ptsA,
       placB: ptsB,
