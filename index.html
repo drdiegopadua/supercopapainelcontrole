@@ -2614,7 +2614,7 @@ async function salvarPlacarBasquete(id) {
 
     // Enviar para o Google Apps Script de basquete
     const res = await sheetWriteBasquete({
-      acao: 'atualizar_placar_basquete',
+      modo: 'atualizar_placar_basquete',
       aba: 'Fase de Grupos',
       linha: rowIndex,
       colStart: colStart,
@@ -3238,3 +3238,4 @@ async function buscarCampeaoDaPlanilha() {
 </script>
 </body>
 </html>
+
