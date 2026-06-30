@@ -90,11 +90,6 @@ function doPost(e) {
       return okJson(salvarBlockedGames(data.blocked || {}));
     }
 
-    // QUIZ — liberar/bloquear por esporte (merge parcial)
-    if (data.tipo === 'quiz_enabled') {
-      return okJson(salvarQuizEnabled(data.quiz || {}));
-    }
-
     // REINICIAR PALPITE
     if (data.tipo === 'reiniciar_palpite') {
       return okJson(excluirPalpite(ss, data.nome));
@@ -225,10 +220,6 @@ function doGet(e) {
       return okJson(getBlockedGames());
     }
 
-    if (action === 'quiz_enabled') {
-      return okJson(getQuizEnabled());
-    }
-
     if (action === 'push_subscriptions') {
       return okJson(getPushSubscriptions());
     }
@@ -329,52 +320,6 @@ function getBlockedGames() {
     }
   }
   return { blocked: {} };
-}
-
-
-// ============================================================
-//  QUIZ — LIBERAR / BLOQUEAR
-// ============================================================
-
-function salvarQuizEnabled(parcial) {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = getOrCreate(ss, ABA_CONFIGS, ['chave', 'valor', 'atualizado']);
-  const dados = sheet.getDataRange().getValues();
-  const agora = new Date().toLocaleString('pt-BR');
-
-  // Estado atual + merge parcial (não sobrescreve o outro esporte)
-  let atual = {};
-  let linhaExistente = -1;
-  for (let i = 1; i < dados.length; i++) {
-    if (dados[i][0] === 'quiz_enabled') {
-      linhaExistente = i;
-      try { atual = JSON.parse(dados[i][1] || '{}'); } catch { atual = {}; }
-      break;
-    }
-  }
-  Object.keys(parcial).forEach(k => { atual[k] = parcial[k]; });
-  const json = JSON.stringify(atual);
-
-  if (linhaExistente >= 0) {
-    sheet.getRange(linhaExistente + 1, 2).setValue(json);
-    sheet.getRange(linhaExistente + 1, 3).setValue(agora);
-  } else {
-    sheet.appendRow(['quiz_enabled', json, agora]);
-  }
-  return { ok: true, quiz: atual };
-}
-
-function getQuizEnabled() {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(ABA_CONFIGS);
-  if (!sheet) return { quiz: {} };
-  const dados = sheet.getDataRange().getValues();
-  for (let i = 1; i < dados.length; i++) {
-    if (dados[i][0] === 'quiz_enabled') {
-      try { return { quiz: JSON.parse(dados[i][1] || '{}') }; } catch { return { quiz: {} }; }
-    }
-  }
-  return { quiz: {} };
 }
 
 
