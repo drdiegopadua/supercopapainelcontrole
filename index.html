@@ -805,6 +805,30 @@
         <div id="tv-link-box-basq" style="display:none;margin-top:12px;padding:10px 14px;background:#f5f5f5;border-radius:10px;font-size:12px;word-break:break-all;color:#333;border:1px solid #ddd;"></div>
       </div>
 
+      <!-- Controle do Quiz -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:var(--gold)"><i class='bx bx-brain'></i> Controle do Quiz</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:16px;">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px;">🏀 Quiz Basquete</div>
+            <div id="statusQuizBasquete" style="font-size:13px;margin-bottom:12px;font-weight:600;">—</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-gold" style="flex:1" onclick="setQuizStatus('basquete','SIM')"><i class='bx bx-lock-open-alt'></i> Liberar</button>
+              <button class="btn" style="flex:1;background:#c53030;color:#fff;" onclick="setQuizStatus('basquete','NAO')"><i class='bx bx-lock-alt'></i> Bloquear</button>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:16px;">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px;">🏐 Quiz Vôlei</div>
+            <div id="statusQuizVolei" style="font-size:13px;margin-bottom:12px;font-weight:600;">—</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-gold" style="flex:1" onclick="setQuizStatus('volei','SIM')"><i class='bx bx-lock-open-alt'></i> Liberar</button>
+              <button class="btn" style="flex:1;background:#c53030;color:#fff;" onclick="setQuizStatus('volei','NAO')"><i class='bx bx-lock-alt'></i> Bloquear</button>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--dark-grey);margin-top:10px;">Liberar/Bloquear força o estado do quiz, sobrepondo a liberação automática por data (25/07 Basquete · 28/11 Vôlei).</div>
+      </div>
+
       <!-- Pódio -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title" style="color:var(--gold)"><i class='bx bxs-trophy'></i> Pódio Final</div>
@@ -1532,7 +1556,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
-  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); }
+  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); loadQuizStatus(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   return false;
@@ -3155,6 +3179,46 @@ async function salvarConfig(kvMap) {
     showToast('Configuração salva na planilha!');
   } catch(e) {
     showToast('Erro ao salvar configuração.', 'error');
+  }
+}
+
+async function loadQuizStatus() {
+  try {
+    const cfgUrl = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Config'!A1:B50")}?key=${GOOGLE_API_KEY}`;
+    const cfgRes = await fetch(cfgUrl);
+    const cfgData = await cfgRes.json();
+    const cfg = {};
+    (cfgData.values || []).forEach(r => { if (r[0]) cfg[r[0].trim()] = (r[1] || '').trim(); });
+    renderStatusQuiz('Basquete', cfg['QUIZ_BASQUETE_ENABLED'] || 'AUTO');
+    renderStatusQuiz('Volei',    cfg['QUIZ_VOLEI_ENABLED']    || 'AUTO');
+  } catch(e) {
+    console.warn('Erro ao carregar status do quiz:', e);
+  }
+}
+
+function renderStatusQuiz(esporte, valor) {
+  const el = document.getElementById('statusQuiz' + esporte);
+  if (!el) return;
+  if (valor === 'SIM') {
+    el.innerHTML = '<span style="color:#48bb78">🟢 LIBERADO manualmente</span>';
+  } else if (valor === 'NAO') {
+    el.innerHTML = '<span style="color:#fc8181">🔴 BLOQUEADO manualmente</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--dark-grey)">⚪ AUTOMÁTICO (segue a data)</span>';
+  }
+}
+
+async function setQuizStatus(esporte, status) {
+  showLoading(true);
+  try {
+    const key = 'QUIZ_' + esporte.toUpperCase() + '_ENABLED';
+    await salvarConfig({ [key]: status });
+    renderStatusQuiz(esporte === 'basquete' ? 'Basquete' : 'Volei', status);
+    showToast(`Quiz ${esporte} ${status === 'SIM' ? 'LIBERADO ✅' : 'BLOQUEADO 🔒'}!`);
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
   }
 }
 
