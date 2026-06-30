@@ -3184,15 +3184,15 @@ async function salvarConfig(kvMap) {
 
 async function loadQuizStatus() {
   try {
-    const cfgUrl = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Config'!A1:B50")}?key=${GOOGLE_API_KEY}`;
-    const cfgRes = await fetch(cfgUrl);
-    const cfgData = await cfgRes.json();
-    const cfg = {};
-    (cfgData.values || []).forEach(r => { if (r[0]) cfg[r[0].trim()] = (r[1] || '').trim(); });
-    renderStatusQuiz('Basquete', cfg['QUIZ_BASQUETE_ENABLED'] || 'AUTO');
-    renderStatusQuiz('Volei',    cfg['QUIZ_VOLEI_ENABLED']    || 'AUTO');
+    const res = await fetch(BOLAO_SHEETS_URL + '?action=quiz_enabled');
+    const data = await res.json();
+    const quiz = (data && data.quiz) || {};
+    renderStatusQuiz('Basquete', quiz.basquete || 'AUTO');
+    renderStatusQuiz('Volei',    quiz.volei    || 'AUTO');
   } catch(e) {
     console.warn('Erro ao carregar status do quiz:', e);
+    renderStatusQuiz('Basquete', 'AUTO');
+    renderStatusQuiz('Volei', 'AUTO');
   }
 }
 
@@ -3211,8 +3211,11 @@ function renderStatusQuiz(esporte, valor) {
 async function setQuizStatus(esporte, status) {
   showLoading(true);
   try {
-    const key = 'QUIZ_' + esporte.toUpperCase() + '_ENABLED';
-    await salvarConfig({ [key]: status });
+    await fetch(BOLAO_SHEETS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo: 'quiz_enabled', quiz: { [esporte]: status }, data: new Date().toLocaleString('pt-BR') })
+    });
     renderStatusQuiz(esporte === 'basquete' ? 'Basquete' : 'Volei', status);
     showToast(`Quiz ${esporte} ${status === 'SIM' ? 'LIBERADO ✅' : 'BLOQUEADO 🔒'}!`);
   } catch(e) {
