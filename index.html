@@ -585,6 +585,7 @@
 <base target="_blank">
 <base target="_blank">
 <base target="_blank">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -739,6 +740,22 @@
       <div class="card-title" style="margin:0 0 12px 2px;"><i class='bx bx-medal'></i> Modalidades</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin-bottom:22px;" id="dash-sport-cards">
         <div class="empty-state"><i class='bx bx-loader-alt'></i><p>Carregando dados dos esportes...</p></div>
+      </div>
+
+      <!-- ═══ GRÁFICOS ═══ -->
+      <div class="card-title" style="margin:0 0 12px 2px;"><i class='bx bx-bar-chart-alt-2'></i> Engajamento &amp; Progresso</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:22px;">
+        <div class="card" style="margin:0;">
+          <div class="card-title"><i class='bx bx-trending-up'></i> Progresso dos Placares por Esporte</div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 10px;">% dos jogos cadastrados que já têm resultado lançado</p>
+          <div style="position:relative;height:220px;"><canvas id="chartProgresso"></canvas></div>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title"><i class='bx bx-group'></i> Engajamento do Público</div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 10px;">App instalado, notificações ativas, quiz e votos da galera</p>
+          <div style="position:relative;height:220px;"><canvas id="chartEngajamento"></canvas></div>
+          <div id="dash-engaj-legend" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;"></div>
+        </div>
       </div>
 
       <!-- ═══ LISTAS ═══ -->
@@ -1303,6 +1320,9 @@ const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aW
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
 const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
+const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nnl9pNkRKUDZJwkONqY7VEHOrxf7TW7QSZRn2-bTun0C_1HzPsgF_BA/exec"; // PALPITES — installs/quiz/blocked_games
+const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkh_F_gOhJhLLktT7veOqGs6rDQslfRyzkbqbKNMnNMvTScRdXVkB_y715Q-Jb4_kk/exec";
+const PUSH_STATUS_URL = "https://supercopa-push-server.onrender.com/api/push/status";
 const HAND_SHEET_ID   = "1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU";
 const HAND_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxend-S87O0BOTR58UTNShlqNHwYqdNVYizKEuvo0DLrXM8q3Q8iRLOCSW-C19-DqjIA/exec";
 
@@ -3047,9 +3067,101 @@ function updateDashSportCards() {
   }).join('');
 }
 
+let _chartProgresso = null, _chartEngajamento = null;
+
+function renderChartProgresso() {
+  const canvas = document.getElementById('chartProgresso');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const dados = DASH_SPORTS.map(s => {
+    const jogos = getDashJogos(s.key);
+    const total = jogos.length;
+    const done = jogos.filter(j => j.status === 'done').length;
+    return { label: s.label, color: s.color, pct: total ? Math.round(done / total * 100) : 0 };
+  });
+  if (_chartProgresso) _chartProgresso.destroy();
+  _chartProgresso = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: dados.map(d => d.label),
+      datasets: [{
+        label: '% com placar lançado',
+        data: dados.map(d => d.pct),
+        backgroundColor: dados.map(d => d.color),
+        borderRadius: 8,
+        maxBarThickness: 56
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.parsed.y + '% concluído' } } },
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+    }
+  });
+}
+
+async function loadDashEngajamento() {
+  const result = { instalado: 0, notif: 0, quiz: state.quiz.length, galera: 0 };
+  try {
+    const r = await fetch(BOLAO_SHEETS_URL + '?action=count_installs').then(r => r.json());
+    result.instalado = r.total || 0;
+  } catch (e) {}
+  try {
+    const r = await fetch(PUSH_STATUS_URL).then(r => r.json());
+    result.notif = r.total || 0;
+  } catch (e) {}
+  try {
+    const [rb, rv] = await Promise.all([
+      fetch(GALERA_SCRIPT_URL + '?action=ranking&modalidade=basquete').then(r => r.json()).catch(() => ({ ranking: [] })),
+      fetch(GALERA_SCRIPT_URL + '?action=ranking&modalidade=volei').then(r => r.json()).catch(() => ({ ranking: [] }))
+    ]);
+    const somaVotos = arr => (arr || []).reduce((acc, x) => acc + (x.votos || 0), 0);
+    result.galera = somaVotos(rb.ranking) + somaVotos(rv.ranking);
+  } catch (e) {}
+  return result;
+}
+
+async function renderChartEngajamento() {
+  const canvas = document.getElementById('chartEngajamento');
+  const legend = document.getElementById('dash-engaj-legend');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const dados = await loadDashEngajamento();
+  const cats = [
+    { label: 'App Instalado', valor: dados.instalado, color: '#1565C0', icon: 'bx-mobile-alt' },
+    { label: 'Notificações Ativas', valor: dados.notif, color: '#4A148C', icon: 'bxs-bell' },
+    { label: 'Quiz Respondido', valor: dados.quiz, color: '#7C3AED', icon: 'bx-brain' },
+    { label: 'Votos na Galera', valor: dados.galera, color: '#E65100', icon: 'bxs-like' }
+  ];
+
+  if (_chartEngajamento) _chartEngajamento.destroy();
+  _chartEngajamento = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: cats.map(c => c.label),
+      datasets: [{ data: cats.map(c => c.valor), backgroundColor: cats.map(c => c.color), borderRadius: 8, maxBarThickness: 56 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+
+  if (legend) {
+    legend.innerHTML = cats.map(c => `
+      <div style="display:flex;align-items:center;gap:8px;background:var(--light);border-radius:10px;padding:8px 10px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:${c.color}22;color:${c.color};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;"><i class='bx ${c.icon}'></i></div>
+        <div><div style="font-size:15px;font-weight:800;color:var(--dark);line-height:1;">${c.valor}</div><div style="font-size:9px;color:var(--dark-grey);">${c.label}</div></div>
+      </div>`).join('');
+  }
+}
+
 function updateDashboard() {
   updateDashCountdowns();
   updateDashSportCards();
+  renderChartProgresso();
+  renderChartEngajamento();
   const allJogos = [...state.jogos.volei, ...state.jogos.basquete, ...state.jogos.handebolMasc, ...state.jogos.handebolFem]
     .sort((a, b) => (b.status === 'live') - (a.status === 'live'));
   const djl = document.getElementById('dash-jogos-list');
