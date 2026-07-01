@@ -2590,20 +2590,21 @@ async function salvarPlacarVolei(id) {
 async function salvarPlacarBasquete(id) {
   const j = state.jogos.basquete.find(x => x.id === id);
   if (!j) return;
+
+  // Só a Fase de Grupos é suportada aqui (linhas 5-7, colunas variam por grupo).
+  // IDs de Mata-Mata (basq_mata_N) não têm mapeamento de coluna implementado —
+  // enviar mesmo assim gravaria por engano em cima do Grupo A / Jogo 1.
+  const match = j.id.match(/^basq_([A-B])_(\d+)$/);
+  if (!match) {
+    showToast('❌ Envio de placar do Mata-Mata ainda não é suportado por aqui.', 'error');
+    return;
+  }
+  const grupo = match[1];
+  const jogoIdx = parseInt(match[2]);
+  const rowIndex = 5 + jogoIdx; // Ambos os grupos usam as linhas 5-7 (colunas diferentes)
+
   showLoading(true);
   try {
-    // Mapear ID do jogo para a linha correta na planilha de basquete
-    // Grupo A: linhas 5, 6, 7 | Grupo B: linhas 5, 6, 7 (mesmas linhas, colunas diferentes)
-    let rowIndex = 5;
-    const match = j.id.match(/basq_([A-B])_(\d)/);
-    let grupo = 'A';
-    let jogoIdx = 0;
-    if (match) {
-      grupo = match[1];
-      jogoIdx = parseInt(match[2]);
-      rowIndex = 5 + jogoIdx; // Ambos grupos usam linhas 5-7 (colunas diferentes)
-    }
-
     const ptsA = parseInt(j.placar.ptsA || 0);
     const ptsB = parseInt(j.placar.ptsB || 0);
 
@@ -2611,55 +2612,20 @@ async function salvarPlacarBasquete(id) {
     if (ptsA > ptsB) vencedor = j.equipeA;
     else if (ptsB > ptsA) vencedor = j.equipeB;
 
-    // Montar dados na estrutura da planilha de basquete
-    // Estrutura com colunas vazias:
-    // A=JOGO, B=EQUIPE1, C=VAZIA, D=PTS1, E=X, F=PTS2, G=VAZIA, H=EQUIPE2, I=VAZIA, J=RESULTADO
-    // J=JOGO, K=EQUIPE1, L=VAZIA, M=PTS1, N=X, O=PTS2, P=VAZIA, Q=EQUIPE2, R=VAZIA, S=RESULTADO
-    let dados;
-    let colStart;
-
-    if (grupo === 'A') {
-      colStart = 1; // Coluna A
-      dados = [
-        (jogoIdx + 1).toString(),  // [0] A: JOGO #
-        j.equipeA,                 // [1] B: EQUIPE 1
-        ptsA.toString(),           // [2] D: PTS 1 (coluna 3, pula C vazia)
-        'x',                       // [3] E: X (coluna 4)
-        ptsB.toString(),           // [4] F: PTS 2 (coluna 5)
-        j.equipeB,                 // [5] H: EQUIPE 2 (coluna 7, pula G vazia)
-        vencedor                   // [6] J: RESULTADO (coluna 9, pula I vazia)
-      ];
-    } else {
-      colStart = 10; // Coluna J
-      dados = [
-        (jogoIdx + 1).toString(),  // [0] J: JOGO #
-        j.equipeA,                 // [1] K: EQUIPE 1
-        ptsA.toString(),           // [2] M: PTS 1 (coluna 12, pula L vazia)
-        'x',                       // [3] N: X (coluna 13)
-        ptsB.toString(),           // [4] O: PTS 2 (coluna 14)
-        j.equipeB,                 // [5] Q: EQUIPE 2 (coluna 16, pula P vazia)
-        vencedor                   // [6] S: RESULTADO (coluna 18, pula R vazia)
-      ];
-    }
-
-    // DEBUG: Log dos dados antes de enviar
-    console.log('=== ENVIANDO PLACAR BASQUETE ===');
-    console.log('ID:', j.id);
-    console.log('Grupo:', grupo, 'JogoIdx:', jogoIdx);
-    console.log('Equipe A:', j.equipeA, 'PTS A:', ptsA);
-    console.log('Equipe B:', j.equipeB, 'PTS B:', ptsB);
-    console.log('Dados array:', dados);
-    console.log('colStart:', colStart, 'linha:', rowIndex);
-
-    // Enviar para o Google Apps Script de basquete
+    // Estrutura real confirmada na planilha 'Fase de Grupos':
+    // Grupo A: A=JOGO B=EQUIPE1 C=(vazia) D=PTS1 E=X F=PTS2 G=EQUIPE2 H=(vazia) I=RESULTADO
+    // Grupo B: K=JOGO L=EQUIPE1 M=(vazia) N=PTS1 O=X P=PTS2 Q=EQUIPE2 R=(vazia) S=RESULTADO
+    // O mapeamento de colunas é feito no Apps Script a partir do campo "grupo".
     const res = await sheetWriteBasquete({
       mode: 'placar_basquete',
       linha: rowIndex,
+      jogo: jogoIdx + 1,
       grupo: grupo,
       timeA: j.equipeA,
       placA: ptsA,
       placB: ptsB,
-      timeB: j.equipeB
+      timeB: j.equipeB,
+      vencedor: vencedor
     });
 
     if (res && res.ok) {
