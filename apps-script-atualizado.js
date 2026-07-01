@@ -9,6 +9,7 @@ const ABA_CAMPEAO   = 'CAMPEAO';
 const ABA_QUIZ      = 'QUIZ';
 const ABA_CONFIGS   = 'CONFIGS';
 const ABA_PUSH      = 'PUSH_SUBS';
+const ABA_INSTALL   = 'INSTALACOES';
 
 // ── doPost ──────────────────────────────────────────────────
 function doPost(e) {
@@ -93,6 +94,11 @@ function doPost(e) {
     // REINICIAR PALPITE
     if (data.tipo === 'reiniciar_palpite') {
       return okJson(excluirPalpite(ss, data.nome));
+    }
+
+    // APP INSTALADO (PWA) — registra 1x por dispositivo
+    if (data.tipo === 'app_install') {
+      return okJson(registrarInstalacao(ss, data.deviceId || ''));
     }
 
     return ok();
@@ -224,6 +230,10 @@ function doGet(e) {
       return okJson(getPushSubscriptions());
     }
 
+    if (action === 'count_installs') {
+      return okJson(contarInstalacoes(ss));
+    }
+
     return okJson({ erro: 'ação inválida' });
   } catch(ex) { return okJson({ erro: ex.message }); }
 }
@@ -284,6 +294,33 @@ function removePushSubscription(endpoint) {
   } catch(e) {
     return { ok: false, erro: e.message };
   }
+}
+
+
+// ============================================================
+//  INSTALAÇÕES DO APP (PWA)
+// ============================================================
+
+function registrarInstalacao(ss, deviceId) {
+  if (!deviceId) return { ok: false, erro: 'deviceId ausente' };
+  const sheet = getOrCreate(ss, ABA_INSTALL, ['DeviceId', 'Primeira vez', 'Última vez', 'Plataforma']);
+  const dados = sheet.getDataRange().getValues();
+  const agora = new Date().toLocaleString('pt-BR');
+
+  for (let i = 1; i < dados.length; i++) {
+    if (dados[i][0] === deviceId) {
+      sheet.getRange(i + 1, 3).setValue(agora); // só atualiza "última vez"
+      return { ok: true, novo: false };
+    }
+  }
+  sheet.appendRow([deviceId, agora, agora, '']);
+  return { ok: true, novo: true };
+}
+
+function contarInstalacoes(ss) {
+  const sheet = ss.getSheetByName(ABA_INSTALL);
+  if (!sheet || sheet.getLastRow() < 2) return { total: 0 };
+  return { total: sheet.getLastRow() - 1 };
 }
 
 
