@@ -3204,6 +3204,16 @@ if (sessionStorage.getItem('supercopa_logged') === 'true') {
     loadBasqueteFromSheet();
     loadAtletasFromSheet();
     loadNoticiasFromSheet();
+    loadQuizRanking();
+    // Carrega handebol masc e fem silenciosamente para o contador do dashboard
+    const _naipeAtualInit = handNaipe;
+    handNaipe = 'masc';
+    loadHandebolFromSheet(false).then(() => {
+      handNaipe = 'fem';
+      loadHandebolFromSheet(false).then(() => {
+        handNaipe = _naipeAtualInit;
+      });
+    });
   }, 500);
 }
 
