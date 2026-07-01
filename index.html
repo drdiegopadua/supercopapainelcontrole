@@ -1914,12 +1914,14 @@ function switchSocialTab(tab) {
 async function loadQuizRanking(manual=false) {
   if (manual) showLoading(true);
   try {
-    const data = await fetch(QUIZ_SHEETS_URL + '?action=ranking_quiz').then(r => r.json());
+    const data = await fetch(BOLAO_SHEETS_URL + '?action=ranking_quiz').then(r => r.json());
     state.quiz = (data.ranking || []).map((p, i) => ({
       id: 'q' + i, nome: p.nome, acertos: p.acertos, total: p.total,
       pct: parseFloat(p.pct) || 0,
       acertosStr: `${p.acertos} de ${p.total} perguntas · ${p.tempo}s`
     }));
+    updateStats();
+    updateDashboard();
     const container = document.getElementById('quiz-cards');
     if (!container) return;
     if (!state.quiz.length) {
@@ -2237,6 +2239,7 @@ async function loadHandebolFromSheet(manual = false) {
     renderHandebolJogos();
     renderHandebolClassif();
     updateStats();
+    updateDashboard();
     if (manual) showToast('Handebol atualizado!');
   } catch(e) {
     console.warn('Erro handebol:', e);
@@ -3110,12 +3113,11 @@ async function loadDashEngajamento() {
     result.notif = r.total || 0;
   } catch (e) {}
   try {
-    const [rb, rv] = await Promise.all([
-      fetch(GALERA_SCRIPT_URL + '?action=ranking&modalidade=basquete').then(r => r.json()).catch(() => ({ ranking: [] })),
-      fetch(GALERA_SCRIPT_URL + '?action=ranking&modalidade=volei').then(r => r.json()).catch(() => ({ ranking: [] }))
-    ]);
-    const somaVotos = arr => (arr || []).reduce((acc, x) => acc + (x.votos || 0), 0);
-    result.galera = somaVotos(rb.ranking) + somaVotos(rv.ranking);
+    // Sem filtro de modalidade: 1 única busca conta cada voto uma vez só
+    // (os votos ainda nao tem a coluna MODALIDADE preenchida na planilha,
+    // entao somar chamadas separadas por esporte contava tudo em dobro).
+    const r = await fetch(GALERA_SCRIPT_URL + '?action=ranking').then(r => r.json()).catch(() => ({ ranking: [] }));
+    result.galera = (r.ranking || []).reduce((acc, x) => acc + (x.votos || 0), 0);
   } catch (e) {}
   return result;
 }
