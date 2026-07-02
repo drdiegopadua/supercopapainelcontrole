@@ -1786,8 +1786,15 @@ async function loadBasqueteFromSheet(manual=false) {
         });
       });
     });
+    const ORDEM_JOGOS_BASQ = { 'A-1': 1, 'B-1': 2, 'A-2': 3, 'B-2': 4, 'A-3': 5, 'B-3': 6 };
+    state.jogos.basquete.sort((x, y) => {
+      const kx = (x.rodada.match(/Grupo (\w) · Jogo (\d)/) || []).slice(1).join('-');
+      const ky = (y.rodada.match(/Grupo (\w) · Jogo (\d)/) || []).slice(1).join('-');
+      return (ORDEM_JOGOS_BASQ[kx] || 99) - (ORDEM_JOGOS_BASQ[ky] || 99);
+    });
 
-    // Mata-mata basquete
+    // Mata-mata basquete (domingo 26/07)
+    const HORA_MATA_BASQ = { 3: '09:00', 8: 'Após SF1', 14: 'Após SF2' };
     const mataRows = await sheetRead(BASQ_SHEET_ID, "'Mata-Mata'!A1:O22");
     [[3, 'Semi'], [8, 'Semi'], [14, 'Final']].forEach(([rIdx, fase]) => {
       const ea = _cc(mataRows, rIdx, 1);
@@ -1798,7 +1805,7 @@ async function loadBasqueteFromSheet(manual=false) {
         id: 'basq_mata_' + rIdx,
         sport: 'basquete',
         equipeA: ea, equipeB: eb,
-        data: '25/07', hora: '13:00',
+        data: '26/07', hora: HORA_MATA_BASQ[rIdx] || '13:00',
         rodada: fase,
         status: 'upcoming',
         placar: { ptsA: q1a, ptsB: q1b }

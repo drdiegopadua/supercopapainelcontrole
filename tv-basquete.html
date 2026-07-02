@@ -503,6 +503,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
     <div class="scene" id="scene-tabela">
       <div class="panel" style="flex:1;">
         <div class="panel-head">📋 Tabela de Jogos</div>
+        <div style="font-size:11px;color:#f0a500;text-align:center;padding:6px 14px;background:rgba(240,165,0,.08);border-bottom:1px solid rgba(240,165,0,.25);">⚠️ Horários são previsão · equipes devem estar na quadra desde as 13h de sábado · imprevistos podem gerar W.O.</div>
         <div class="panel-body" id="tabelaJogos"></div>
       </div>
     </div>
@@ -620,7 +621,7 @@ var BOLAO_API_URL = 'https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nnl9pNk
 var HORARIOS = {
   'A-1':'13:00','A-2':'~15:30','A-3':'~18:00',
   'B-1':'~14:10','B-2':'~16:45','B-3':'~19:10',
-  'SF1':'14:00','SF2':'15:30','Final':'17:00'
+  'SF1':'09:00 (Dom)','SF2':'Após SF1','Final':'Após SF2'
 };
 
 var appData = { grupos:[], matamata:[], config:{}, bolao:[] };
@@ -746,6 +747,8 @@ function loadData(){
         });
       });
     });
+    var ORDEM_JOGOS={'A-1':1,'B-1':2,'A-2':3,'B-2':4,'A-3':5,'B-3':6};
+    appData.grupos.sort(function(x,y){return (ORDEM_JOGOS[x.key]||99)-(ORDEM_JOGOS[y.key]||99);});
 
     appData.matamata=[];
     [[3,'SF1'],[8,'SF2'],[14,'Final']].forEach(function(cfg){
