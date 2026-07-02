@@ -35,11 +35,11 @@ function doPost(e) {
     }
 
     // QUIZ
-    if (!data.tipo) {
+    if (data.tipo === 'quiz' || !data.tipo) {
       const sh = getOrCreate(ss, ABA_QUIZ,
         ['Data/Hora','Nome','WhatsApp','Acertos','Total','% Acerto','Tempo(s)']);
       sh.appendRow([now(), data.nome, data.fone||'—',
-        data.acertos, data.total, data.percentual+'%', data.tempo_segundos||'—']);
+        data.acertos, data.total, (data.pct||data.percentual)+'%', data.tempo||data.tempo_segundos||'—']);
       return ok();
     }
 
