@@ -1754,6 +1754,11 @@ async function loadBasqueteFromSheet(manual=false) {
 
     state.jogos.basquete = [];
     const grupos = ['A', 'B'];
+    const HORARIOS_BASQUETE = {
+      'A-1': '13:00', 'B-1': '~14:10',
+      'A-2': '~15:30', 'B-2': '~16:45',
+      'A-3': '~18:00', 'B-3': '~19:10'
+    };
 
     grupos.forEach((g, gi) => {
       const colOffset = gi * 10;
@@ -1771,7 +1776,7 @@ async function loadBasqueteFromSheet(manual=false) {
           id: 'basq_' + g + '_' + i,
           sport: 'basquete',
           equipeA: ea, equipeB: eb,
-          data: '25/07', hora: '13:00',
+          data: '25/07', hora: HORARIOS_BASQUETE[g + '-' + (i+1)] || '13:00',
           rodada: 'Grupo ' + g + ' · Jogo ' + (i+1),
           status: 'upcoming',
           placar: {
