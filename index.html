@@ -873,6 +873,16 @@
         <div style="font-size:11px;color:var(--dark-grey);margin-top:10px;">Liberar/Bloquear força o estado do quiz, sobrepondo a liberação automática por data (25/07 Basquete · 28/11 Vôlei).</div>
       </div>
 
+      <!-- Transmissão ao Vivo -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:#c53030"><i class='bx bxs-video'></i> Transmissão ao Vivo (YouTube)</div>
+        <p style="font-size:12px;color:var(--dark-grey);margin:0 0 12px;">Cole o link do YouTube (vídeo ou live) que vai aparecer no botão "Live" do app.</p>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="inputLiveYoutube" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid #ccc;font-size:13px;">
+          <button class="btn btn-primary" style="background:#c53030;border-color:#c53030;" onclick="salvarLinkTransmissao()"><i class='bx bx-save'></i> Salvar</button>
+        </div>
+      </div>
+
       <!-- Pódio -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title" style="color:var(--gold)"><i class='bx bxs-trophy'></i> Pódio Final</div>
@@ -1603,7 +1613,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
-  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); loadQuizStatus(); }
+  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); loadQuizStatus(); carregarLinkTransmissao(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   return false;
@@ -3418,6 +3428,33 @@ async function setQuizStatus(esporte, status) {
     await salvarConfig({ [key]: status });
     renderStatusQuiz(esporte === 'basquete' ? 'Basquete' : 'Volei', status);
     showToast(`Quiz ${esporte} ${status === 'SIM' ? 'LIBERADO ✅' : 'BLOQUEADO 🔒'}!`);
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function carregarLinkTransmissao() {
+  try {
+    const cfgUrl = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${encodeURIComponent("'Config'!A1:B50")}?key=${GOOGLE_API_KEY}`;
+    const cfgRes = await fetch(cfgUrl);
+    const cfgData = await cfgRes.json();
+    const cfg = {};
+    (cfgData.values || []).forEach(r => { if (r[0]) cfg[r[0].toString().trim()] = (r[1] || '').toString().trim(); });
+    const inp = document.getElementById('inputLiveYoutube');
+    if (inp) inp.value = cfg['LIVE_YOUTUBE_URL'] || '';
+  } catch(e) {
+    console.warn('Erro ao carregar link de transmissão:', e);
+  }
+}
+
+async function salvarLinkTransmissao() {
+  const val = (document.getElementById('inputLiveYoutube')?.value || '').trim();
+  showLoading(true);
+  try {
+    await salvarConfig({ LIVE_YOUTUBE_URL: val });
+    showToast(val ? '✅ Link de transmissão salvo!' : '✅ Link de transmissão removido!');
   } catch(e) {
     showToast('Erro: ' + e.message, 'error');
   } finally {
