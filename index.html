@@ -3575,6 +3575,7 @@ const BASQ_TV_SCENES_DEF = [
   {id:'s-campeao', icon:'🏆', label:'Campeão', desc:'Tela de campeão com confetti (selecione quando quiser revelar).'},
 ];
 let _tvScenesBasq = new Set(['s-class-a','s-class-b','s-jogos','s-matamata','s-galera','s-quiz']);
+const BASQ_TV_SCENE_CODES = {'s-class-a':'a','s-class-b':'b','s-jogos':'j','s-matamata':'m','s-galera':'g','s-quiz':'q','s-campeao':'c'};
 
 function initTvSceneGridBasq(){
   try{const s=localStorage.getItem('supercopa_tv_basq_scenes');if(s){_tvScenesBasq=new Set(JSON.parse(s));}}catch(e){}
@@ -3618,7 +3619,8 @@ function salvarCenasTvBasq(){
 
 function gerarLinkTvBasq(){
   const s=getTvScenesBasq();
-  const url=BASQ_TV_URL+'?scenes='+s.join(',');
+  const codes=s.map(id=>BASQ_TV_SCENE_CODES[id]).filter(Boolean).join('');
+  const url=BASQ_TV_URL+'?s='+codes;
   const box=document.getElementById('tv-link-box-basq');
   box.style.display='';
   box.innerHTML=`<strong>Link para a TV Basquete:</strong><br>${url}<br>
@@ -3630,7 +3632,8 @@ function gerarLinkTvBasq(){
 
 function abrirTvBasq(){
   const s=getTvScenesBasq();
-  window.open(BASQ_TV_URL+'?scenes='+s.join(','),'_blank');
+  const codes=s.map(id=>BASQ_TV_SCENE_CODES[id]).filter(Boolean).join('');
+  window.open(BASQ_TV_URL+'?s='+codes,'_blank');
 }
 
 </script>
