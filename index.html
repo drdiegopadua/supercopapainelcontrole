@@ -849,6 +849,19 @@
         <div id="tv-link-box-basq" style="display:none;margin-top:12px;padding:10px 14px;background:#f5f5f5;border-radius:10px;font-size:12px;word-break:break-all;color:#333;border:1px solid #ddd;"></div>
       </div>
 
+      <!-- ═══ TELAS DA TV — VÔLEI ═══ -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:#1565C0"><i class='bx bx-tv'></i> Telas da TV — Vôlei</div>
+        <p style="font-size:12px;color:var(--dark-grey);margin:0 0 16px;">Selecione quais telas vão rodar na TV de vôlei.</p>
+        <div id="tvSceneGridVolei" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" style="background:#1565C0;border-color:#1565C0;" onclick="salvarCenasTvVolei()"><i class='bx bx-save'></i> Salvar Seleção</button>
+          <button class="btn" style="background:#7C3AED;color:#fff;" onclick="gerarLinkTvVolei()"><i class='bx bx-link-external'></i> Gerar Link TV</button>
+          <button class="btn" style="background:rgba(255,255,255,.08);color:var(--text);" onclick="abrirTvVolei()"><i class='bx bx-tv'></i> Abrir TV</button>
+        </div>
+        <div id="tv-link-box-volei" style="display:none;margin-top:12px;padding:10px 14px;background:#f5f5f5;border-radius:10px;font-size:12px;word-break:break-all;color:#333;border:1px solid #ddd;"></div>
+      </div>
+
       <!-- Controle do Quiz -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title" style="color:var(--gold)"><i class='bx bx-brain'></i> Controle do Quiz</div>
@@ -1616,7 +1629,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
-  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); loadQuizStatus(); carregarLinkTransmissao(); }
+  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   return false;
@@ -3634,6 +3647,78 @@ function abrirTvBasq(){
   const s=getTvScenesBasq();
   const codes=s.map(id=>BASQ_TV_SCENE_CODES[id]).filter(Boolean).join('');
   window.open(BASQ_TV_URL+'?s='+codes,'_blank');
+}
+
+// ════════════════════════════════════════════════════════
+// TV CONFIG — Vôlei
+// ════════════════════════════════════════════════════════
+const VOLEI_TV_URL = 'https://drdiegopadua.github.io/supercopa-app/tv-volei.html';
+const VOLEI_TV_SCENES_DEF = [
+  {id:'s-capa',      icon:'🏆', label:'Capa', desc:'Abertura com os escudos dos times e o título da Supercopa.'},
+  {id:'s-equipes',   icon:'👥', label:'Equipes', desc:'Cards com escudo, nome e grupo de cada equipe inscrita.'},
+  {id:'s-jogos',     icon:'🏐', label:'Jogos', desc:'Confrontos de cada grupo com placar, data e local.'},
+  {id:'s-dashboard', icon:'📊', label:'Dashboard', desc:'Pontos por equipe e jogos realizados x pendentes.'},
+];
+let _tvScenesVolei = new Set(['s-capa','s-equipes','s-jogos','s-dashboard']);
+const VOLEI_TV_SCENE_CODES = {'s-capa':'c','s-equipes':'e','s-jogos':'j','s-dashboard':'d'};
+
+function initTvSceneGridVolei(){
+  try{const s=localStorage.getItem('supercopa_tv_volei_scenes');if(s){_tvScenesVolei=new Set(JSON.parse(s));}}catch(e){}
+  const grid=document.getElementById('tvSceneGridVolei');
+  if(!grid)return;
+  grid.innerHTML=VOLEI_TV_SCENES_DEF.map(sc=>{
+    const on=_tvScenesVolei.has(sc.id);
+    return `<div id="tvsv-${sc.id}" onclick="toggleTvSceneVolei('${sc.id}')" style="
+        cursor:pointer;padding:14px 16px;border-radius:14px;border:2px solid ${on?'#1565C0':'#e0e0e0'};
+        background:${on?'rgba(21,101,192,.07)':'#fafafa'};transition:.2s;user-select:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="font-size:22px;">${sc.icon}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;color:${on?'#1565C0':'#333'}">${sc.label}</div>
+        </div>
+        <div id="chkv-${sc.id}" style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'#1565C0':'#ccc'};
+            background:${on?'#1565C0':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':''}
+        </div>
+      </div>
+      <div style="font-size:11px;color:#888;line-height:1.4;">${sc.desc}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTvSceneVolei(id){
+  if(_tvScenesVolei.has(id))_tvScenesVolei.delete(id);else _tvScenesVolei.add(id);
+  const card=document.getElementById('tvsv-'+id);
+  const chk=document.getElementById('chkv-'+id);
+  const on=_tvScenesVolei.has(id);
+  if(card){card.style.borderColor=on?'#1565C0':'#e0e0e0';card.style.background=on?'rgba(21,101,192,.07)':'#fafafa';const title=card.querySelector('div>div>div');if(title)title.style.color=on?'#1565C0':'#333';}
+  if(chk){chk.style.borderColor=on?'#1565C0':'#ccc';chk.style.background=on?'#1565C0':'transparent';chk.innerHTML=on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':'';}
+}
+
+function getTvScenesVolei(){return[..._tvScenesVolei];}
+
+function salvarCenasTvVolei(){
+  localStorage.setItem('supercopa_tv_volei_scenes',JSON.stringify(getTvScenesVolei()));
+  showToast('✅ Configuração de TV Vôlei salva!');
+}
+
+function gerarLinkTvVolei(){
+  const s=getTvScenesVolei();
+  const codes=s.map(id=>VOLEI_TV_SCENE_CODES[id]).filter(Boolean).join('');
+  const url=VOLEI_TV_URL+'?s='+codes;
+  const box=document.getElementById('tv-link-box-volei');
+  box.style.display='';
+  box.innerHTML=`<strong>Link para a TV Vôlei:</strong><br>${url}<br>
+    <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('Link copiado!'))"
+      style="margin-top:8px;padding:6px 14px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">
+      📋 Copiar Link
+    </button>`;
+}
+
+function abrirTvVolei(){
+  const s=getTvScenesVolei();
+  const codes=s.map(id=>VOLEI_TV_SCENE_CODES[id]).filter(Boolean).join('');
+  window.open(VOLEI_TV_URL+'?s='+codes,'_blank');
 }
 
 </script>
