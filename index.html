@@ -899,6 +899,24 @@
         </div>
       </div>
 
+      <!-- Transmissões por jogo — SITE (uma live por jogo do basquete) -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="color:#c53030"><i class='bx bxs-video-plus'></i> Transmissões por jogo — Site (Basquete)</div>
+        <p style="font-size:12px;color:var(--dark-grey);margin:0 0 12px;">
+          Cada jogo do basquete tem sua própria live. Cadastre uma linha por jogo — a mais recente vira "AO VIVO" no site
+          (<code>tabela.html</code> e <code>transmissao.html</code>); as anteriores ficam disponíveis como "Reveja".
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:14px;">
+          <input type="text" id="inputLiveJogoNome" placeholder="Ex: Jogo 1 — Crossover x Central Serrano" style="padding:10px 14px;border-radius:10px;border:1px solid #ccc;font-size:13px;">
+          <input type="text" id="inputLiveJogoLink" placeholder="https://www.youtube.com/watch?v=..." style="padding:10px 14px;border-radius:10px;border:1px solid #ccc;font-size:13px;">
+          <button class="btn btn-primary" style="background:#c53030;border-color:#c53030;" onclick="adicionarLiveJogo()"><i class='bx bx-plus'></i> Adicionar</button>
+        </div>
+        <div id="liveJogosList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <div style="font-size:11px;color:var(--dark-grey);margin-top:10px;">
+          Errou o link? É só cadastrar uma nova linha com o link certo — a mais recente sempre vence. A lista atualiza sozinha no site em até 30s, sem precisar de novo deploy.
+        </div>
+      </div>
+
       <!-- Pódio -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title" style="color:var(--gold)"><i class='bx bxs-trophy'></i> Pódio Final</div>
@@ -1629,7 +1647,7 @@ function navTo(page, el) {
   if (el) el.parentElement.classList.add('active');
   const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
-  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); }
+  if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); loadLiveJogosList(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   return false;
@@ -3471,6 +3489,66 @@ async function salvarLinkTransmissao() {
   try {
     await salvarConfig({ LIVE_YOUTUBE_URL: val });
     showToast(val ? '✅ Link de transmissão salvo!' : '✅ Link de transmissão removido!');
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ── Transmissões por jogo (site) — uma live por jogo do basquete ──
+// Lê/grava em 'Configuracao'!A11:B30 da planilha do basquete
+// (coluna A = nome do jogo, coluna B = link do YouTube).
+async function loadLiveJogosList() {
+  const el = document.getElementById('liveJogosList');
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--dark-grey);">Carregando...</div>';
+  try {
+    const range = encodeURIComponent("'Configuracao'!A11:B30");
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${BASQ_SHEET_ID}/values/${range}?key=${GOOGLE_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const isUrl = s => /^https?:\/\//i.test(s) || /youtu/i.test(s);
+    const items = [];
+    (data.values || []).forEach(row => {
+      const a = (row[0] || '').toString().trim(), b = (row[1] || '').toString().trim();
+      const link = isUrl(b) ? b : (isUrl(a) ? a : '');
+      if (!link) return;
+      items.push({ titulo: (link === b ? a : b) || `Transmissão ${items.length + 1}`, url: link });
+    });
+    if (!items.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--dark-grey);">Nenhuma transmissão cadastrada ainda.</div>';
+      return;
+    }
+    el.innerHTML = items.slice().reverse().map((it, idx) => {
+      const aoVivo = idx === 0;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:${aoVivo ? 'rgba(197,48,48,.08)' : 'rgba(0,0,0,.03)'};border:1px solid ${aoVivo ? 'rgba(197,48,48,.25)' : 'transparent'};">
+        <span style="font-size:13px;">${aoVivo ? '🔴' : '▶️'}</span>
+        <span style="flex:1;font-size:13px;font-weight:600;">${it.titulo}</span>
+        <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;${aoVivo ? 'background:#c53030;color:#fff;' : 'color:var(--dark-grey);'}">${aoVivo ? 'AO VIVO' : 'Reveja'}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:#c53030;">Erro ao carregar transmissões: ' + e.message + '</div>';
+  }
+}
+
+async function adicionarLiveJogo() {
+  const nome = (document.getElementById('inputLiveJogoNome')?.value || '').trim();
+  const link = (document.getElementById('inputLiveJogoLink')?.value || '').trim();
+  if (!link) { showToast('Cole o link do YouTube antes de adicionar.', 'error'); return; }
+  showLoading(true);
+  try {
+    await fetch(BASQ_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      mode: 'no-cors',
+      body: JSON.stringify({ mode: 'adicionar_linha', aba: 'Configuracao', dados: [nome, link] })
+    });
+    document.getElementById('inputLiveJogoNome').value = '';
+    document.getElementById('inputLiveJogoLink').value = '';
+    showToast('✅ Transmissão adicionada! Pode levar alguns segundos para aparecer na lista.');
+    setTimeout(loadLiveJogosList, 1500);
   } catch(e) {
     showToast('Erro: ' + e.message, 'error');
   } finally {
