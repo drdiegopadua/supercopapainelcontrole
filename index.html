@@ -1363,6 +1363,7 @@ const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/env
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
 const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
+const ATLETA_DESTAQUE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQoFAERSMTzYZAp7vry6Qz2zVbw7SdMiJTKSVHesaTd0DNNzbo2Lo1gK3Zd1tdPn9J/exec";
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nnl9pNkRKUDZJwkONqY7VEHOrxf7TW7QSZRn2-bTun0C_1HzPsgF_BA/exec"; // PALPITES — installs/quiz/blocked_games
 const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUc_Z7wdPEWMQ_WzbQGNiHBVu0yJsxb8AwZC3-eZm_dHT_yk-hhmdToxXUeiTtxV/exec";
@@ -1876,7 +1877,7 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Basquete'!A2:D200");
+    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Basquete'!A2:F200");
     state.destaques = [];
     if (!rows || rows.length === 0) {
       renderDestaques();
@@ -1890,13 +1891,13 @@ async function loadAtletasFromSheet(manual=false) {
       const jogoLabel = (row[1] || '').toString().trim();
       const nome = (row[2] || '').trim();
       const equipe = (row[3] || '').trim();
-      const obs = '';
-      const dataReg = '';
+      const obs = (row[4] || '').trim();
+      const dataReg = (row[5] || '').trim();
       if (!nome) return;
       const emoji = modalidadeKey === 'basquete' ? '🏀' : '🏐';
       const modalidade = modalidadeKey === 'basquete' ? 'Basquete' : 'Vôlei';
       state.destaques.push({
-        id: 'atleta_' + i,
+        id: i + 2, // linha real na planilha (dados começam na linha 2)
         jogo: jogoLabel,
         nome, equipe, obs,
         modalidade,
@@ -2908,10 +2909,13 @@ async function salvarDestaque() {
 
   showLoading(true);
   try {
-    const r = await fetch(GALERA_SCRIPT_URL, {
+    const r = await fetch(ATLETA_DESTAQUE_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ mode: 'atleta_destaque', esporte: modalidadeKey, jogo: jogoLabel, nome, time: equipe })
+      body: JSON.stringify({
+        acao: 'adicionar',
+        linha: [modalidadeKey, jogoLabel, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
+      })
     });
     const res = await r.json().catch(() => ({ ok: false, erro: 'Resposta inválida' }));
 
@@ -2953,6 +2957,29 @@ function renderDestaques() {
       <button class="btn btn-danger" style="position:absolute;top:10px;right:10px;padding:3px 8px;font-size:11px;" onclick="excluirDestaque('${d.id}')"><i class='bx bx-trash'></i></button>
     </div>`;
   }).join('');
+}
+
+async function excluirDestaque(rowIndex) {
+  if (!confirm('Remover este destaque?')) return;
+  showLoading(true);
+  try {
+    const r = await fetch(ATLETA_DESTAQUE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ acao: 'excluir', rowIndex: parseInt(rowIndex) })
+    });
+    const res = await r.json().catch(() => ({ ok: false, erro: 'Resposta inválida' }));
+    if (res && res.ok) {
+      showToast('✅ Destaque removido!');
+      await loadAtletasFromSheet();
+    } else {
+      showToast('❌ Erro: ' + (res?.erro || 'desconhecido'), 'error');
+    }
+  } catch(e) {
+    showToast('❌ Falha na conexão', 'error');
+  } finally {
+    showLoading(false);
+  }
 }
 
 // ════════════════════════════════════════════════════════
