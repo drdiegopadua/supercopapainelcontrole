@@ -1365,7 +1365,7 @@ const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9
 const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nnl9pNkRKUDZJwkONqY7VEHOrxf7TW7QSZRn2-bTun0C_1HzPsgF_BA/exec"; // PALPITES — installs/quiz/blocked_games
-const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkh_F_gOhJhLLktT7veOqGs6rDQslfRyzkbqbKNMnNMvTScRdXVkB_y715Q-Jb4_kk/exec";
+const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUc_Z7wdPEWMQ_WzbQGNiHBVu0yJsxb8AwZC3-eZm_dHT_yk-hhmdToxXUeiTtxV/exec";
 const PUSH_STATUS_URL = "https://supercopa-push-server.onrender.com/api/push/status";
 const HAND_SHEET_ID   = "1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU";
 const HAND_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxend-S87O0BOTR58UTNShlqNHwYqdNVYizKEuvo0DLrXM8q3Q8iRLOCSW-C19-DqjIA/exec";
@@ -1876,7 +1876,7 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Página1'!A2:E200");
+    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Basquete'!A2:D200");
     state.destaques = [];
     if (!rows || rows.length === 0) {
       renderDestaques();
@@ -1891,7 +1891,7 @@ async function loadAtletasFromSheet(manual=false) {
       const nome = (row[2] || '').trim();
       const equipe = (row[3] || '').trim();
       const obs = '';
-      const dataReg = (row[4] || '').trim();
+      const dataReg = '';
       if (!nome) return;
       const emoji = modalidadeKey === 'basquete' ? '🏀' : '🏐';
       const modalidade = modalidadeKey === 'basquete' ? 'Basquete' : 'Vôlei';
@@ -2908,11 +2908,12 @@ async function salvarDestaque() {
 
   showLoading(true);
   try {
-    const res = await sheetWriteAtleta({
-      aba: 'Página1',
-      acao: 'adicionar',
-      linha: [modalidadeKey, jogoId, nome, equipe, obs, new Date().toLocaleString('pt-BR')]
+    const r = await fetch(GALERA_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ mode: 'atleta_destaque', esporte: modalidadeKey, jogo: jogoLabel, nome, time: equipe })
     });
+    const res = await r.json().catch(() => ({ ok: false, erro: 'Resposta inválida' }));
 
     if (res && res.ok) {
       showToast('✅ Atleta destaque registrado com sucesso!');
