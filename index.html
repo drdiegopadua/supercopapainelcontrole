@@ -1052,6 +1052,20 @@
           <div class="empty-state" style="grid-column:1/-1"><i class='bx bxs-star'></i><p>Carregando destaques da planilha...</p></div>
         </div>
       </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="font-size:22px">🏆</div>
+          <div>
+            <div class="card-title" style="margin-bottom:0">Melhores do Campeonato — Basquete</div>
+            <div style="font-size:12px;color:var(--dark-grey)">MVP, Melhor Ala, Melhor Armador e Melhor Pivô. Aparecem na TV e no app.</div>
+          </div>
+          <button onclick="loadPremiacao(true)" style="margin-left:auto;background:#C8960C;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
+        </div>
+        <div id="premiacao-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;">
+          <div class="empty-state" style="grid-column:1/-1"><i class='bx bxs-trophy'></i><p>Carregando premiação da planilha...</p></div>
+        </div>
+      </div>
     </div>
 
     <!-- ─── SOCIAL ─── -->
@@ -1519,6 +1533,7 @@ function doLogin(e) {
       loadVoleiFromSheet();
       loadBasqueteFromSheet();
       loadAtletasFromSheet();
+      loadPremiacao();
       loadNoticiasFromSheet();
       loadQuizRanking();
       // Carrega handebol masc e fem silenciosamente para o contador do dashboard
@@ -2961,6 +2976,80 @@ async function excluirDestaque(rowIndex) {
 }
 
 // ════════════════════════════════════════════════════════
+// MELHORES DO CAMPEONATO — Basquete (MVP, Ala, Armador, Pivô)
+// ════════════════════════════════════════════════════════
+const PREMIACAO_CATEGORIAS = [
+  { key: 'MVP',             label: '🏆 MVP do Campeonato' },
+  { key: 'Melhor Ala',      label: '🎯 Melhor Ala' },
+  { key: 'Melhor Armador',  label: '🧠 Melhor Armador' },
+  { key: 'Melhor Pivô',     label: '💪 Melhor Pivô' }
+];
+state.premiacao = {};
+
+function premCssSafe(s) { return s.replace(/[^a-zA-Z0-9]/g, ''); }
+
+async function loadPremiacao(manual = false) {
+  try {
+    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Premiacao'!A2:D10");
+    state.premiacao = {};
+    (rows || []).forEach(row => {
+      const categoria = (row[0] || '').trim();
+      if (!categoria) return;
+      state.premiacao[categoria] = { nome: (row[1] || '').trim(), equipe: (row[2] || '').trim() };
+    });
+    renderPremiacaoGrid();
+    if (manual) showToast('Melhores do campeonato atualizados!');
+  } catch (e) {
+    console.error('Erro ao carregar premiação:', e);
+    renderPremiacaoGrid();
+    if (manual) showToast('Erro ao carregar: ' + e.message, 'error');
+  }
+}
+
+function renderPremiacaoGrid() {
+  const c = document.getElementById('premiacao-grid');
+  if (!c) return;
+  c.innerHTML = PREMIACAO_CATEGORIAS.map(cat => {
+    const atual = state.premiacao[cat.key] || {};
+    const safe = premCssSafe(cat.key);
+    return `
+    <div style="background:#fff;border:1px solid #E8ECF4;border-radius:14px;padding:14px 16px;">
+      <div style="font-weight:800;font-size:13px;color:var(--dark);margin-bottom:10px;">${cat.label}</div>
+      <input type="text" class="form-control" id="prem-nome-${safe}" placeholder="Nome do atleta" value="${atual.nome || ''}" style="margin-bottom:8px;">
+      <input type="text" class="form-control" id="prem-equipe-${safe}" placeholder="Equipe" value="${atual.equipe || ''}" style="margin-bottom:10px;">
+      <button class="btn btn-gold" style="width:100%;" onclick="salvarPremiacao('${cat.key}')"><i class='bx bx-save'></i> Salvar</button>
+    </div>`;
+  }).join('');
+}
+
+async function salvarPremiacao(categoria) {
+  const safe = premCssSafe(categoria);
+  const nome = document.getElementById('prem-nome-' + safe).value.trim();
+  const equipe = document.getElementById('prem-equipe-' + safe).value.trim();
+  if (!nome) { showToast('Digite o nome do atleta.', 'error'); return; }
+
+  showLoading(true);
+  try {
+    const r = await fetch(ATLETA_DESTAQUE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ acao: 'salvarPremiacao', categoria, nome, equipe })
+    });
+    const res = await r.json().catch(() => ({ ok: false, erro: 'Resposta inválida' }));
+    if (res && res.ok) {
+      showToast('✅ ' + categoria + ' salvo com sucesso!');
+      await loadPremiacao();
+    } else {
+      showToast('❌ Erro: ' + (res?.erro || 'desconhecido'), 'error');
+    }
+  } catch (e) {
+    showToast('❌ Falha na conexão', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ════════════════════════════════════════════════════════
 // NOTÍCIAS RENDER
 // ════════════════════════════════════════════════════════
 function renderNoticias() {
@@ -3670,9 +3759,13 @@ const BASQ_TV_SCENES_DEF = [
   {id:'s-galera',  icon:'⭐', label:'Destaque da Galera', desc:'Top 10 atletas mais votados pelo público.'},
   {id:'s-quiz',    icon:'🧠', label:'Quiz — Ranking', desc:'Ranking geral dos participantes do quiz.'},
   {id:'s-campeao', icon:'🏆', label:'Campeão', desc:'Tela de campeão com confetti (selecione quando quiser revelar).'},
+  {id:'s-mvp',     icon:'🏆', label:'MVP do Campeonato', desc:'Pôster do MVP do campeonato (selecione quando quiser revelar).'},
+  {id:'s-ala',     icon:'🎯', label:'Melhor Ala', desc:'Pôster do melhor ala do campeonato.'},
+  {id:'s-armador', icon:'🧠', label:'Melhor Armador', desc:'Pôster do melhor armador do campeonato.'},
+  {id:'s-pivo',    icon:'💪', label:'Melhor Pivô', desc:'Pôster do melhor pivô do campeonato.'},
 ];
 let _tvScenesBasq = new Set(['s-class-a','s-class-b','s-jogos','s-matamata','s-galera','s-quiz']);
-const BASQ_TV_SCENE_CODES = {'s-class-a':'a','s-class-b':'b','s-jogos':'j','s-matamata':'m','s-galera':'g','s-quiz':'q','s-campeao':'c'};
+const BASQ_TV_SCENE_CODES = {'s-class-a':'a','s-class-b':'b','s-jogos':'j','s-matamata':'m','s-galera':'g','s-quiz':'q','s-campeao':'c','s-mvp':'v','s-ala':'l','s-armador':'r','s-pivo':'p'};
 
 function initTvSceneGridBasq(){
   try{const s=localStorage.getItem('supercopa_tv_basq_scenes');if(s){_tvScenesBasq=new Set(JSON.parse(s));}}catch(e){}
