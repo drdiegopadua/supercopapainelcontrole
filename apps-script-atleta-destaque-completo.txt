@@ -1,0 +1,144 @@
+// ============================================================
+// SUPERCOPA AFC 2026 — Apps Script da Planilha ATLETA DESTAQUE
+// ID: 18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo
+//
+// Cuida de:
+//  - Atleta Destaque por jogo (aba "Basquete")
+//  - Melhores do Campeonato: MVP, Melhor Ala, Melhor Armador,
+//    Melhor Pivô (aba "Premiacao")
+//
+// COMO USAR: abra o Apps Script vinculado a esta planilha
+// (Extensões > Apps Script), apague todo o conteúdo do arquivo
+// e cole este texto inteiro no lugar. Depois: Implantar >
+// Gerenciar implantações > editar (ícone de lápis) > Nova versão
+// > Implantar. A URL do /exec continua a mesma, não precisa
+// trocar em nenhum lugar do painel/app/TV.
+// ============================================================
+
+const ABA_ATLETA_DESTAQUE = 'Basquete';
+const ABA_PREMIACAO       = 'Premiacao';
+
+// ── doPost ──────────────────────────────────────────────────
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+
+    // MELHORES DO CAMPEONATO (MVP / Ala / Armador / Pivô)
+    if (data.acao === 'salvarPremiacao') {
+      return okJson(salvarPremiacao_(data.categoria, data.nome, data.equipe));
+    }
+    if (data.acao === 'excluirPremiacao') {
+      return okJson(excluirPremiacao_(data.categoria));
+    }
+
+    // ATLETA DESTAQUE POR JOGO
+    if (data.acao === 'adicionar') {
+      const sh = getAbaAtletaDestaque_();
+      sh.appendRow(data.linha);
+      return okJson({ ok: true });
+    }
+    if (data.acao === 'excluir') {
+      const sh = getAbaAtletaDestaque_();
+      const rowIndex = parseInt(data.rowIndex);
+      if (rowIndex >= 2 && rowIndex <= sh.getLastRow()) {
+        sh.deleteRow(rowIndex);
+      }
+      return okJson({ ok: true });
+    }
+
+    return okJson({ ok: false, erro: 'ação inválida' });
+  } catch (ex) {
+    return okJson({ ok: false, erro: ex.message });
+  }
+}
+
+// ── doGet ───────────────────────────────────────────────────
+function doGet(e) {
+  try {
+    const action = (e.parameter && e.parameter.action) || '';
+
+    if (action === 'premiacao') {
+      return okJson(listarPremiacao_());
+    }
+
+    return okJson({ erro: 'ação inválida' });
+  } catch (ex) {
+    return okJson({ erro: ex.message });
+  }
+}
+
+// ============================================================
+//  ATLETA DESTAQUE POR JOGO (aba "Basquete")
+// ============================================================
+function getAbaAtletaDestaque_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(ABA_ATLETA_DESTAQUE);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_ATLETA_DESTAQUE);
+    sh.appendRow(['Modalidade', 'Jogo', 'Nome', 'Equipe', 'Observação', 'Data/Hora']);
+  }
+  return sh;
+}
+
+// ============================================================
+//  MELHORES DO CAMPEONATO (aba "Premiacao")
+// ============================================================
+function getAbaPremiacao_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(ABA_PREMIACAO);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_PREMIACAO);
+    sh.appendRow(['Categoria', 'Nome', 'Equipe', 'Atualizado em']);
+  }
+  return sh;
+}
+
+function salvarPremiacao_(categoria, nome, equipe) {
+  if (!categoria || !nome) return { ok: false, erro: 'Categoria e nome são obrigatórios' };
+  const sh = getAbaPremiacao_();
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if ((rows[i][0] || '').toString().trim() === categoria) {
+      sh.getRange(i + 1, 2, 1, 3).setValues([[nome, equipe || '', new Date().toLocaleString('pt-BR')]]);
+      return { ok: true };
+    }
+  }
+  sh.appendRow([categoria, nome, equipe || '', new Date().toLocaleString('pt-BR')]);
+  return { ok: true };
+}
+
+function excluirPremiacao_(categoria) {
+  const sh = getAbaPremiacao_();
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if ((rows[i][0] || '').toString().trim() === categoria) {
+      sh.deleteRow(i + 1);
+      return { ok: true };
+    }
+  }
+  return { ok: true };
+}
+
+function listarPremiacao_() {
+  const sh = getAbaPremiacao_();
+  if (sh.getLastRow() < 2) return { premiacao: [] };
+  const rows = sh.getDataRange().getValues().slice(1);
+  const premiacao = rows.map(function(r) {
+    return {
+      categoria: (r[0] || '').toString().trim(),
+      nome: (r[1] || '').toString().trim(),
+      equipe: (r[2] || '').toString().trim(),
+      atualizado: (r[3] || '').toString().trim()
+    };
+  }).filter(function(p) { return p.categoria; });
+  return { premiacao: premiacao };
+}
+
+// ============================================================
+//  HELPER
+// ============================================================
+function okJson(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
