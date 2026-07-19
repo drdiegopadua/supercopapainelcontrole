@@ -3802,9 +3802,28 @@ function toggleTvSceneBasq(id){
 
 function getTvScenesBasq(){return[..._tvScenesBasq];}
 
-function salvarCenasTvBasq(){
+async function salvarCenasTvBasq(){
   localStorage.setItem('supercopa_tv_basq_scenes',JSON.stringify(getTvScenesBasq()));
-  showToast('✅ Configuração de TV Basquete salva!');
+  const codes=getTvScenesBasq().map(id=>BASQ_TV_SCENE_CODES[id]).filter(Boolean).join('');
+  if(!codes){showToast('Selecione pelo menos uma tela.','error');return;}
+  showLoading(true);
+  try{
+    const r=await fetch(ATLETA_DESTAQUE_SCRIPT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({acao:'salvarTvConfig',codes})
+    });
+    const res=await r.json().catch(()=>({ok:false}));
+    if(res&&res.ok){
+      showToast('✅ Salvo! A TV atualiza sozinha em até 30 segundos.');
+    }else{
+      showToast('⚠️ Salvo no navegador, mas falhou ao enviar pra TV: '+(res?.erro||'erro desconhecido'),'error');
+    }
+  }catch(e){
+    showToast('⚠️ Salvo no navegador, mas falhou ao enviar pra TV','error');
+  }finally{
+    showLoading(false);
+  }
 }
 
 function gerarLinkTvBasq(){

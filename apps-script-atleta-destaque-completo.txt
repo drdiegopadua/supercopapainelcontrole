@@ -31,6 +31,11 @@ function doPost(e) {
       return okJson(excluirPremiacao_(data.categoria));
     }
 
+    // CONFIG DA TV (telas selecionadas no painel → TV lê e aplica sozinha)
+    if (data.acao === 'salvarTvConfig') {
+      return okJson(salvarTvConfig_(data.codes));
+    }
+
     // ATLETA DESTAQUE POR JOGO
     if (data.acao === 'adicionar') {
       const sh = getAbaAtletaDestaque_();
@@ -132,6 +137,20 @@ function listarPremiacao_() {
     };
   }).filter(function(p) { return p.categoria; });
   return { premiacao: premiacao };
+}
+
+// ============================================================
+//  CONFIG DA TV (aba "ConfigTV")
+// ============================================================
+function salvarTvConfig_(codes) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName('ConfigTV');
+  if (!sh) {
+    sh = ss.insertSheet('ConfigTV');
+    sh.appendRow(['Codes', 'Atualizado em']);
+  }
+  sh.getRange(2, 1, 1, 2).setValues([[(codes || '').toString(), new Date().toLocaleString('pt-BR')]]);
+  return { ok: true };
 }
 
 // ============================================================
