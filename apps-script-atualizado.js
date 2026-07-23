@@ -10,6 +10,7 @@
 const ABA_QUIZ      = 'QUIZ';
 const ABA_PUSH      = 'PUSH_SUBS';
 const ABA_INSTALL   = 'INSTALACOES';
+const ABA_ACESSOS   = 'ACESSOS';
 
 // ── doPost ──────────────────────────────────────────────────
 function doPost(e) {
@@ -46,6 +47,11 @@ function doPost(e) {
     // APP INSTALADO (PWA) — registra 1x por dispositivo
     if (data.tipo === 'app_install') {
       return okJson(registrarInstalacao(ss, data.deviceId || ''));
+    }
+
+    // ACESSO AO APP — registra visita (1x por sessão, controlado no cliente)
+    if (data.tipo === 'app_acesso') {
+      return okJson(registrarAcesso(ss, data.deviceId || ''));
     }
 
     return ok();
@@ -92,6 +98,10 @@ function doGet(e) {
 
     if (action === 'count_installs') {
       return okJson(contarInstalacoes(ss));
+    }
+
+    if (action === 'count_acessos') {
+      return okJson(contarAcessos(ss));
     }
 
     return okJson({ erro: 'ação inválida' });
@@ -175,6 +185,36 @@ function registrarInstalacao(ss, deviceId) {
   }
   sheet.appendRow([deviceId, agora, agora, '']);
   return { ok: true, novo: true };
+}
+
+// ============================================================
+//  ACESSOS AO APP (visitas)
+// ============================================================
+
+function registrarAcesso(ss, deviceId) {
+  if (!deviceId) return { ok: false, erro: 'deviceId ausente' };
+  const sheet = getOrCreate(ss, ABA_ACESSOS, ['DeviceId', 'Primeira visita', 'Última visita', 'Visitas']);
+  const dados = sheet.getDataRange().getValues();
+  const agora = new Date().toLocaleString('pt-BR');
+
+  for (let i = 1; i < dados.length; i++) {
+    if (dados[i][0] === deviceId) {
+      sheet.getRange(i + 1, 3).setValue(agora);
+      sheet.getRange(i + 1, 4).setValue((parseInt(dados[i][3]) || 0) + 1);
+      return { ok: true, novo: false };
+    }
+  }
+  sheet.appendRow([deviceId, agora, agora, 1]);
+  return { ok: true, novo: true };
+}
+
+function contarAcessos(ss) {
+  const sheet = ss.getSheetByName(ABA_ACESSOS);
+  if (!sheet || sheet.getLastRow() < 2) return { unicos: 0, total: 0 };
+  const dados = sheet.getDataRange().getValues().slice(1);
+  let total = 0;
+  dados.forEach(r => { total += parseInt(r[3]) || 0; });
+  return { unicos: dados.length, total: total };
 }
 
 function contarInstalacoes(ss) {

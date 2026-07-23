@@ -3254,10 +3254,14 @@ function renderChartProgresso() {
 }
 
 async function loadDashEngajamento() {
-  const result = { instalado: 0, notif: 0, quiz: state.quiz.length, galera: 0 };
+  const result = { acessos: 0, instalado: 0, notif: 0, quiz: state.quiz.length, galera: 0 };
   try {
     const r = await fetch(BOLAO_SHEETS_URL + '?action=count_installs').then(r => r.json());
     result.instalado = r.total || 0;
+  } catch (e) {}
+  try {
+    const r = await fetch(BOLAO_SHEETS_URL + '?action=count_acessos').then(r => r.json());
+    result.acessos = r.unicos || 0;
   } catch (e) {}
   try {
     const r = await fetch(PUSH_STATUS_URL).then(r => r.json());
@@ -3280,6 +3284,7 @@ async function renderChartEngajamento() {
 
   const dados = await loadDashEngajamento();
   const cats = [
+    { label: 'Acessos ao App', valor: dados.acessos, color: '#00897B', icon: 'bx-user' },
     { label: 'App Instalado', valor: dados.instalado, color: '#1565C0', icon: 'bx-mobile-alt' },
     { label: 'Notificações Ativas', valor: dados.notif, color: '#4A148C', icon: 'bxs-bell' },
     { label: 'Quiz Respondido', valor: dados.quiz, color: '#7C3AED', icon: 'bx-brain' },
