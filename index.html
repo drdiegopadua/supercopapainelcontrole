@@ -3758,6 +3758,7 @@ const BASQ_TV_SCENES_DEF = [
   {id:'s-matamata',icon:'⚔️', label:'Mata-Mata', desc:'Chaveamento das semifinais e final.'},
   {id:'s-galera',  icon:'⭐', label:'Destaque da Galera', desc:'Top 10 atletas mais votados pelo público.'},
   {id:'s-quiz',    icon:'🧠', label:'Quiz — Ranking', desc:'Ranking geral dos participantes do quiz.'},
+  {id:'s-destaques',icon:'🌟', label:'Atletas Destaques', desc:'Nome e time do atleta destaque de cada partida.'},
   {id:'s-campeao', icon:'🏆', label:'Campeão', desc:'Tela de campeão com confetti (selecione quando quiser revelar).'},
   {id:'s-mvp',     icon:'🏆', label:'MVP do Campeonato', desc:'Pôster do MVP do campeonato (selecione quando quiser revelar).'},
   {id:'s-ala',     icon:'🎯', label:'Melhor Ala', desc:'Pôster do melhor ala do campeonato.'},
@@ -3765,7 +3766,7 @@ const BASQ_TV_SCENES_DEF = [
   {id:'s-pivo',    icon:'💪', label:'Melhor Pivô', desc:'Pôster do melhor pivô do campeonato.'},
 ];
 let _tvScenesBasq = new Set(['s-class-a','s-class-b','s-jogos','s-matamata','s-galera','s-quiz']);
-const BASQ_TV_SCENE_CODES = {'s-class-a':'a','s-class-b':'b','s-jogos':'j','s-matamata':'m','s-galera':'g','s-quiz':'q','s-campeao':'c','s-mvp':'v','s-ala':'l','s-armador':'r','s-pivo':'p'};
+const BASQ_TV_SCENE_CODES = {'s-class-a':'a','s-class-b':'b','s-jogos':'j','s-matamata':'m','s-galera':'g','s-quiz':'q','s-destaques':'d','s-campeao':'c','s-mvp':'v','s-ala':'l','s-armador':'r','s-pivo':'p'};
 
 function initTvSceneGridBasq(){
   try{const s=localStorage.getItem('supercopa_tv_basq_scenes');if(s){_tvScenesBasq=new Set(JSON.parse(s));}}catch(e){}
