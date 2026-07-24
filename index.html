@@ -3121,6 +3121,7 @@ async function excluirNoticia(id) {
 // ════════════════════════════════════════════════════════
 function renderPushLog() {
   const c = document.getElementById('notif-log');
+  if (!c) return;
   if (!state.pushLog.length) {
     c.innerHTML = `<div class="empty-state"><i class='bx bxs-bell-off'></i><p>Nenhuma notificação enviada.</p></div>`;
     return;
