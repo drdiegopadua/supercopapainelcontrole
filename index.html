@@ -2708,12 +2708,15 @@ async function salvarPlacarBasquete(id) {
   const j = state.jogos.basquete.find(x => x.id === id);
   if (!j) return;
 
-  // Só a Fase de Grupos é suportada aqui (linhas 5-7, colunas variam por grupo).
-  // IDs de Mata-Mata (basq_mata_N) não têm mapeamento de coluna implementado —
-  // enviar mesmo assim gravaria por engano em cima do Grupo A / Jogo 1.
+  const mataMatch = j.id.match(/^basq_mata_(\d+)$/);
+  if (mataMatch) {
+    return salvarPlacarMataMataBasquete(j, parseInt(mataMatch[1]));
+  }
+
+  // Fase de Grupos (linhas 5-7, colunas variam por grupo).
   const match = j.id.match(/^basq_([A-B])_(\d+)$/);
   if (!match) {
-    showToast('❌ Envio de placar do Mata-Mata ainda não é suportado por aqui.', 'error');
+    showToast('❌ Jogo não reconhecido.', 'error');
     return;
   }
   const grupo = match[1];
@@ -2757,6 +2760,67 @@ async function salvarPlacarBasquete(id) {
   } finally {
     showLoading(false);
   }
+}
+
+// Mata-Mata (Semifinais e Final) do basquete.
+// Estrutura confirmada na aba 'Mata-Mata': time A (col B) e time B (col H)
+// ficam na linha (rIdx+1); o placar (mesmas colunas) fica na linha seguinte
+// (rIdx+2). rIdx = 3 (SF1), 8 (SF2) ou 14 (Final).
+async function salvarPlacarMataMataBasquete(j, rIdx) {
+  const scoreRow = rIdx + 2;
+  showLoading(true);
+  try {
+    const ptsA = parseInt(j.placar.ptsA || 0);
+    const ptsB = parseInt(j.placar.ptsB || 0);
+
+    const atual = await sheetRead(BASQ_SHEET_ID, `'Mata-Mata'!A${scoreRow}:O${scoreRow}`);
+    const linhaAtual = (atual && atual[0]) ? atual[0].slice() : [];
+    while (linhaAtual.length < 8) linhaAtual.push('');
+    linhaAtual[1] = ptsA; // coluna B
+    linhaAtual[7] = ptsB; // coluna H
+
+    const res = await sheetWriteBasquete({
+      mode: 'substituir_linha',
+      aba: 'Mata-Mata',
+      linha: scoreRow,
+      dados: linhaAtual
+    });
+
+    if (res && res.ok) {
+      showToast('✅ Placar do mata-mata enviado com sucesso!');
+      const fase = rIdx === 14 ? 'Final' : 'Semifinal';
+      const decidido = ptsA !== ptsB;
+      if (decidido) {
+        enviarPushResultado('basquete', j.equipeA, ptsA, j.equipeB, ptsB, fase);
+        if (rIdx === 14) {
+          const campeao = ptsA > ptsB ? j.equipeA : j.equipeB;
+          enviarPushCampeao(campeao);
+        }
+      }
+    } else {
+      showToast('❌ Erro ao enviar: ' + (res?.erro || 'Verifique o Apps Script'), 'error');
+    }
+  } catch(e) {
+    console.error('Erro salvarPlacarMataMataBasquete:', e);
+    showToast('❌ Erro: ' + e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function enviarPushCampeao(time) {
+  try {
+    await fetch(PUSH_SERVER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '🏆 TEMOS CAMPEÃO! 🏆',
+        body: `${time} é o grande campeão da Supercopa de Basquete 2026!`,
+        url: 'https://drdiegopadua.github.io/supercopa-app/',
+        category: 'urgente'
+      })
+    });
+  } catch(e) { /* push falhou silenciosamente */ }
 }
 
 function excluirJogo(id, sport) {
