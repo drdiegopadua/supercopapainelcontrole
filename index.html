@@ -1135,6 +1135,14 @@
       <div class="notif-composer card">
         <div class="card-title"><i class='bx bxs-bell'></i> Enviar Notificação Push</div>
         <div style="margin-bottom:14px;">
+          <label class="form-group" style="font-size:12px;color:var(--dark-grey);font-weight:600;margin-bottom:6px;display:block;">Atalhos rápidos — Basquete</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" style="font-size:12px;padding:8px 12px;" onclick="preencherPushRapido('🏀 Próximo jogo começando!','Corra pra quadra, o próximo jogo da Supercopa Basquete está começando!','placar')"><i class='bx bx-run'></i> Próximo jogo</button>
+            <button type="button" class="btn btn-secondary" style="font-size:12px;padding:8px 12px;" onclick="preencherPushRapido('🏀 Jogo ao vivo agora!','A partida está rolando na quadra! Acompanhe o placar em tempo real no app.','placar')"><i class='bx bxs-video'></i> Ao vivo agora</button>
+            <button type="button" class="btn btn-secondary" style="font-size:12px;padding:8px 12px;" onclick="preencherPushRapido('⏱️ Intervalo','Aproveite o intervalo! Já volta o próximo jogo da Supercopa Basquete.','geral')"><i class='bx bx-time-five'></i> Intervalo</button>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;">
           <label class="form-group" style="font-size:12px;color:var(--dark-grey);font-weight:600;margin-bottom:6px;display:block;">Tipo</label>
           <div class="notif-type-grid">
             <div class="notif-type-btn selected" onclick="selectNotifType(this,'geral')"><i class='bx bxs-megaphone'></i>Geral</div>
@@ -2079,6 +2087,15 @@ async function loadPushStatus() {
 function clearPush() {
   ['push-titulo','push-body','push-link'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('push-target').value = 'all';
+}
+
+function preencherPushRapido(titulo, body, tipo) {
+  document.getElementById('push-titulo').value = titulo;
+  document.getElementById('push-body').value = body;
+  document.getElementById('push-target').value = 'basquete';
+  const btn = [...document.querySelectorAll('.notif-type-btn')].find(b => b.getAttribute('onclick')?.includes("'" + tipo + "'"));
+  if (btn) selectNotifType(btn, tipo);
+  showToast('Revise a mensagem e clique em "Enviar Push" quando quiser disparar.');
 }
 
 async function sendPush() {
