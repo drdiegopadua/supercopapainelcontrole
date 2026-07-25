@@ -2429,15 +2429,31 @@ async function salvarPlacarHandebol(id) {
 
 async function enviarPushResultado(esporte, tA, gA, tB, gB, rodada) {
   const emoji = esporte === 'handebol' ? '🤾' : esporte === 'basquete' ? '🏀' : '🏐';
+  const url = esporte === 'handebol' ? 'https://drdiegopadua.github.io/afohandapp/' : 'https://drdiegopadua.github.io/supercopa-app/';
   try {
-    await fetch(PUSH_SERVER_URL.replace('/enviar','') + '/api/push/enviar', {
+    await fetch(PUSH_SERVER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: `${emoji} Resultado — ${rodada || esporte}`,
         body: `${tA} ${gA} × ${gB} ${tB}`,
-        url: 'https://drdiegopadua.github.io/afohandapp/',
+        url: url,
         category: esporte
+      })
+    });
+  } catch(e) { /* push falhou silenciosamente */ }
+}
+
+async function enviarPushDestaque(nome, equipe, jogoLabel) {
+  try {
+    await fetch(PUSH_SERVER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '🌟 Atleta Destaque da Partida!',
+        body: `${nome} (${equipe}) — ${jogoLabel}`,
+        url: 'https://drdiegopadua.github.io/supercopa-app/',
+        category: 'destaque'
       })
     });
   } catch(e) { /* push falhou silenciosamente */ }
@@ -2676,6 +2692,7 @@ async function salvarPlacarVolei(id) {
 
     if (res && res.ok) {
       showToast('✅ Placar enviado com sucesso!');
+      enviarPushResultado('volei', j.equipeA, setsVencidosA, j.equipeB, setsVencidosB, match ? `Grupo ${match[1]}` : 'Vôlei');
     } else {
       showToast('❌ Erro ao enviar: ' + (res?.erro || 'Verifique o Apps Script'), 'error');
     }
@@ -2730,6 +2747,7 @@ async function salvarPlacarBasquete(id) {
 
     if (res && res.ok) {
       showToast('✅ Placar de basquete enviado com sucesso!');
+      enviarPushResultado('basquete', j.equipeA, ptsA, j.equipeB, ptsB, `Grupo ${grupo} · Jogo ${jogoIdx + 1}`);
     } else {
       showToast('❌ Erro ao enviar: ' + (res?.erro || 'Verifique o Apps Script'), 'error');
     }
@@ -2914,6 +2932,7 @@ async function salvarDestaque() {
 
     if (res && res.ok) {
       showToast('✅ Atleta destaque registrado com sucesso!');
+      enviarPushDestaque(nome, equipe, jogoLabel);
       closeModal('modal-destaque');
       await loadAtletasFromSheet();
     } else {
