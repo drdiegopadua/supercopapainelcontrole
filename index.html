@@ -633,6 +633,7 @@
     <li><a href="javascript:void(0)" onclick="navTo('destaque',this); return false;"><i class='bx bxs-star'></i><span>Atleta Destaque</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('social',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Social</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('feedback',this); return false;"><i class='bx bxs-message-square-detail'></i><span>Feedback</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('inscricoes',this); return false;"><i class='bx bxs-id-card'></i><span>Inscrições</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('classificacao',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Classificação</span></a></li>
@@ -1189,6 +1190,39 @@
       </div>
     </div>
 
+    <!-- ─── INSCRIÇÕES ─── -->
+    <div class="page" id="page-inscricoes">
+      <div class="page-header">
+        <div>
+          <h1>Inscrições</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Inscrições</span></div>
+        </div>
+        <button class="refresh-btn" onclick="loadInscricoesDashboard(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:20px;">
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-blue);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--blue);"><i class='bx bxs-id-card'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-total">0</div><div style="font-size:12px;color:var(--dark-grey)">Equipes inscritas</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--orange);"><i class='bx bx-hotel'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-aloj">0</div><div style="font-size:12px;color:var(--dark-grey)">Precisam de alojamento</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--green);"><i class='bx bx-group'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-pessoas">0</div><div style="font-size:12px;color:var(--dark-grey)">Pessoas no alojamento</div></div>
+        </div>
+      </div>
+
+      <div id="inscEmptyState" class="card" style="text-align:center;padding:40px;color:var(--dark-grey)">
+        <i class='bx bx-id-card' style="font-size:32px"></i>
+        <p style="margin-top:8px">Nenhuma inscrição carregada ainda. Configure o INSCRICAO_SCRIPT_URL e clique em Atualizar.</p>
+      </div>
+
+      <div id="inscList" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+
     <!-- ─── NOTÍCIAS ─── -->
     <div class="page" id="page-noticias">
       <div class="page-header">
@@ -1476,6 +1510,8 @@ const HAND_SHEET_ID   = "1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU";
 // Preencha após rodar apps-script-feedback.js e implantar como Web App:
 const FEEDBACK_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwI8SlXs8chIPW9ounZjULMD-z0FdmkYjTZJDjKSQQqjfy8-HcpuXv2Zixw8ZiV16OH/exec";
 const FEEDBACK_FORM_URL = "https://www.supercopaafc.com.br/feedback.html"; // formulário bonito no site (feedback.html)
+// Preencha após rodar apps-script-inscricao-equipes.js e implantar como Web App:
+const INSCRICAO_SCRIPT_URL = ""; // ex: https://script.google.com/macros/s/XXXX/exec
 const HAND_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxend-S87O0BOTR58UTNShlqNHwYqdNVYizKEuvo0DLrXM8q3Q8iRLOCSW-C19-DqjIA/exec";
 
 // ════════════════════════════════════════════════════════
@@ -1754,12 +1790,13 @@ function navTo(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
   if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); loadLiveJogosList(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   if (page === 'feedback') loadFeedbackDashboard();
+  if (page === 'inscricoes') loadInscricoesDashboard();
   return false;
 }
 
@@ -2120,6 +2157,51 @@ function _fbAvg(nums) {
   const v = nums.map(n => parseFloat(n)).filter(n => !isNaN(n));
   return v.length ? (v.reduce((a,b)=>a+b,0) / v.length) : null;
 }
+async function loadInscricoesDashboard(manual) {
+  if (!INSCRICAO_SCRIPT_URL) {
+    if (manual) showToast('❌ Configure INSCRICAO_SCRIPT_URL primeiro (veja apps-script-inscricao-equipes.js).', 'error');
+    return;
+  }
+  try {
+    const data = await fetch(INSCRICAO_SCRIPT_URL).then(r => r.json());
+    if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
+    const inscricoes = data.inscricoes || [];
+
+    document.getElementById('inscEmptyState').style.display = inscricoes.length ? 'none' : '';
+    document.getElementById('insc-total').textContent = inscricoes.length;
+
+    const comAloj = inscricoes.filter(i => i['Precisa de Alojamento'] === 'Sim');
+    document.getElementById('insc-aloj').textContent = comAloj.length;
+    const totalPessoas = comAloj.reduce((sum, i) => sum + (parseInt(i['Pessoas no Alojamento']) || 0), 0);
+    document.getElementById('insc-pessoas').textContent = totalPessoas;
+
+    const list = document.getElementById('inscList');
+    list.innerHTML = inscricoes.slice().reverse().map(i => {
+      const escudo = i['Link do Escudo']
+        ? `<img src="${i['Link do Escudo']}" style="width:52px;height:52px;object-fit:contain;border-radius:8px;background:#f5f5f5" onerror="this.style.display='none'">`
+        : `<div style="width:52px;height:52px;border-radius:8px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:22px">🏆</div>`;
+      const aloj = i['Precisa de Alojamento'] === 'Sim'
+        ? `🛏️ Sim · ${i['Pessoas no Alojamento'] || '—'} pessoa(s)`
+        : '🏠 Não';
+      return `
+        <div class="card" style="margin:0;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          ${escudo}
+          <div style="flex:1;min-width:200px">
+            <div style="font-weight:800;font-size:14px;color:var(--dark)">${i['Nome da Equipe'] || '—'}</div>
+            <div style="font-size:12px;color:var(--dark-grey);margin-top:2px">${i['Cidade'] || '—'} · Resp: ${i['Nome do Responsável'] || '—'} · ${i['Telefone/WhatsApp'] || '—'}</div>
+            <div style="font-size:11px;color:var(--dark-grey);margin-top:2px">${i['Instagram'] ? '📷 ' + i['Instagram'] + ' · ' : ''}${aloj} · Conheceu via: ${i['Como conheceu a Supercopa'] || '—'}</div>
+          </div>
+          <span class="status-badge status-upcoming">${i['Status'] || 'Pendente'}</span>
+        </div>`;
+    }).join('');
+
+    if (manual) showToast('✅ Inscrições atualizadas!');
+  } catch(e) {
+    console.error('Erro ao carregar inscrições:', e);
+    if (manual) showToast('❌ Erro ao carregar inscrições: ' + e.message, 'error');
+  }
+}
+
 async function loadFeedbackDashboard(manual) {
   const linkTextEl = document.getElementById('feedbackFormLinkText');
   const linkBtnEl = document.getElementById('feedbackFormLinkBtn');
