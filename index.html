@@ -1146,7 +1146,7 @@
             <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-org">—</div><div style="font-size:12px;color:var(--dark-grey)">Organização (1-10)</div></div>
           </div>
           <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-purple);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--purple);"><i class='bx bx-whistle'></i></div>
+            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-purple);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--purple);"><i class='bx bxs-shield-alt-2'></i></div>
             <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-arb">—</div><div style="font-size:12px;color:var(--dark-grey)">Arbitragem (1-10)</div></div>
           </div>
           <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
@@ -2175,7 +2175,7 @@ async function loadFeedbackDashboard(manual) {
         labels: ['Organização','Arbitragem','App','Nota Geral','Recomendaria'],
         datasets: [{ data: [org, arb, app, notaGeral, _fbAvg(npsVals)].map(n => n !== null ? +n.toFixed(1) : 0), backgroundColor: ['#F4C542','#7C3AED','#1565C0','#22c55e','#f97316'], borderRadius: 8 }]
       },
-      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10 } } }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10 } } }
     });
 
     // Respostas por time
@@ -2186,7 +2186,7 @@ async function loadFeedbackDashboard(manual) {
     _chartFbTime = new Chart(document.getElementById('chartFbTime'), {
       type: 'doughnut',
       data: { labels: timeLabels, datasets: [{ data: timeData, backgroundColor: ['#1565C0','#F4C542','#7C3AED','#22c55e','#f97316','#ef4444'] }] },
-      options: { plugins: { legend: { position: 'bottom' } } }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
 
     // Comentários
