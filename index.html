@@ -2185,17 +2185,61 @@ function _fbAvg(nums) {
   const v = nums.map(n => parseFloat(n)).filter(n => !isNaN(n));
   return v.length ? (v.reduce((a,b)=>a+b,0) / v.length) : null;
 }
+// Metadados fixos por edição (nome bonito + duração do evento em minutos,
+// já que isso não dá pra calcular sozinho a partir da planilha).
+const EDICOES_META = {
+  BASQUETE: { emoji: '🏀', titulo: '1ª Edição — Supercopa de Basquete', ano: '2026', duracaoMin: 905, gradiente: 'linear-gradient(120deg,#7a1f1f,#c8960c)' },
+  VOLEI:    { emoji: '🏐', titulo: 'Supercopa de Vôlei', ano: '2026', duracaoMin: null, gradiente: 'linear-gradient(120deg,#0D47A1,#1565C0)' }
+};
+function metaParaEdicao(edicao) {
+  if (/basquete/i.test(edicao)) return EDICOES_META.BASQUETE;
+  if (/volei|vôlei/i.test(edicao)) return EDICOES_META.VOLEI;
+  if (edicao === 'ATUAL') return EDICOES_META.BASQUETE; // hoje só o Basquete está em andamento
+  return null;
+}
+function formatarDuracao(min) {
+  if (!min) return '—';
+  const h = Math.floor(min / 60), m = min % 60;
+  return `${h}h${String(m).padStart(2, '0')}min`;
+}
+
+async function calcularStatsBasquete() {
+  try {
+    const [grupos, mata] = await Promise.all([
+      sheetRead(BASQ_SHEET_ID, "'Fase de Grupos'!A1:S8"),
+      sheetRead(BASQ_SHEET_ID, "'Mata-Mata'!A1:O16")
+    ]);
+    let totalPontos = 0;
+    [4, 5, 6].forEach(r => {
+      const row = grupos[r] || [];
+      totalPontos += (parseInt(row[3]) || 0) + (parseInt(row[5]) || 0);
+      totalPontos += (parseInt(row[13]) || 0) + (parseInt(row[15]) || 0);
+    });
+    [4, 9, 15].forEach(r => {
+      const row = mata[r] || [];
+      totalPontos += (parseInt(row[1]) || 0) + (parseInt(row[7]) || 0);
+    });
+    let campeao = '';
+    const finRow = mata[14] || [], finScore = mata[15] || [];
+    const t1 = (finRow[1] || '').toString().trim(), t2 = (finRow[7] || '').toString().trim();
+    const s1 = parseInt(finScore[1]) || 0, s2 = parseInt(finScore[7]) || 0;
+    if (t1 && t2 && s1 !== s2 && (s1 > 0 || s2 > 0)) campeao = s1 > s2 ? t1 : t2;
+    return { totalPontos, campeao };
+  } catch (e) { return { totalPontos: 0, campeao: '' }; }
+}
+
 async function loadEdicoesDashboard(manual) {
   const grid = document.getElementById('edicoesGrid');
   const empty = document.getElementById('edicoesEmptyState');
   try {
-    const [instalAcessoQuiz, destaquePremiacao, galera] = await Promise.all([
+    const [instalAcessoQuiz, destaquePremiacao, galera, statsBasquete] = await Promise.all([
       fetch(BOLAO_SHEETS_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false })),
       fetch(ATLETA_DESTAQUE_SCRIPT_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false })),
-      fetch(GALERA_SCRIPT_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false }))
+      fetch(GALERA_SCRIPT_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false })),
+      calcularStatsBasquete()
     ]);
 
-    // Junta as 3 fontes num mapa único por edição (chave "ATUAL", "BASQUETE_2026", etc.)
+    // Junta as fontes num mapa único por edição (chave "ATUAL", "BASQUETE_2026", etc.)
     const mapa = {};
     const getEd = (nome) => mapa[nome] || (mapa[nome] = { edicao: nome, instalacoes: 0, acessosUnicos: 0, acessosTotais: 0, quizRespostas: 0, destaques: 0, premiacao: [], votosGalera: 0, rankingGalera: [] });
 
@@ -2208,44 +2252,65 @@ async function loadEdicoesDashboard(manual) {
     (galera.ok ? galera.edicoes : []).forEach(ed => {
       Object.assign(getEd(ed.edicao), { votosGalera: ed.totalVotos || 0, rankingGalera: ed.ranking || [] });
     });
+    // Pontos/campeão do basquete valem pra edição ATUAL (ou já arquivada como BASQUETE_*)
+    Object.values(mapa).forEach(ed => {
+      if (metaParaEdicao(ed.edicao) === EDICOES_META.BASQUETE) {
+        ed.totalPontos = statsBasquete.totalPontos;
+        ed.campeao = statsBasquete.campeao;
+      }
+    });
 
     const edicoes = Object.values(mapa).sort((a, b) => a.edicao === 'ATUAL' ? -1 : b.edicao === 'ATUAL' ? 1 : a.edicao.localeCompare(b.edicao));
 
     empty.style.display = edicoes.length ? 'none' : '';
-    const cores = { ATUAL: '#22c55e' };
-    const iconePorEdicao = (ed) => ed === 'ATUAL' ? '🟢' : /basquete/i.test(ed) ? '🏀' : /volei|vôlei/i.test(ed) ? '🏐' : '🏆';
-    const stat = (valor, label) => `
-      <div style="background:var(--light);border-radius:10px;padding:10px;text-align:center">
-        <div style="font-size:20px;font-weight:800;color:var(--dark)">${valor}</div>
-        <div style="font-size:10px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px">${label}</div>
+    const stat = (icone, valor, label) => `
+      <div style="background:rgba(255,255,255,.9);border-radius:12px;padding:12px 8px;text-align:center">
+        <div style="font-size:16px;margin-bottom:2px">${icone}</div>
+        <div style="font-size:19px;font-weight:800;color:var(--dark)">${valor}</div>
+        <div style="font-size:9.5px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.4px;line-height:1.3">${label}</div>
       </div>`;
 
     grid.innerHTML = edicoes.map(ed => {
-      const cor = cores[ed.edicao] || '#7C3AED';
-      const titulo = ed.edicao === 'ATUAL' ? 'Edição Atual (em andamento)' : ed.edicao.replace(/_/g, ' ');
+      const meta = metaParaEdicao(ed.edicao);
+      const gradiente = meta ? meta.gradiente : 'linear-gradient(120deg,#4b5563,#7C3AED)';
+      const titulo = meta ? `${meta.emoji} ${meta.titulo} · ${meta.ano}` : `🏆 ${ed.edicao.replace(/_/g, ' ')}`;
+      const subtitulo = ed.edicao === 'ATUAL' ? 'Em andamento' : 'Edição encerrada · arquivada';
       const topGalera = ed.rankingGalera[0];
       const premiacaoHtml = ed.premiacao.length
-        ? ed.premiacao.map(p => `<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:5px 0;border-bottom:1px solid var(--light2,#eee)"><span style="color:var(--dark-grey)">${p.categoria}</span><span style="font-weight:700;color:var(--dark)">${p.nome}${p.equipe ? ' · ' + p.equipe : ''}</span></div>`).join('')
+        ? ed.premiacao.map(p => `<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06)"><span style="color:var(--dark-grey)">${p.categoria}</span><span style="font-weight:700;color:var(--dark)">${p.nome}${p.equipe ? ' · ' + p.equipe : ''}</span></div>`).join('')
         : '<div style="font-size:11.5px;color:var(--dark-grey);padding:6px 0">Nenhum prêmio definido</div>';
 
       return `
-        <div class="card" style="margin:0;border-top:3px solid ${cor}">
-          <div class="card-title" style="margin-bottom:14px">${iconePorEdicao(ed.edicao)} ${titulo}</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-            ${stat(ed.instalacoes, 'Instalações')}
-            ${stat(ed.acessosUnicos, 'Acessos únicos')}
-            ${stat(ed.quizRespostas, 'Respostas Quiz')}
-            ${stat(ed.destaques, 'Atletas Destaque')}
+        <div class="card" style="margin:0;padding:0;overflow:hidden">
+          <div style="background:${gradiente};padding:20px 22px;color:#fff;position:relative;overflow:hidden">
+            <div style="position:absolute;right:-20px;top:-20px;font-size:110px;opacity:.15;line-height:1">${meta ? meta.emoji : '🏆'}</div>
+            <div style="position:relative;z-index:1">
+              <div style="font-size:17px;font-weight:800;letter-spacing:.3px">${titulo}</div>
+              <div style="font-size:11px;opacity:.85;margin-top:2px">${subtitulo}</div>
+              ${ed.campeao ? `<div style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px">
+                <span style="font-size:15px">🏆</span><span style="font-size:12.5px;font-weight:800">Campeão: ${ed.campeao}</span>
+              </div>` : ''}
+            </div>
           </div>
-          <div style="background:var(--light);border-radius:10px;padding:10px;margin-bottom:10px">
-            <div style="font-size:10px;font-weight:800;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🗳️ Destaque da Galera</div>
-            ${topGalera
-              ? `<div style="font-size:12.5px"><strong>${topGalera.atleta}</strong> (${topGalera.time}) — ${topGalera.votos} votos <span style="color:var(--dark-grey)">· ${ed.votosGalera} votos no total</span></div>`
-              : '<div style="font-size:11.5px;color:var(--dark-grey)">Nenhum voto registrado</div>'}
-          </div>
-          <div style="background:var(--light);border-radius:10px;padding:10px">
-            <div style="font-size:10px;font-weight:800;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏆 Melhores do Campeonato</div>
-            ${premiacaoHtml}
+          <div style="padding:18px 22px">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+              ${stat('📲', ed.instalacoes, 'Instalações')}
+              ${stat('👀', ed.acessosUnicos, 'Acessos únicos')}
+              ${stat('🧠', ed.quizRespostas, 'Quiz')}
+              ${stat('⭐', ed.destaques, 'Destaques')}
+              ${stat('🏀', ed.totalPontos ?? '—', 'Pontos marcados')}
+              ${stat('⏱️', formatarDuracao(meta ? meta.duracaoMin : null), 'De evento')}
+            </div>
+            <div style="background:var(--light);border-radius:10px;padding:12px;margin-bottom:10px">
+              <div style="font-size:10px;font-weight:800;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🗳️ Destaque da Galera</div>
+              ${topGalera
+                ? `<div style="font-size:12.5px"><strong>${topGalera.atleta}</strong> (${topGalera.time}) — ${topGalera.votos} votos <span style="color:var(--dark-grey)">· ${ed.votosGalera} votos no total</span></div>`
+                : '<div style="font-size:11.5px;color:var(--dark-grey)">Nenhum voto registrado</div>'}
+            </div>
+            <div style="background:var(--light);border-radius:10px;padding:12px">
+              <div style="font-size:10px;font-weight:800;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏆 Melhores do Campeonato</div>
+              ${premiacaoHtml}
+            </div>
           </div>
         </div>`;
     }).join('');
