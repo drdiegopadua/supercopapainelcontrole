@@ -103,6 +103,44 @@ function criarFormularioFeedback() {
   Logger.log('====================================================');
 }
 
+// Recebe os envios do formulário bonito em feedback.html (site da Supercopa)
+function doPost(e) {
+  try {
+    const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID') || FEEDBACK_SHEET_ID;
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheets = ss.getSheets();
+    let sheet = sheets.find(s => /form responses|respostas ao formul/i.test(s.getName()));
+    if (!sheet) {
+      sheet = sheets.reduce((best, s) => (!best || s.getLastColumn() > best.getLastColumn()) ? s : best, null);
+    }
+
+    const dados = JSON.parse(e.postData.contents);
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    const achar = (kw) => headers.findIndex(h => h.toLowerCase().includes(kw.toLowerCase()));
+    const linha = new Array(headers.length).fill('');
+    const iTs = achar('carimbo') >= 0 ? achar('carimbo') : achar('timestamp');
+    if (iTs >= 0) linha[iTs] = new Date();
+    const set = (kw, val) => { const i = achar(kw); if (i >= 0) linha[i] = val; };
+    set('organização', dados.organizacao);
+    set('arbitragem', dados.arbitragem);
+    set('achou do app', dados.app);
+    set('nota geral', dados.notaGeral);
+    set('recomendaria', dados.recomendaria);
+    set('positivos', dados.positivos);
+    set('melhorar', dados.melhorar);
+    set('seu time', dados.time);
+
+    sheet.appendRow(linha);
+
+    return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (ex) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, erro: ex.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 // Web App — usado pelo Painel Admin para montar o dashboard
 function doGet(e) {
   try {
