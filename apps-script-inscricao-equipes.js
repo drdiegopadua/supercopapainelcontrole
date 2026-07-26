@@ -41,12 +41,9 @@ const HEADERS = [
 
 function configurarInscricao() {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
-  const primeiraLinha = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
-  const jaTemCabecalho = primeiraLinha.some(v => String(v).trim() !== '');
-  if (!jaTemCabecalho) {
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-    sheet.setFrozenRows(1);
-  }
+  // Sempre reescreve o cabeçalho da linha 1 (não mexe nas linhas de dados abaixo).
+  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  sheet.setFrozenRows(1);
   Logger.log('Planilha configurada: ' + SpreadsheetApp.openById(SHEET_ID).getUrl());
   Logger.log('Pasta de escudos: ' + DriveApp.getFolderById(FOLDER_ID).getUrl());
 }
