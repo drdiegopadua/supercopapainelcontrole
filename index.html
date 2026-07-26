@@ -634,6 +634,7 @@
     <li><a href="javascript:void(0)" onclick="navTo('social',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Social</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('feedback',this); return false;"><i class='bx bxs-message-square-detail'></i><span>Feedback</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('inscricoes',this); return false;"><i class='bx bxs-id-card'></i><span>Inscrições</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('edicoes',this); return false;"><i class='bx bxs-layer'></i><span>Edições</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('classificacao',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Classificação</span></a></li>
@@ -1221,6 +1222,34 @@
       <div id="inscList" style="display:flex;flex-direction:column;gap:12px"></div>
     </div>
 
+    <!-- ─── EDIÇÕES ─── -->
+    <div class="page" id="page-edicoes">
+      <div class="page-header">
+        <div>
+          <h1>Edições</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Edições</span></div>
+        </div>
+        <button class="refresh-btn" onclick="loadEdicoesDashboard(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;background:linear-gradient(120deg,#0D47A1,#1565C0);color:#fff">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="font-size:30px">🗂️</div>
+          <div>
+            <div style="font-weight:800;font-size:15px">Histórico por edição</div>
+            <div style="font-size:12px;opacity:.85;margin-top:2px">Compara instalações, acessos e quiz de cada edição da Supercopa. Quando uma edição termina, rode <code>arquivarEdicaoAtual()</code> no Apps Script pra arquivar os números e começar a próxima do zero.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="edicoesEmptyState" class="card" style="text-align:center;padding:40px;color:var(--dark-grey)">
+        <i class='bx bx-loader-alt bx-spin' style="font-size:32px"></i>
+        <p style="margin-top:8px">Carregando edições...</p>
+      </div>
+
+      <div id="edicoesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px"></div>
+    </div>
+
     <!-- ─── NOTÍCIAS ─── -->
     <div class="page" id="page-noticias">
       <div class="page-header">
@@ -1788,13 +1817,14 @@ function navTo(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',edicoes:'Edições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
   if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); loadLiveJogosList(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   if (page === 'feedback') loadFeedbackDashboard();
   if (page === 'inscricoes') loadInscricoesDashboard();
+  if (page === 'edicoes') loadEdicoesDashboard();
   return false;
 }
 
@@ -2155,6 +2185,54 @@ function _fbAvg(nums) {
   const v = nums.map(n => parseFloat(n)).filter(n => !isNaN(n));
   return v.length ? (v.reduce((a,b)=>a+b,0) / v.length) : null;
 }
+async function loadEdicoesDashboard(manual) {
+  const grid = document.getElementById('edicoesGrid');
+  const empty = document.getElementById('edicoesEmptyState');
+  try {
+    const data = await fetch(BOLAO_SHEETS_URL + '?action=listar_edicoes').then(r => r.json());
+    if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
+    const edicoes = data.edicoes || [];
+
+    empty.style.display = edicoes.length ? 'none' : '';
+    const cores = { ATUAL: '#22c55e' };
+    const iconePorEdicao = (ed) => ed === 'ATUAL' ? '🟢' : /basquete/i.test(ed) ? '🏀' : /volei|vôlei/i.test(ed) ? '🏐' : '🏆';
+
+    grid.innerHTML = edicoes.map(ed => {
+      const cor = cores[ed.edicao] || '#7C3AED';
+      const titulo = ed.edicao === 'ATUAL' ? 'Edição Atual (em andamento)' : ed.edicao.replace(/_/g, ' ');
+      return `
+        <div class="card" style="margin:0;border-top:3px solid ${cor}">
+          <div class="card-title" style="margin-bottom:14px">${iconePorEdicao(ed.edicao)} ${titulo}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:var(--light);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:20px;font-weight:800;color:var(--dark)">${ed.instalacoes}</div>
+              <div style="font-size:10px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px">Instalações</div>
+            </div>
+            <div style="background:var(--light);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:20px;font-weight:800;color:var(--dark)">${ed.acessosUnicos}</div>
+              <div style="font-size:10px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px">Acessos únicos</div>
+            </div>
+            <div style="background:var(--light);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:20px;font-weight:800;color:var(--dark)">${ed.acessosTotais}</div>
+              <div style="font-size:10px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px">Acessos totais</div>
+            </div>
+            <div style="background:var(--light);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:20px;font-weight:800;color:var(--dark)">${ed.quizRespostas}</div>
+              <div style="font-size:10px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px">Respostas Quiz</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    if (manual) showToast('✅ Edições atualizadas!');
+  } catch(e) {
+    console.error('Erro ao carregar edições:', e);
+    empty.style.display = '';
+    empty.innerHTML = `<i class='bx bx-error' style="font-size:32px"></i><p style="margin-top:8px">Erro ao carregar: ${e.message}</p>`;
+    if (manual) showToast('❌ Erro ao carregar edições: ' + e.message, 'error');
+  }
+}
+
 async function loadInscricoesDashboard(manual) {
   if (!INSCRICAO_SCRIPT_URL) {
     if (manual) showToast('❌ Configure INSCRICAO_SCRIPT_URL primeiro (veja apps-script-inscricao-equipes.js).', 'error');

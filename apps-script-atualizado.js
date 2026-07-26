@@ -104,6 +104,10 @@ function doGet(e) {
       return okJson(contarAcessos(ss));
     }
 
+    if (action === 'listar_edicoes') {
+      return okJson(listarEdicoesArquivadas());
+    }
+
     return okJson({ erro: 'ação inválida' });
   } catch(ex) { return okJson({ erro: ex.message }); }
 }
@@ -223,6 +227,95 @@ function contarInstalacoes(ss) {
   return { total: sheet.getLastRow() - 1 };
 }
 
+
+// ============================================================
+//  ARQUIVAMENTO POR EDIÇÃO
+// ============================================================
+// Renomeia as abas atuais de INSTALACOES/ACESSOS/QUIZ para um nome
+// de arquivo (ex: "INSTALACOES_BASQUETE_2026"), preservando todos os
+// dados. As abas originais (INSTALACOES/ACESSOS/QUIZ) são recriadas
+// vazias, para a nova edição contar do zero. Rode isso manualmente
+// quando uma edição terminar e a próxima for começar.
+//
+// Uso: mude NOME_EDICAO_ATUAL abaixo para o nome da edição que está
+// TERMINANDO (ex: 'BASQUETE_2026'), rode arquivarEdicaoAtual() uma
+// vez, e pronto — os contadores voltam a zero para a próxima edição.
+
+function arquivarEdicaoAtual() {
+  const NOME_EDICAO_ATUAL = 'BASQUETE_2026'; // <<< ajuste antes de rodar
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  [ABA_INSTALL, ABA_ACESSOS, ABA_QUIZ].forEach(nomeAba => {
+    const sheet = ss.getSheetByName(nomeAba);
+    if (!sheet) return; // nada a arquivar
+    const novoNome = nomeAba + '_' + NOME_EDICAO_ATUAL;
+    if (ss.getSheetByName(novoNome)) {
+      Logger.log('Já existe uma aba chamada ' + novoNome + ' — pulando ' + nomeAba + '.');
+      return;
+    }
+    sheet.setName(novoNome);
+    Logger.log('Arquivado: ' + nomeAba + ' → ' + novoNome);
+  });
+
+  Logger.log('Arquivamento concluído. As próximas instalações/acessos/quiz vão criar abas novas (' +
+    ABA_INSTALL + ', ' + ABA_ACESSOS + ', ' + ABA_QUIZ + ') automaticamente.');
+}
+
+// Lista todas as edições arquivadas + os dados atuais (edição em
+// andamento). Usado pelo Painel Admin na página "Edições".
+function listarEdicoesArquivadas() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheets = ss.getSheets().map(s => s.getName());
+
+    // Descobre os sufixos de edição a partir das abas arquivadas
+    // (ex: "INSTALACOES_BASQUETE_2026" -> "BASQUETE_2026")
+    const edicoes = new Set();
+    sheets.forEach(nome => {
+      [ABA_INSTALL, ABA_ACESSOS, ABA_QUIZ].forEach(base => {
+        if (nome.indexOf(base + '_') === 0) edicoes.add(nome.slice(base.length + 1));
+      });
+    });
+
+    const contarSheet = (nome) => {
+      const sh = ss.getSheetByName(nome);
+      if (!sh || sh.getLastRow() < 2) return 0;
+      return sh.getLastRow() - 1;
+    };
+    const somarAcessos = (nome) => {
+      const sh = ss.getSheetByName(nome);
+      if (!sh || sh.getLastRow() < 2) return 0;
+      const rows = sh.getDataRange().getValues().slice(1);
+      let total = 0;
+      rows.forEach(r => { total += parseInt(r[3]) || 0; });
+      return total;
+    };
+
+    const resultado = [];
+    edicoes.forEach(ed => {
+      resultado.push({
+        edicao: ed,
+        instalacoes: contarSheet(ABA_INSTALL + '_' + ed),
+        acessosUnicos: contarSheet(ABA_ACESSOS + '_' + ed),
+        acessosTotais: somarAcessos(ABA_ACESSOS + '_' + ed),
+        quizRespostas: contarSheet(ABA_QUIZ + '_' + ed)
+      });
+    });
+
+    // Edição atual (em andamento, abas sem sufixo)
+    resultado.push({
+      edicao: 'ATUAL',
+      instalacoes: contarSheet(ABA_INSTALL),
+      acessosUnicos: contarSheet(ABA_ACESSOS),
+      acessosTotais: somarAcessos(ABA_ACESSOS),
+      quizRespostas: contarSheet(ABA_QUIZ)
+    });
+
+    return { ok: true, edicoes: resultado };
+  } catch (ex) {
+    return { ok: false, erro: ex.message };
+  }
+}
 
 // ============================================================
 //  LIMPEZA — execute 1x para remover o gatilho antigo do bolão
