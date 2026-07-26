@@ -1,5 +1,5 @@
-// ════════════════════════════════════════════════════════
-// APPS SCRIPT — BASQUETE (SUPERCOPA)
+// ══════════════════════════════════════════════════════════
+// APPS SCRIPT – BASQUETE (SUPERCOPA)
 // Planilha ID: 1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0
 //
 // SETUP (faça UMA VEZ após colar o código):
@@ -8,14 +8,17 @@
 //   3. No menu: Executar → configurarTrigger
 //   4. Autorize as permissões quando solicitado
 //   Isso cria o trigger automático a cada 30 min para o bolão.
-//   5. Implantar → Gerenciar implantações → editar (lápis) →
-//      Nova versão → Implantar (ESSENCIAL, sem isso a correção
-//      do placar de basquete não entra em vigor).
-// ════════════════════════════════════════════════════════
+//
+// ARQUIVAMENTO DE EDIÇÃO (Destaque da Galera):
+//   Quando a edição de Basquete terminar, rode arquivarEdicaoGalera()
+//   uma vez (ajuste NOME_EDICAO_ATUAL antes) pra arquivar todos os
+//   votos e começar a contagem do Vôlei do zero, sem perder nada.
+// ══════════════════════════════════════════════════════════
 
 var SHEET_ID = '1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0';
+var VOTOS_SHEET_ID = '1VS2RWX50aGYquB_AE-X9HQCcTvHsOEJwPcFAJjvD99c';
 
-// ── TRIGGER SETUP (execute uma única vez) ───────────────
+// ── TRIGGER SETUP (execute uma única vez) ──────────────────
 function configurarTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === 'verificarBolao') {
@@ -57,39 +60,31 @@ function verificarBolao() {
 
   bets.forEach(function(bet) {
     var timePalpite = (bet[1] || '').toString().trim();
-    if (!timePalpite) {
-      resultados.push(['', '', '']);
-      return;
-    }
-
+    if (!timePalpite) { resultados.push(['', '', '']); return; }
     totalValidos++;
-
     if (campeao) {
       var acertouCampeao = normalizar(timePalpite) === normalizar(campeao);
       resultados.push([
         acertouCampeao ? 'Campeão: ' + campeao : 'Eliminado',
-        acertouCampeao ? 'SIM' : 'NÃO',
-        ''
+        acertouCampeao ? 'SIM' : 'NÃO', ''
       ]);
       if (acertouCampeao) totalAcertos++;
     } else {
       var vitorias = contarVitorias(timePalpite, resultadosGrupos);
       var status = 'Em andamento (' + vitorias + ' vitória' + (vitorias !== 1 ? 's' : '') + ')';
-      var acertoParcial = vitorias > 0;
-      resultados.push([status, acertoParcial ? 'PARCIAL' : 'AGUARDANDO', '']);
-      if (acertoParcial) totalAcertos++;
+      resultados.push([status, vitorias > 0 ? 'PARCIAL' : 'AGUARDANDO', '']);
+      if (vitorias > 0) totalAcertos++;
     }
   });
 
-  var pctGeral = totalValidos > 0
-    ? Math.round((totalAcertos / totalValidos) * 100)
-    : 0;
+  var pctGeral = totalValidos > 0 ? Math.round((totalAcertos / totalValidos) * 100) : 0;
 
   resultados.forEach(function(r, i) {
     var row = i + 2;
     bolaoSheet.getRange(row, 4).setValue(r[0]);
     bolaoSheet.getRange(row, 5).setValue(r[1]);
-    bolaoSheet.getRange(row, 6).setValue(i === 0 ? pctGeral + '%' : '');
+    if (i === 0) bolaoSheet.getRange(row, 6).setValue(pctGeral + '%');
+    else bolaoSheet.getRange(row, 6).setValue('');
   });
 
   bolaoSheet.getRange(1, 6).setValue('% Acerto: ' + pctGeral + '%');
@@ -108,10 +103,8 @@ function verificarBolao() {
 function getCampeaoAtual(ss) {
   var sheet = ss.getSheetByName('Mata-Mata');
   if (!sheet || sheet.getLastRow() < 2) return null;
-
   var data = sheet.getDataRange().getValues();
   var campeao = null;
-
   data.forEach(function(row) {
     var timeA = (row[0] || '').toString().trim();
     var placA = parseInt(row[1]) || 0;
@@ -122,7 +115,6 @@ function getCampeaoAtual(ss) {
       campeao = placA > placB ? timeA : (placB > placA ? timeB : null);
     }
   });
-
   if (!campeao) {
     for (var i = data.length - 1; i >= 1; i--) {
       var r = data[i];
@@ -130,20 +122,15 @@ function getCampeaoAtual(ss) {
       var pA = parseInt(r[1]) || 0;
       var pB = parseInt(r[2]) || 0;
       var tB = (r[3] || '').toString().trim();
-      if (tA && tB && pA !== pB) {
-        campeao = pA > pB ? tA : tB;
-        break;
-      }
+      if (tA && tB && pA !== pB) { campeao = pA > pB ? tA : tB; break; }
     }
   }
-
   return campeao;
 }
 
 function getResultadosGrupos(ss) {
   var sheet = ss.getSheetByName('Fase de Grupos');
   if (!sheet || sheet.getLastRow() < 2) return [];
-
   var data = sheet.getDataRange().getValues();
   var jogos = [];
   data.slice(1).forEach(function(row) {
@@ -152,10 +139,7 @@ function getResultadosGrupos(ss) {
     var placB = parseInt(row[2]);
     var timeB = (row[3] || '').toString().trim();
     if (timeA && timeB && !isNaN(placA) && !isNaN(placB)) {
-      jogos.push({
-        timeA: timeA, placA: placA, placB: placB, timeB: timeB,
-        vencedor: placA > placB ? timeA : (placB > placA ? timeB : null)
-      });
+      jogos.push({ timeA, placA, placB, timeB, vencedor: placA > placB ? timeA : (placB > placA ? timeB : null) });
     }
   });
   return jogos;
@@ -163,22 +147,16 @@ function getResultadosGrupos(ss) {
 
 function contarVitorias(time, jogos) {
   var n = normalizar(time);
-  return jogos.filter(function(j) {
-    return j.vencedor && normalizar(j.vencedor) === n;
-  }).length;
+  return jogos.filter(function(j) { return j.vencedor && normalizar(j.vencedor) === n; }).length;
 }
 
 function normalizar(str) {
-  return str.toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9 ]/g, '')
-    .trim();
+  return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').trim();
 }
 
 function salvarConfigInterno(ss, kvMap) {
   var cfg = ss.getSheetByName('Config');
   if (!cfg) cfg = ss.insertSheet('Config');
-
   var values = cfg.getLastRow() > 0 ? cfg.getDataRange().getValues() : [];
   Object.keys(kvMap).forEach(function(key) {
     var val = kvMap[key];
@@ -191,77 +169,164 @@ function salvarConfigInterno(ss, kvMap) {
         break;
       }
     }
-    if (!found) {
-      cfg.appendRow([key, val]);
-      values.push([key, val]);
-    }
+    if (!found) { cfg.appendRow([key, val]); values.push([key, val]); }
   });
 }
 
+// ── Ranking de votos (usado por doPost e doGet) ────────────
+function montarRankingVotos() {
+  var ssVotos = SpreadsheetApp.openById(VOTOS_SHEET_ID);
+  var votosSheet = ssVotos.getSheets()[0];
+  if (!votosSheet || votosSheet.getLastRow() <= 1) return [];
+  var rows = votosSheet.getDataRange().getValues().slice(1);
+  var contagem = {};
+  rows.forEach(function(r) {
+    var key = (r[1] || '').toString().trim();
+    if (!key) return;
+    if (!contagem[key]) contagem[key] = { atleta: key, time: (r[2] || '').toString().trim(), votos: 0 };
+    contagem[key].votos++;
+  });
+  return Object.values(contagem).sort(function(a, b) { return b.votos - a.votos; }).slice(0, 10);
+}
+
 // ══════════════════════════════════════════════════════════
-// doPost — recebe requisições do painel de controle
+// ARQUIVAMENTO DA EDIÇÃO — Destaque da Galera
+// ══════════════════════════════════════════════════════════
+// Renomeia a aba de votos atual (ex: "Basquete") para um nome de
+// arquivo (ex: "Basquete_BASQUETE_2026"), preservando todos os
+// votos, e cria uma aba nova "Basquete" (vazia, na posição 0) para
+// a próxima edição (Vôlei) contar os votos do zero.
+//
+// Rode manualmente quando a edição de Basquete terminar.
+
+function arquivarEdicaoGalera() {
+  var NOME_EDICAO_ATUAL = 'BASQUETE_2026'; // <<< ajuste antes de rodar
+
+  var ssVotos = SpreadsheetApp.openById(VOTOS_SHEET_ID);
+  var atual = ssVotos.getSheets()[0];
+  var nomeOriginal = atual.getName();
+  var novoNome = nomeOriginal + '_' + NOME_EDICAO_ATUAL;
+
+  if (ssVotos.getSheetByName(novoNome)) {
+    Logger.log('Já existe uma aba chamada ' + novoNome + ' — nada a fazer.');
+    return;
+  }
+
+  atual.setName(novoNome);
+  var nova = ssVotos.insertSheet(nomeOriginal, 0);
+  nova.appendRow(['DATA-HORA', 'ATLETA VOTADO', 'TIME']);
+
+  Logger.log('Votos arquivados em: ' + novoNome);
+  Logger.log('Nova aba de votos (vazia): ' + nomeOriginal);
+}
+
+// Lista o ranking de cada edição arquivada + a edição atual.
+// Usado pelo Painel Admin na página "Edições".
+function listarEdicoesGalera() {
+  try {
+    var ssVotos = SpreadsheetApp.openById(VOTOS_SHEET_ID);
+    var todasAbas = ssVotos.getSheets();
+    var atual = todasAbas[0];
+
+    function rankingDeAba(sheet) {
+      if (!sheet || sheet.getLastRow() <= 1) return [];
+      var rows = sheet.getDataRange().getValues().slice(1);
+      var contagem = {};
+      rows.forEach(function(r) {
+        var key = (r[1] || '').toString().trim();
+        if (!key) return;
+        if (!contagem[key]) contagem[key] = { atleta: key, time: (r[2] || '').toString().trim(), votos: 0 };
+        contagem[key].votos++;
+      });
+      return Object.values(contagem).sort(function(a, b) { return b.votos - a.votos; }).slice(0, 10);
+    }
+
+    var resultado = [];
+    todasAbas.forEach(function(sh) {
+      if (sh.getName() === atual.getName()) return;
+      var ranking = rankingDeAba(sh);
+      resultado.push({
+        edicao: sh.getName(),
+        totalVotos: ranking.reduce(function(acc, x) { return acc + x.votos; }, 0),
+        ranking: ranking
+      });
+    });
+    var rankingAtual = rankingDeAba(atual);
+    resultado.push({
+      edicao: 'ATUAL',
+      totalVotos: rankingAtual.reduce(function(acc, x) { return acc + x.votos; }, 0),
+      ranking: rankingAtual
+    });
+
+    return { ok: true, edicoes: resultado };
+  } catch (ex) {
+    return { ok: false, erro: ex.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// doPost – recebe requisições do painel de controle e do app
 // ══════════════════════════════════════════════════════════
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
     var mode = body.mode || body.tipo || '';
-    var ss   = SpreadsheetApp.openById(SHEET_ID);
 
+    // ── compatibilidade com o app (que manda "action") ─────
+    if (!mode && body.action === 'votar') mode = 'votar_atleta';
+    if (!mode && body.action === 'ranking') mode = 'ranking_atleta';
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+
+    // ── salvar_config ──────────────────────────────────────
     if (mode === 'salvar_config') {
       salvarConfigInterno(ss, body.data || {});
       return jsonResponse({ ok: true, mode: 'salvar_config' });
     }
 
+    // ── adicionar_bolao ────────────────────────────────────
     if (mode === 'adicionar_bolao') {
+      var esporte = (body.esporte || 'basquete').toUpperCase();
+      var configKey = 'BOLAO_' + esporte + '_ABERTO';
+      var cfgSheet = ss.getSheetByName('Config');
+      var bolaoAberto = false;
+      if (cfgSheet && cfgSheet.getLastRow() > 0) {
+        var cfgVals = cfgSheet.getDataRange().getValues();
+        for (var ci = 0; ci < cfgVals.length; ci++) {
+          if (cfgVals[ci][0] && cfgVals[ci][0].toString().trim() === configKey) {
+            bolaoAberto = cfgVals[ci][1].toString().trim() === 'SIM';
+            break;
+          }
+        }
+      }
+      if (!bolaoAberto) return jsonResponse({ ok: false, erro: 'Bolão ' + esporte + ' está fechado no momento.' });
       var bolao = ss.getSheetByName('Bolao');
       if (!bolao) {
         bolao = ss.insertSheet('Bolao');
-        bolao.appendRow(['Nome', 'Time', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
+        bolao.appendRow(['Nome', 'Time', 'Esporte', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
       } else if (bolao.getLastRow() === 0) {
-        bolao.appendRow(['Nome', 'Time', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
+        bolao.appendRow(['Nome', 'Time', 'Esporte', 'Data', 'Resultado', 'Acerto', '% Acerto Geral']);
       }
-      bolao.appendRow([body.nome || '', body.time || '', new Date(), '', '', '']);
+      bolao.appendRow([body.nome || '', body.time || '', esporte, new Date(), '', '', '']);
       verificarBolao();
       return jsonResponse({ ok: true, mode: 'adicionar_bolao' });
     }
 
+    // ── placar_basquete ────────────────────────────────────
     if (mode === 'placar_basquete' || mode === 'atualizar_placar') {
       var sheet = ss.getSheetByName('Fase de Grupos');
       if (!sheet) return jsonResponse({ ok: false, erro: 'Aba Fase de Grupos não encontrada' });
       var linha = parseInt(body.linha);
       if (isNaN(linha) || linha < 2) return jsonResponse({ ok: false, erro: 'Linha inválida' });
-
-      // Estrutura real confirmada na planilha 'Fase de Grupos':
-      // Grupo A: A=JOGO B=EQUIPE1 C=(vazia) D=PTS1 E=X F=PTS2 G=EQUIPE2 H=(vazia) I=RESULTADO
-      // Grupo B: K=JOGO L=EQUIPE1 M=(vazia) N=PTS1 O=X P=PTS2 Q=EQUIPE2 R=(vazia) S=RESULTADO
-      var grupo = (body.grupo || 'A').toString().toUpperCase();
-      var off = grupo === 'B' ? 10 : 0;
-      var colJogo      = 1 + off;  // A ou K
-      var colEquipe1   = 2 + off;  // B ou L
-      var colPts1      = 4 + off;  // D ou N
-      var colPts2      = 6 + off;  // F ou P
-      var colEquipe2   = 7 + off;  // G ou Q
-      var colResultado = 9 + off;  // I ou S
-
-      var placA = body.placA;
-      var placB = body.placB;
-      var vencedor = body.vencedor;
-      if (!vencedor) {
-        var pa = parseInt(placA) || 0, pb = parseInt(placB) || 0;
-        vencedor = pa > pb ? body.timeA : (pb > pa ? body.timeB : 'EMPATE');
-      }
-
-      if (body.jogo !== undefined) sheet.getRange(linha, colJogo).setValue(body.jogo);
-      if (body.timeA)              sheet.getRange(linha, colEquipe1).setValue(body.timeA);
-      if (placA !== undefined)     sheet.getRange(linha, colPts1).setValue(placA);
-      if (placB !== undefined)     sheet.getRange(linha, colPts2).setValue(placB);
-      if (body.timeB)              sheet.getRange(linha, colEquipe2).setValue(body.timeB);
-      sheet.getRange(linha, colResultado).setValue(vencedor);
-
+      if (body.timeA) sheet.getRange(linha, 1).setValue(body.timeA);
+      if (body.placA !== undefined) sheet.getRange(linha, 2).setValue(body.placA);
+      if (body.placB !== undefined) sheet.getRange(linha, 3).setValue(body.placB);
+      if (body.timeB) sheet.getRange(linha, 4).setValue(body.timeB);
       verificarBolao();
-      return jsonResponse({ ok: true, mode: 'placar_basquete', linha: linha, grupo: grupo });
+      return jsonResponse({ ok: true, mode: 'placar_basquete', linha: linha });
     }
 
+    // ── adicionar_linha ────────────────────────────────────
     if (mode === 'adicionar_linha') {
       var sheetName = body.aba || 'Fase de Grupos';
       var s = ss.getSheetByName(sheetName);
@@ -270,6 +335,7 @@ function doPost(e) {
       return jsonResponse({ ok: true, mode: 'adicionar_linha' });
     }
 
+    // ── substituir_linha ───────────────────────────────────
     if (mode === 'substituir_linha') {
       var sheetName2 = body.aba || 'Fase de Grupos';
       var s2 = ss.getSheetByName(sheetName2);
@@ -282,18 +348,56 @@ function doPost(e) {
       return jsonResponse({ ok: true, mode: 'substituir_linha' });
     }
 
+    // ── votar_atleta ───────────────────────────────────────
+    if (mode === 'votar_atleta') {
+      var nomeAtleta = (body.atleta || '').toString().trim();
+      var timeAtleta = (body.time || '').toString().trim();
+      if (!nomeAtleta) return jsonResponse({ ok: false, erro: 'Nome do atleta obrigatorio' });
+      var ssVotos = SpreadsheetApp.openById(VOTOS_SHEET_ID);
+      var votos = ssVotos.getSheets()[0];
+      if (votos.getLastRow() === 0) {
+        votos.appendRow(['Data-Hora', 'Atleta', 'Time']);
+      }
+      var agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+      votos.appendRow([agora, nomeAtleta, timeAtleta]);
+      return jsonResponse({ ok: true, mode: 'votar_atleta' });
+    }
+
+    // ── ranking_atleta ─────────────────────────────────────
+    if (mode === 'ranking_atleta') {
+      return jsonResponse({ ok: true, ranking: montarRankingVotos() });
+    }
+
     return jsonResponse({ ok: false, erro: 'modo desconhecido: ' + mode });
 
-  } catch(err) {
+  } catch (err) {
     return ContentService
       .createTextOutput(JSON.stringify({ ok: false, erro: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
+// ══════════════════════════════════════════════════════════
+// doGet – ranking (usado pelo app: GALERA_URL?action=ranking)
+// ══════════════════════════════════════════════════════════
 function doGet(e) {
+  var action = (e && e.parameter && e.parameter.action) || '';
+  if (action === 'ranking') {
+    try {
+      return jsonResponse({ ok: true, ranking: montarRankingVotos() });
+    } catch (err) {
+      return jsonResponse({ ok: false, erro: err.message });
+    }
+  }
+  if (action === 'listar_edicoes') {
+    try {
+      return jsonResponse(listarEdicoesGalera());
+    } catch (err) {
+      return jsonResponse({ ok: false, erro: err.message });
+    }
+  }
   return ContentService
-    .createTextOutput('Supercopa Basquete Apps Script v7 OK')
+    .createTextOutput('Supercopa Basquete Apps Script v6 OK')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
