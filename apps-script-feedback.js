@@ -113,7 +113,19 @@ function doGet(e) {
     }
     const ss = SpreadsheetApp.openById(sheetId);
     const sheets = ss.getSheets();
-    const sheet = sheets.find(s => s.getName().indexOf('Form Responses') === 0) || sheets[sheets.length - 1];
+
+    // A aba de respostas do Forms pode se chamar "Form Responses 1" (conta em
+    // inglês) ou "Respostas ao formulário 1" (conta em português). Em vez de
+    // confiar só no nome, escolhe a aba com mais colunas preenchidas na
+    // primeira linha (a de respostas tem 9: carimbo de data/hora + 8 perguntas).
+    let sheet = sheets.find(s => /form responses|respostas ao formul/i.test(s.getName()));
+    if (!sheet) {
+      sheet = sheets.reduce((best, s) => {
+        const cols = s.getLastColumn();
+        return (!best || cols > best.getLastColumn()) ? s : best;
+      }, null);
+    }
+
     const rows = sheet.getDataRange().getValues();
     const headers = rows.shift();
 
@@ -123,8 +135,12 @@ function doGet(e) {
       return obj;
     });
 
-    return ContentService.createTextOutput(JSON.stringify({ ok: true, headers: headers, respostas: respostas }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: true,
+      headers: headers,
+      respostas: respostas,
+      debug: { abaUsada: sheet.getName(), todasAbas: sheets.map(s => s.getName()) }
+    })).setMimeType(ContentService.MimeType.JSON);
   } catch (ex) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, erro: ex.message }))
       .setMimeType(ContentService.MimeType.JSON);
