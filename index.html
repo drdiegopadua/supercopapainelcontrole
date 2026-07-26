@@ -632,6 +632,7 @@
     <li><a href="javascript:void(0)" onclick="navTo('handebol',this); return false;"><i class='bx bxs-hand-right'></i><span>Handebol</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('destaque',this); return false;"><i class='bx bxs-star'></i><span>Atleta Destaque</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('social',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Social</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('feedback',this); return false;"><i class='bx bxs-message-square-detail'></i><span>Feedback</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('classificacao',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Classificação</span></a></li>
@@ -1107,6 +1108,83 @@
       </div>
     </div>
 
+    <!-- ─── FEEDBACK ─── -->
+    <div class="page" id="page-feedback">
+      <div class="page-header">
+        <div>
+          <h1>Feedback</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Feedback</span></div>
+        </div>
+        <button class="refresh-btn" onclick="loadFeedbackDashboard(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;background:linear-gradient(120deg,#0D47A1,#1565C0);color:#fff">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="font-size:30px">📋</div>
+          <div style="flex:1;min-width:220px">
+            <div style="font-weight:800;font-size:15px">Link do formulário para enviar às pessoas</div>
+            <div style="font-size:12px;opacity:.85;margin-top:2px" id="feedbackFormLinkText">Cole o link do formulário aqui embaixo assim que criar (ou me envie que eu configuro).</div>
+          </div>
+          <a id="feedbackFormLinkBtn" href="#" target="_blank" rel="noopener" style="background:#fff;color:#0D47A1;font-weight:800;font-size:12px;padding:10px 16px;border-radius:10px;text-decoration:none;display:none">Abrir Formulário</a>
+        </div>
+      </div>
+
+      <div id="feedbackEmptyState" class="card" style="text-align:center;padding:40px;color:var(--dark-grey)">
+        <i class='bx bx-message-square-detail' style="font-size:32px"></i>
+        <p style="margin-top:8px">Nenhuma resposta carregada ainda. Configure o link do Apps Script (FEEDBACK_SCRIPT_URL) e clique em Atualizar.</p>
+      </div>
+
+      <div id="feedbackContent" style="display:none">
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:20px;">
+          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-blue);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--blue);"><i class='bx bxs-message-square-detail'></i></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-total">0</div><div style="font-size:12px;color:var(--dark-grey)">Respostas recebidas</div></div>
+          </div>
+          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--green);"><i class='bx bxs-star'></i></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-nota">—</div><div style="font-size:12px;color:var(--dark-grey)">Nota geral média (0-10)</div></div>
+          </div>
+          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--orange);"><i class='bx bx-buildings'></i></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-org">—</div><div style="font-size:12px;color:var(--dark-grey)">Organização média (1-5)</div></div>
+          </div>
+          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-purple);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--purple);"><i class='bx bx-whistle'></i></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-arb">—</div><div style="font-size:12px;color:var(--dark-grey)">Arbitragem média (1-5)</div></div>
+          </div>
+          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+            <div style="width:56px;height:56px;border-radius:14px;background:rgba(124,58,237,.12);display:flex;align-items:center;justify-content:center;font-size:26px;color:#7C3AED;"><i class='bx bx-trending-up'></i></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-nps">—</div><div style="font-size:12px;color:var(--dark-grey)">NPS (recomendação)</div></div>
+          </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:22px;">
+          <div class="card" style="margin:0;">
+            <div class="card-title"><i class='bx bx-pie-chart-alt-2'></i> Modalidade acompanhada</div>
+            <div style="position:relative;height:220px;"><canvas id="chartFbModalidade"></canvas></div>
+          </div>
+          <div class="card" style="margin:0;">
+            <div class="card-title"><i class='bx bx-mobile'></i> Uso do app da Supercopa</div>
+            <div style="position:relative;height:220px;"><canvas id="chartFbApp"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Comentários -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="card" style="margin:0;">
+            <div class="card-title"><i class='bx bx-like'></i> O que mais gostaram</div>
+            <div id="fb-gostou-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto"></div>
+          </div>
+          <div class="card" style="margin:0;">
+            <div class="card-title"><i class='bx bx-wrench'></i> O que podemos melhorar</div>
+            <div id="fb-melhorar-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── NOTÍCIAS ─── -->
     <div class="page" id="page-noticias">
       <div class="page-header">
@@ -1391,6 +1469,9 @@ const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbLoQaF0-p9nn
 const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUc_Z7wdPEWMQ_WzbQGNiHBVu0yJsxb8AwZC3-eZm_dHT_yk-hhmdToxXUeiTtxV/exec";
 const PUSH_STATUS_URL = "https://supercopa-push-server.onrender.com/api/push/status";
 const HAND_SHEET_ID   = "1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU";
+// Preencha após rodar apps-script-feedback.js e implantar como Web App:
+const FEEDBACK_SCRIPT_URL = ""; // ex: https://script.google.com/macros/s/XXXX/exec
+const FEEDBACK_FORM_URL = ""; // link do formulário (form.getPublishedUrl())
 const HAND_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxend-S87O0BOTR58UTNShlqNHwYqdNVYizKEuvo0DLrXM8q3Q8iRLOCSW-C19-DqjIA/exec";
 
 // ════════════════════════════════════════════════════════
@@ -1669,11 +1750,12 @@ function navTo(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') loadHandebolFromSheet();
   if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); loadLiveJogosList(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
+  if (page === 'feedback') loadFeedbackDashboard();
   return false;
 }
 
@@ -2029,6 +2111,97 @@ async function loadQuizRanking(manual=false) {
 // ════════════════════════════════════════════════════════
 // DESTAQUE DA GALERA — Ranking de votos
 // ════════════════════════════════════════════════════════
+let _chartFbModalidade, _chartFbApp;
+function _fbAvg(nums) {
+  const v = nums.map(n => parseFloat(n)).filter(n => !isNaN(n));
+  return v.length ? (v.reduce((a,b)=>a+b,0) / v.length) : null;
+}
+async function loadFeedbackDashboard(manual) {
+  const linkTextEl = document.getElementById('feedbackFormLinkText');
+  const linkBtnEl = document.getElementById('feedbackFormLinkBtn');
+  if (FEEDBACK_FORM_URL) {
+    linkTextEl.textContent = FEEDBACK_FORM_URL;
+    linkBtnEl.href = FEEDBACK_FORM_URL;
+    linkBtnEl.style.display = '';
+  }
+  if (!FEEDBACK_SCRIPT_URL) {
+    if (manual) showToast('❌ Configure FEEDBACK_SCRIPT_URL primeiro (veja apps-script-feedback.js).', 'error');
+    return;
+  }
+  try {
+    const data = await fetch(FEEDBACK_SCRIPT_URL).then(r => r.json());
+    if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
+    const respostas = data.respostas || [];
+    const headers = data.headers || [];
+
+    document.getElementById('feedbackEmptyState').style.display = respostas.length ? 'none' : '';
+    document.getElementById('feedbackContent').style.display = respostas.length ? '' : 'none';
+    if (!respostas.length) return;
+
+    const col = (r, keyword) => {
+      const h = headers.find(h => h.toLowerCase().includes(keyword.toLowerCase()));
+      return h ? r[h] : undefined;
+    };
+
+    document.getElementById('fb-total').textContent = respostas.length;
+
+    const notaGeral = _fbAvg(respostas.map(r => col(r, 'Nota geral')));
+    const org = _fbAvg(respostas.map(r => col(r, 'Organização')));
+    const arb = _fbAvg(respostas.map(r => col(r, 'Arbitragem')));
+    const npsVals = respostas.map(r => parseFloat(col(r, 'recomendaria'))).filter(n => !isNaN(n));
+
+    document.getElementById('fb-nota').textContent = notaGeral !== null ? notaGeral.toFixed(1) : '—';
+    document.getElementById('fb-org').textContent = org !== null ? org.toFixed(1) : '—';
+    document.getElementById('fb-arb').textContent = arb !== null ? arb.toFixed(1) : '—';
+
+    if (npsVals.length) {
+      const promotores = npsVals.filter(n => n >= 9).length;
+      const detratores = npsVals.filter(n => n <= 6).length;
+      const nps = Math.round(((promotores - detratores) / npsVals.length) * 100);
+      document.getElementById('fb-nps').textContent = nps;
+    }
+
+    // Modalidade
+    const modCounts = {};
+    respostas.forEach(r => { const m = col(r, 'modalidade'); if (m) modCounts[m] = (modCounts[m]||0)+1; });
+    const modLabels = Object.keys(modCounts), modData = Object.values(modCounts);
+    if (_chartFbModalidade) _chartFbModalidade.destroy();
+    _chartFbModalidade = new Chart(document.getElementById('chartFbModalidade'), {
+      type: 'doughnut',
+      data: { labels: modLabels, datasets: [{ data: modData, backgroundColor: ['#1565C0','#F4C542','#7C3AED','#22c55e'] }] },
+      options: { plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // Uso do app
+    const appCounts = {};
+    respostas.forEach(r => { const a = col(r, 'usa o app'); if (a) appCounts[a] = (appCounts[a]||0)+1; });
+    const appLabels = Object.keys(appCounts), appData = Object.values(appCounts);
+    if (_chartFbApp) _chartFbApp.destroy();
+    _chartFbApp = new Chart(document.getElementById('chartFbApp'), {
+      type: 'bar',
+      data: { labels: appLabels, datasets: [{ data: appData, backgroundColor: '#1565C0', borderRadius: 8 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+
+    // Comentários
+    const gostouEl = document.getElementById('fb-gostou-list');
+    const melhorarEl = document.getElementById('fb-melhorar-list');
+    const renderComentarios = (el, keyword) => {
+      const items = respostas.map(r => col(r, keyword)).filter(t => t && String(t).trim());
+      el.innerHTML = items.length
+        ? items.slice().reverse().map(t => `<div style="background:#f7f9fc;border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--dark)">${String(t).replace(/</g,'&lt;')}</div>`).join('')
+        : '<div style="color:var(--dark-grey);font-size:12px;padding:8px">Nenhum comentário ainda.</div>';
+    };
+    renderComentarios(gostouEl, 'mais gostou');
+    renderComentarios(melhorarEl, 'melhorar');
+
+    if (manual) showToast('✅ Dashboard de feedback atualizado!');
+  } catch(e) {
+    console.error('Erro ao carregar feedback:', e);
+    if (manual) showToast('❌ Erro ao carregar feedback: ' + e.message, 'error');
+  }
+}
+
 async function carregarRankingGalera() {
   const el = document.getElementById('adminGaleraRanking');
   if (!el) return;
