@@ -640,7 +640,6 @@
     <li><a href="javascript:void(0)" onclick="navTo('tvconfig',this); return false;"><i class='bx bx-tv'></i><span>TV Config</span></a></li>
   </ul>
   <div class="side-bottom">
-    <a href="javascript:void(0)"><i class='bx bxs-cog'></i><span>Configurações</span></a>
     <a href="javascript:void(0)" style="color:var(--red)" onclick="doLogout(); return false;"><i class='bx bx-power-off'></i><span>Sair</span></a>
   </div>
 </section>
@@ -681,7 +680,6 @@
       <div class="profile-dropdown" id="profileMenu">
         <ul>
           <li><a href="javascript:void(0)">Meu Perfil</a></li>
-          <li><a href="javascript:void(0)">Configurações</a></li>
           <li><a href="javascript:void(0)" style="color:var(--red)" onclick="doLogout(); return false;">Sair</a></li>
         </ul>
       </div>
@@ -2722,6 +2720,21 @@ async function enviarPushResultado(esporte, tA, gA, tB, gB, rodada) {
   } catch(e) { /* push falhou silenciosamente */ }
 }
 
+async function enviarPushNoticia(icone, titulo, corpo) {
+  try {
+    await fetch(PUSH_SERVER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `${icone || '📰'} ${titulo}`,
+        body: (corpo || '').slice(0, 120),
+        url: 'https://drdiegopadua.github.io/supercopa-app/',
+        category: 'noticia'
+      })
+    });
+  } catch(e) { /* push falhou silenciosamente */ }
+}
+
 async function enviarPushDestaque(nome, equipe, jogoLabel) {
   try {
     await fetch(PUSH_SERVER_URL, {
@@ -3760,6 +3773,7 @@ async function salvarNoticia() {
 
     if (result.ok) {
       showToast('✅ Notícia publicada para todos!');
+      enviarPushNoticia(ic, titulo, corpo);
       document.getElementById('noticia-titulo').value = '';
       document.getElementById('noticia-corpo').value = '';
       closeModal('modal-noticia');
