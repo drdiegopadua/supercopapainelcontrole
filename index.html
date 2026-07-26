@@ -1142,16 +1142,20 @@
             <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-total">0</div><div style="font-size:12px;color:var(--dark-grey)">Respostas recebidas</div></div>
           </div>
           <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--green);"><i class='bx bxs-star'></i></div>
-            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-nota">—</div><div style="font-size:12px;color:var(--dark-grey)">Nota geral média (0-10)</div></div>
-          </div>
-          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
             <div style="width:56px;height:56px;border-radius:14px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--orange);"><i class='bx bx-buildings'></i></div>
-            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-org">—</div><div style="font-size:12px;color:var(--dark-grey)">Organização média (1-5)</div></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-org">—</div><div style="font-size:12px;color:var(--dark-grey)">Organização (1-10)</div></div>
           </div>
           <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
             <div style="width:56px;height:56px;border-radius:14px;background:var(--light-purple);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--purple);"><i class='bx bx-whistle'></i></div>
-            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-arb">—</div><div style="font-size:12px;color:var(--dark-grey)">Arbitragem média (1-5)</div></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-arb">—</div><div style="font-size:12px;color:var(--dark-grey)">Arbitragem (1-10)</div></div>
+          </div>
+          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-blue);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--blue);"><i class='bx bx-mobile'></i></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-app">—</div><div style="font-size:12px;color:var(--dark-grey)">App da Supercopa (1-10)</div></div>
+          </div>
+          <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+            <div style="width:56px;height:56px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--green);"><i class='bx bxs-star'></i></div>
+            <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="fb-nota">—</div><div style="font-size:12px;color:var(--dark-grey)">Nota geral (1-10)</div></div>
           </div>
           <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
             <div style="width:56px;height:56px;border-radius:14px;background:rgba(124,58,237,.12);display:flex;align-items:center;justify-content:center;font-size:26px;color:#7C3AED;"><i class='bx bx-trending-up'></i></div>
@@ -1162,23 +1166,23 @@
         <!-- Gráficos -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:22px;">
           <div class="card" style="margin:0;">
-            <div class="card-title"><i class='bx bx-pie-chart-alt-2'></i> Modalidade acompanhada</div>
-            <div style="position:relative;height:220px;"><canvas id="chartFbModalidade"></canvas></div>
+            <div class="card-title"><i class='bx bx-bar-chart-alt-2'></i> Médias por critério</div>
+            <div style="position:relative;height:220px;"><canvas id="chartFbMedias"></canvas></div>
           </div>
           <div class="card" style="margin:0;">
-            <div class="card-title"><i class='bx bx-mobile'></i> Uso do app da Supercopa</div>
-            <div style="position:relative;height:220px;"><canvas id="chartFbApp"></canvas></div>
+            <div class="card-title"><i class='bx bx-pie-chart-alt-2'></i> Respostas por time</div>
+            <div style="position:relative;height:220px;"><canvas id="chartFbTime"></canvas></div>
           </div>
         </div>
 
         <!-- Comentários -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div class="card" style="margin:0;">
-            <div class="card-title"><i class='bx bx-like'></i> O que mais gostaram</div>
+            <div class="card-title"><i class='bx bx-like'></i> Pontos positivos</div>
             <div id="fb-gostou-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto"></div>
           </div>
           <div class="card" style="margin:0;">
-            <div class="card-title"><i class='bx bx-wrench'></i> O que podemos melhorar</div>
+            <div class="card-title"><i class='bx bx-wrench'></i> Pontos a melhorar</div>
             <div id="fb-melhorar-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto"></div>
           </div>
         </div>
@@ -2111,7 +2115,7 @@ async function loadQuizRanking(manual=false) {
 // ════════════════════════════════════════════════════════
 // DESTAQUE DA GALERA — Ranking de votos
 // ════════════════════════════════════════════════════════
-let _chartFbModalidade, _chartFbApp;
+let _chartFbMedias, _chartFbTime;
 function _fbAvg(nums) {
   const v = nums.map(n => parseFloat(n)).filter(n => !isNaN(n));
   return v.length ? (v.reduce((a,b)=>a+b,0) / v.length) : null;
@@ -2145,14 +2149,16 @@ async function loadFeedbackDashboard(manual) {
 
     document.getElementById('fb-total').textContent = respostas.length;
 
-    const notaGeral = _fbAvg(respostas.map(r => col(r, 'Nota geral')));
-    const org = _fbAvg(respostas.map(r => col(r, 'Organização')));
-    const arb = _fbAvg(respostas.map(r => col(r, 'Arbitragem')));
+    const org = _fbAvg(respostas.map(r => col(r, 'organização')));
+    const arb = _fbAvg(respostas.map(r => col(r, 'arbitragem')));
+    const app = _fbAvg(respostas.map(r => col(r, 'achou do app')));
+    const notaGeral = _fbAvg(respostas.map(r => col(r, 'nota geral')));
     const npsVals = respostas.map(r => parseFloat(col(r, 'recomendaria'))).filter(n => !isNaN(n));
 
-    document.getElementById('fb-nota').textContent = notaGeral !== null ? notaGeral.toFixed(1) : '—';
     document.getElementById('fb-org').textContent = org !== null ? org.toFixed(1) : '—';
     document.getElementById('fb-arb').textContent = arb !== null ? arb.toFixed(1) : '—';
+    document.getElementById('fb-app').textContent = app !== null ? app.toFixed(1) : '—';
+    document.getElementById('fb-nota').textContent = notaGeral !== null ? notaGeral.toFixed(1) : '—';
 
     if (npsVals.length) {
       const promotores = npsVals.filter(n => n >= 9).length;
@@ -2161,26 +2167,26 @@ async function loadFeedbackDashboard(manual) {
       document.getElementById('fb-nps').textContent = nps;
     }
 
-    // Modalidade
-    const modCounts = {};
-    respostas.forEach(r => { const m = col(r, 'modalidade'); if (m) modCounts[m] = (modCounts[m]||0)+1; });
-    const modLabels = Object.keys(modCounts), modData = Object.values(modCounts);
-    if (_chartFbModalidade) _chartFbModalidade.destroy();
-    _chartFbModalidade = new Chart(document.getElementById('chartFbModalidade'), {
-      type: 'doughnut',
-      data: { labels: modLabels, datasets: [{ data: modData, backgroundColor: ['#1565C0','#F4C542','#7C3AED','#22c55e'] }] },
-      options: { plugins: { legend: { position: 'bottom' } } }
+    // Médias por critério
+    if (_chartFbMedias) _chartFbMedias.destroy();
+    _chartFbMedias = new Chart(document.getElementById('chartFbMedias'), {
+      type: 'bar',
+      data: {
+        labels: ['Organização','Arbitragem','App','Nota Geral','Recomendaria'],
+        datasets: [{ data: [org, arb, app, notaGeral, _fbAvg(npsVals)].map(n => n !== null ? +n.toFixed(1) : 0), backgroundColor: ['#F4C542','#7C3AED','#1565C0','#22c55e','#f97316'], borderRadius: 8 }]
+      },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10 } } }
     });
 
-    // Uso do app
-    const appCounts = {};
-    respostas.forEach(r => { const a = col(r, 'usa o app'); if (a) appCounts[a] = (appCounts[a]||0)+1; });
-    const appLabels = Object.keys(appCounts), appData = Object.values(appCounts);
-    if (_chartFbApp) _chartFbApp.destroy();
-    _chartFbApp = new Chart(document.getElementById('chartFbApp'), {
-      type: 'bar',
-      data: { labels: appLabels, datasets: [{ data: appData, backgroundColor: '#1565C0', borderRadius: 8 }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    // Respostas por time
+    const timeCounts = {};
+    respostas.forEach(r => { const t = col(r, 'seu time'); if (t) timeCounts[t] = (timeCounts[t]||0)+1; });
+    const timeLabels = Object.keys(timeCounts), timeData = Object.values(timeCounts);
+    if (_chartFbTime) _chartFbTime.destroy();
+    _chartFbTime = new Chart(document.getElementById('chartFbTime'), {
+      type: 'doughnut',
+      data: { labels: timeLabels, datasets: [{ data: timeData, backgroundColor: ['#1565C0','#F4C542','#7C3AED','#22c55e','#f97316','#ef4444'] }] },
+      options: { plugins: { legend: { position: 'bottom' } } }
     });
 
     // Comentários
@@ -2192,7 +2198,7 @@ async function loadFeedbackDashboard(manual) {
         ? items.slice().reverse().map(t => `<div style="background:#f7f9fc;border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--dark)">${String(t).replace(/</g,'&lt;')}</div>`).join('')
         : '<div style="color:var(--dark-grey);font-size:12px;padding:8px">Nenhum comentário ainda.</div>';
     };
-    renderComentarios(gostouEl, 'mais gostou');
+    renderComentarios(gostouEl, 'positivos');
     renderComentarios(melhorarEl, 'melhorar');
 
     if (manual) showToast('✅ Dashboard de feedback atualizado!');

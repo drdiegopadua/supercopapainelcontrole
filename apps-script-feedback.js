@@ -9,6 +9,9 @@
 // 2) Expõe um endpoint (doGet) que o Painel Admin usa para ler
 //    as respostas e montar o dashboard.
 //
+// As respostas vão direto para a planilha já existente:
+// https://docs.google.com/spreadsheets/d/1InodiEZbZfBtawwDSGWLkfFp4xwK9aSWKbqc9TPRPCw/edit
+//
 // COMO USAR (passo a passo):
 // 1. Acesse https://script.google.com e clique em "Novo projeto"
 // 2. Apague o conteúdo padrão e cole todo este arquivo
@@ -26,73 +29,64 @@
 //    (termina em /exec) e me envie aqui no chat — é o que eu uso
 //    para ligar o dashboard no Painel Admin.
 //
-// Depois de rodar o passo 3, você pode editar as perguntas
+// Depois de rodar o passo 3, você pode editar o TEXTO das perguntas
 // normalmente pela interface do Google Forms (o link de edição
 // aparece no log). Só não mude a ORDEM das perguntas, senão o
 // dashboard lê a coluna errada.
 
+const FEEDBACK_SHEET_ID = '1InodiEZbZfBtawwDSGWLkfFp4xwK9aSWKbqc9TPRPCw';
+
 function criarFormularioFeedback() {
   const form = FormApp.create('Feedback Supercopa AFC 2026');
-  form.setDescription('Sua opinião ajuda a Supercopa AFC a ficar cada vez melhor! Leva menos de 2 minutos. 🏀🏐');
+  form.setDescription('Sua opinião ajuda a Supercopa AFC a ficar cada vez melhor! Leva menos de 1 minuto. 🏀🏐');
   form.setCollectEmail(false);
   form.setAllowResponseEdits(false);
 
-  form.addMultipleChoiceItem()
-    .setTitle('Qual modalidade você acompanhou?')
-    .setChoiceValues(['Vôlei', 'Basquete', 'Ambas'])
-    .setRequired(true);
-
-  form.addTextItem()
-    .setTitle('Qual time você torce ou está ligado?')
-    .setRequired(false);
-
   form.addScaleItem()
-    .setTitle('Nota geral para o evento')
-    .setBounds(0, 10)
-    .setLabels('Muito ruim', 'Excelente')
+    .setTitle('1. Qual sua nota para a organização e infraestrutura?')
+    .setBounds(1, 10)
+    .setLabels('Péssima', 'Excelente')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('Organização e infraestrutura (local, horários, estrutura)')
-    .setBounds(1, 5)
-    .setLabels('Ruim', 'Ótima')
+    .setTitle('2. Qual sua nota para a arbitragem?')
+    .setBounds(1, 10)
+    .setLabels('Péssima', 'Excelente')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('Arbitragem')
-    .setBounds(1, 5)
-    .setLabels('Ruim', 'Ótima')
+    .setTitle('3. O que você achou do app da Supercopa?')
+    .setBounds(1, 10)
+    .setLabels('Não gostei', 'Adorei')
     .setRequired(true);
 
-  form.addMultipleChoiceItem()
-    .setTitle('Você usa o app da Supercopa?')
-    .setChoiceValues(['Sim, uso sempre', 'Já usei algumas vezes', 'Não conhecia'])
-    .setRequired(false);
+  form.addScaleItem()
+    .setTitle('4. Qual sua nota geral para o evento?')
+    .setBounds(1, 10)
+    .setLabels('Péssimo', 'Excelente')
+    .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('De 0 a 10, o quanto você recomendaria a Supercopa para amigos e família?')
-    .setBounds(0, 10)
+    .setTitle('5. Recomendaria a Supercopa?')
+    .setBounds(1, 10)
     .setLabels('Não recomendaria', 'Com certeza')
     .setRequired(true);
 
   form.addParagraphTextItem()
-    .setTitle('O que você mais gostou?')
+    .setTitle('6. Pontos positivos')
     .setRequired(false);
 
   form.addParagraphTextItem()
-    .setTitle('O que podemos melhorar?')
+    .setTitle('7. Pontos a melhorar')
     .setRequired(false);
 
-  form.addTextItem()
-    .setTitle('Seu nome (opcional)')
-    .setRequired(false);
+  form.addMultipleChoiceItem()
+    .setTitle('8. Seu time')
+    .setChoiceValues(['CT das Montanhas', 'São Pedro Basquete', 'Central Serrano Basquete', 'Aracruz Basquete', 'Marlins', 'Crossover Basquete'])
+    .setRequired(true);
 
-  form.addTextItem()
-    .setTitle('WhatsApp (opcional, caso tenha sorteios/brindes)')
-    .setRequired(false);
-
-  // Cria e vincula a planilha de respostas
-  const ss = SpreadsheetApp.create('Feedback Supercopa AFC 2026 - Respostas');
+  // Vincula a planilha já existente (cria uma aba "Form Responses 1" nela com as colunas)
+  const ss = SpreadsheetApp.openById(FEEDBACK_SHEET_ID);
   form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
 
   // Guarda o ID da planilha para o doGet usar depois
@@ -118,7 +112,8 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     const ss = SpreadsheetApp.openById(sheetId);
-    const sheet = ss.getSheets()[0];
+    const sheets = ss.getSheets();
+    const sheet = sheets.find(s => s.getName().indexOf('Form Responses') === 0) || sheets[sheets.length - 1];
     const rows = sheet.getDataRange().getValues();
     const headers = rows.shift();
 
