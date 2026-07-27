@@ -48,6 +48,34 @@ function configurarInscricao() {
   Logger.log('Pasta de escudos: ' + DriveApp.getFolderById(FOLDER_ID).getUrl());
 }
 
+// Rode esta função direto no editor (▶ Executar, selecionando "testarUploadEscudo"
+// no menu ao lado do botão) para ver exatamente onde o Drive está recusando.
+// O log completo aparece automaticamente depois de rodar (menu "Execuções" à esquerda).
+function testarUploadEscudo() {
+  try {
+    Logger.log('1) Abrindo a pasta...');
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    Logger.log('   OK — pasta: ' + folder.getName());
+
+    Logger.log('2) Criando arquivo de teste...');
+    const bytes = Utilities.base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+    const blob = Utilities.newBlob(bytes, 'image/png', 'teste-diagnostico.png');
+    const file = folder.createFile(blob);
+    Logger.log('   OK — arquivo criado: ' + file.getUrl());
+
+    Logger.log('3) Ajustando compartilhamento...');
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    Logger.log('   OK — compartilhado.');
+
+    Logger.log('4) Apagando arquivo de teste...');
+    file.setTrashed(true);
+    Logger.log('TUDO OK! O upload de escudo deveria funcionar normalmente.');
+  } catch (ex) {
+    Logger.log('ERRO: ' + ex.message);
+    Logger.log('STACK: ' + ex.stack);
+  }
+}
+
 function doPost(e) {
   try {
     const dados = JSON.parse(e.postData.contents);
