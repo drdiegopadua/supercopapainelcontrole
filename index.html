@@ -2083,7 +2083,12 @@ async function loadAtletasFromSheet(manual=false) {
   try {
     state.destaques = [];
 
-    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Basquete'!A2:F200");
+    let rows = [];
+    try {
+      rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Basquete'!A2:F200");
+    } catch (e) {
+      console.warn('Aba "Basquete" não encontrada (provavelmente arquivada) — pulando.', e);
+    }
     (rows || []).forEach((row, i) => {
       const modalidadeKey = (row[0] || '').trim().toLowerCase();
       const jogoLabel = (row[1] || '').toString().trim();
