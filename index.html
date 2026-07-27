@@ -2284,17 +2284,25 @@ async function loadEdicoesDashboard(manual) {
     ]);
 
     // Junta as fontes num mapa único por edição (chave "ATUAL", "BASQUETE_2026", etc.)
+    // Cada script arquiva com um prefixo próprio (ex: "Basquete_BASQUETE_2026" na
+    // Galera vs "BASQUETE_2026" nos outros) — normaliza pra não duplicar o card.
+    const normalizarEdicao = (nome) => {
+      if (!nome || nome === 'ATUAL') return nome;
+      const m = nome.match(/([A-Za-zÀ-ú]+_\d{4})$/);
+      return m ? m[1].toUpperCase() : nome;
+    };
+
     const mapa = {};
     const getEd = (nome) => mapa[nome] || (mapa[nome] = { edicao: nome, instalacoes: 0, acessosUnicos: 0, acessosTotais: 0, quizRespostas: 0, destaques: 0, premiacao: [], votosGalera: 0, rankingGalera: [] });
 
     (instalAcessoQuiz.ok ? instalAcessoQuiz.edicoes : []).forEach(ed => {
-      Object.assign(getEd(ed.edicao), { instalacoes: ed.instalacoes, acessosUnicos: ed.acessosUnicos, acessosTotais: ed.acessosTotais, quizRespostas: ed.quizRespostas });
+      Object.assign(getEd(normalizarEdicao(ed.edicao)), { instalacoes: ed.instalacoes, acessosUnicos: ed.acessosUnicos, acessosTotais: ed.acessosTotais, quizRespostas: ed.quizRespostas });
     });
     (destaquePremiacao.ok ? destaquePremiacao.edicoes : []).forEach(ed => {
-      Object.assign(getEd(ed.edicao), { destaques: ed.destaques, premiacao: ed.premiacao || [] });
+      Object.assign(getEd(normalizarEdicao(ed.edicao)), { destaques: ed.destaques, premiacao: ed.premiacao || [] });
     });
     (galera.ok ? galera.edicoes : []).forEach(ed => {
-      Object.assign(getEd(ed.edicao), { votosGalera: ed.totalVotos || 0, rankingGalera: ed.ranking || [] });
+      Object.assign(getEd(normalizarEdicao(ed.edicao)), { votosGalera: ed.totalVotos || 0, rankingGalera: ed.ranking || [] });
     });
     // Pontos/campeão do basquete valem pra edição ATUAL (ou já arquivada como BASQUETE_*)
     Object.values(mapa).forEach(ed => {
