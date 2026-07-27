@@ -63,9 +63,7 @@ function testarUploadEscudo() {
     const file = folder.createFile(blob);
     Logger.log('   OK — arquivo criado: ' + file.getUrl());
 
-    Logger.log('3) Ajustando compartilhamento...');
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    Logger.log('   OK — compartilhado.');
+    Logger.log('3) Pulando setSharing() — o arquivo já herda o compartilhamento da pasta.');
 
     Logger.log('4) Apagando arquivo de teste...');
     file.setTrashed(true);
@@ -87,7 +85,10 @@ function doPost(e) {
       const blob = Utilities.newBlob(bytes, 'image/png', dados.escudoNome || 'escudo.png');
       const folder = DriveApp.getFolderById(FOLDER_ID);
       const file = folder.createFile(blob);
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      // Não chama file.setSharing() aqui: a pasta já está compartilhada como
+      // "Qualquer pessoa com o link" e o arquivo herda essa permissão sozinho.
+      // Forçar setSharing() no arquivo individual dá "Acesso negado: DriveApp."
+      // nessa conta.
       linkEscudo = file.getUrl();
     }
 
