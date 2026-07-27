@@ -2354,7 +2354,7 @@ async function loadInscricoesDashboard(manual) {
         <div class="card" style="margin:0;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
           ${escudo}
           <div style="flex:1;min-width:200px">
-            <div style="font-weight:800;font-size:14px;color:var(--dark)">${i['Nome da Equipe'] || '—'}</div>
+            <div style="font-weight:800;font-size:14px;color:var(--dark)">${i['Modalidade'] === 'Basquete' ? '🏀' : '🏐'} ${i['Nome da Equipe'] || '—'}</div>
             <div style="font-size:12px;color:var(--dark-grey);margin-top:2px">${i['Cidade'] || '—'} · Resp: ${i['Nome do Responsável'] || '—'} · ${i['Telefone/WhatsApp'] || '—'}</div>
             <div style="font-size:11px;color:var(--dark-grey);margin-top:2px">${i['Instagram'] ? '📷 ' + i['Instagram'] + ' · ' : ''}${aloj} · Conheceu via: ${i['Como conheceu a Supercopa'] || '—'}</div>
           </div>

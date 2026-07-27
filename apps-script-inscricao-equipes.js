@@ -33,7 +33,7 @@ const SHEET_ID = '1hM1wRtCW-3GjQGB9flO3_sH5LAmOnjii7yN8d_Ob7VI';
 const FOLDER_ID = '1u8SuBSGXJHnzonB7rQKxfu6TeYyxymr_';
 
 const HEADERS = [
-  'Carimbo de data/hora', 'Nome da Equipe', 'Nome do Responsável', 'Instagram',
+  'Carimbo de data/hora', 'Modalidade', 'Nome da Equipe', 'Nome do Responsável', 'Instagram',
   'Telefone/WhatsApp', 'Cidade', 'Precisa de Alojamento', 'Pessoas no Alojamento',
   'Como conheceu a Supercopa', 'Termo de Alojamento', 'Termo de Compromisso',
   'Link do Escudo', 'Status'
@@ -66,6 +66,7 @@ function doPost(e) {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
     sheet.appendRow([
       new Date(),
+      dados.modalidade || '',
       dados.nomeEquipe || '',
       dados.nomeResp || '',
       dados.instagram || '',
