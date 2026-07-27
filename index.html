@@ -2238,7 +2238,7 @@ const EDICOES_META = {
 function metaParaEdicao(edicao) {
   if (/basquete/i.test(edicao)) return EDICOES_META.BASQUETE;
   if (/volei|vôlei/i.test(edicao)) return EDICOES_META.VOLEI;
-  if (edicao === 'ATUAL') return EDICOES_META.BASQUETE; // hoje só o Basquete está em andamento
+  if (edicao === 'ATUAL') return EDICOES_META.VOLEI; // Basquete já foi arquivado — a edição em andamento agora é o Vôlei
   return null;
 }
 function formatarDuracao(min) {
