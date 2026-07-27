@@ -1067,6 +1067,20 @@
           <div class="empty-state" style="grid-column:1/-1"><i class='bx bxs-trophy'></i><p>Carregando premiação da planilha...</p></div>
         </div>
       </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="font-size:22px">🏆</div>
+          <div>
+            <div class="card-title" style="margin-bottom:0">Melhores do Campeonato — Vôlei</div>
+            <div style="font-size:12px;color:var(--dark-grey)">MVP, Melhor Levantador, Melhor Ponteiro e Melhor Líbero. Aparecem na TV e no app.</div>
+          </div>
+          <button onclick="loadPremiacaoVolei(true)" style="margin-left:auto;background:#1565C0;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
+        </div>
+        <div id="premiacao-grid-volei" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;">
+          <div class="empty-state" style="grid-column:1/-1"><i class='bx bxs-trophy'></i><p>Configure VOLEI_APOIO_SCRIPT_URL para carregar.</p></div>
+        </div>
+      </div>
     </div>
 
     <!-- ─── SOCIAL ─── -->
@@ -1105,6 +1119,19 @@
           <button onclick="carregarRankingGalera()" style="margin-left:auto;background:#7C3AED;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
         </div>
         <div id="adminGaleraRanking" style="font-size:13px;color:var(--dark-grey);text-align:center;padding:20px">Clique em Atualizar para carregar</div>
+      </div>
+
+      <!-- ═══ ATLETA DA GALERA — VÔLEI ═══ -->
+      <div class="card" style="margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="font-size:22px">🗳️</div>
+          <div>
+            <div class="card-title" style="margin-bottom:0">Atleta da Galera — Vôlei</div>
+            <div style="font-size:12px;color:var(--dark-grey)">Top 5 mais votados pelo público</div>
+          </div>
+          <button onclick="carregarRankingGaleraVolei()" style="margin-left:auto;background:#1565C0;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
+        </div>
+        <div id="adminGaleraRankingVolei" style="font-size:13px;color:var(--dark-grey);text-align:center;padding:20px">Clique em Atualizar para carregar</div>
       </div>
     </div>
 
@@ -1529,6 +1556,8 @@ const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aW
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
 const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec";
 const ATLETA_DESTAQUE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJcF6s2NNYrOtv2WkfBzKSlosU75wpfDopW1T91p0k7IYJvHlFsrh2p-5g78759UQz/exec";
+// Preencha após rodar criarPlanilhaVolei() em apps-script-volei-apoio.js e implantar:
+const VOLEI_APOIO_SCRIPT_URL = ""; // ex: https://script.google.com/macros/s/XXXX/exec
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxAJ33xHRJH1AoNAMRV_o2KOasCvufl6JN_4kK--SBeh2LA1grmiIiYNNrNBfKqgbZs/exec"; // PALPITES — installs/quiz/blocked_games
 const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUc_Z7wdPEWMQ_WzbQGNiHBVu0yJsxb8AwZC3-eZm_dHT_yk-hhmdToxXUeiTtxV/exec";
@@ -1690,6 +1719,7 @@ function doLogin(e) {
       loadBasqueteFromSheet();
       loadAtletasFromSheet();
       loadPremiacao();
+      loadPremiacaoVolei();
       loadNoticiasFromSheet();
       loadQuizRanking();
       // Carrega handebol masc e fem silenciosamente para o contador do dashboard
@@ -2051,16 +2081,10 @@ async function loadBasqueteFromSheet(manual=false) {
 async function loadAtletasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Basquete'!A2:F200");
     state.destaques = [];
-    if (!rows || rows.length === 0) {
-      renderDestaques();
-      updateStats();
-      updateDashboard();
-      if (manual) showToast('Nenhum atleta destaque encontrado.', 'error');
-      return;
-    }
-    rows.forEach((row, i) => {
+
+    const rows = await sheetRead('18wKa_PWsVDBJdMw5wJLFs-1Qtcx5C1zdzlE_lK2Wzgo', "'Basquete'!A2:F200");
+    (rows || []).forEach((row, i) => {
       const modalidadeKey = (row[0] || '').trim().toLowerCase();
       const jogoLabel = (row[1] || '').toString().trim();
       const nome = (row[2] || '').trim();
@@ -2071,7 +2095,7 @@ async function loadAtletasFromSheet(manual=false) {
       const emoji = modalidadeKey === 'basquete' ? '🏀' : '🏐';
       const modalidade = modalidadeKey === 'basquete' ? 'Basquete' : 'Vôlei';
       state.destaques.push({
-        id: i + 2, // linha real na planilha (dados começam na linha 2)
+        id: 'b' + (i + 2), // linha real na planilha (dados começam na linha 2)
         jogo: jogoLabel,
         nome, equipe, obs,
         modalidade,
@@ -2079,6 +2103,21 @@ async function loadAtletasFromSheet(manual=false) {
         data: dataReg
       });
     });
+
+    if (VOLEI_APOIO_SCRIPT_URL) {
+      try {
+        const vData = await fetch(VOLEI_APOIO_SCRIPT_URL + '?action=destaques').then(r => r.json());
+        (vData.ok ? vData.destaques : []).forEach(d => {
+          if (!d.nome) return;
+          state.destaques.push({
+            id: 'v' + d._linha,
+            jogo: d.jogo, nome: d.nome, equipe: d.equipe, obs: d.observacao,
+            modalidade: 'Vôlei', emoji: '🏐', data: d.dataHora
+          });
+        });
+      } catch (e) { console.warn('Erro ao carregar destaques do Vôlei:', e); }
+    }
+
     console.log('Destaques carregados:', state.destaques.length);
     renderDestaques();
     updateStats();
@@ -2488,6 +2527,41 @@ async function carregarRankingGalera() {
   } catch(e) {
     el.innerHTML = '<div style="text-align:center;padding:20px;color:#e53935;font-size:13px;">⚠️ Erro ao carregar ranking</div>';
     console.warn('Erro galera ranking:', e);
+  }
+}
+
+async function carregarRankingGaleraVolei() {
+  const el = document.getElementById('adminGaleraRankingVolei');
+  if (!el) return;
+  if (!VOLEI_APOIO_SCRIPT_URL) { el.innerHTML = '<div style="text-align:center;padding:12px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#999;">Configure VOLEI_APOIO_SCRIPT_URL primeiro.</div>'; return; }
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dark-grey);font-size:13px;">⏳ Carregando...</div>';
+  try {
+    const data = await fetch(VOLEI_APOIO_SCRIPT_URL + '?action=ranking').then(r => r.json());
+    const sorted = (data.ranking || []).slice(0, 5);
+
+    const medals = ['🥇','🥈','🥉'];
+    const color = '#1565C0';
+    let html = '';
+    if (!sorted.length) {
+      html = `<div style="text-align:center;padding:12px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#999;">Nenhum voto registrado</div>`;
+    } else {
+      sorted.forEach((item, i) => {
+        const medal = medals[i] || `${i+1}`;
+        html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${i===0?'#fff8e1':i===1?'#f3f3f3':i===2?'#fbe9e7':'#fafafa'};border-radius:10px;margin-bottom:6px;border:1px solid ${i<3?color+'33':'#eee'};">
+          <div style="font-size:18px;width:28px;text-align:center;">${medal}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px;">${item.atleta}</div>
+            <div style="font-size:11px;color:#888;">${item.time}</div>
+          </div>
+          <div style="font-weight:800;font-size:15px;color:${color};">${item.votos}<span style="font-size:10px;font-weight:400;color:#aaa;"> voto${item.votos>1?'s':''}</span></div>
+        </div>`;
+      });
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:#e53935;font-size:13px;">⚠️ Erro ao carregar ranking</div>';
+    console.warn('Erro galera ranking vôlei:', e);
   }
 }
 
@@ -3442,9 +3516,12 @@ async function salvarDestaque() {
   const jogoLabel = jogo ? (jogo.rodada + ' - ' + jogo.equipeA + ' vs ' + jogo.equipeB) : jogoId;
   const modalidadeKey = modalidade === 'Vôlei' ? 'volei' : 'basquete';
 
+  const scriptDestino = modalidade === 'Vôlei' ? VOLEI_APOIO_SCRIPT_URL : ATLETA_DESTAQUE_SCRIPT_URL;
+  if (!scriptDestino) { showToast('❌ Configure VOLEI_APOIO_SCRIPT_URL primeiro.', 'error'); return; }
+
   showLoading(true);
   try {
-    const r = await fetch(ATLETA_DESTAQUE_SCRIPT_URL, {
+    const r = await fetch(scriptDestino, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
@@ -3582,6 +3659,77 @@ async function salvarPremiacao(categoria) {
     if (res && res.ok) {
       showToast('✅ ' + categoria + ' salvo com sucesso!');
       await loadPremiacao();
+    } else {
+      showToast('❌ Erro: ' + (res?.erro || 'desconhecido'), 'error');
+    }
+  } catch (e) {
+    showToast('❌ Falha na conexão', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ── Melhores do Campeonato — Vôlei (mesma lógica, planilha separada) ──
+const PREMIACAO_CATEGORIAS_VOLEI = [
+  { key: 'MVP',              label: '🏆 MVP do Campeonato' },
+  { key: 'Melhor Levantador', label: '🎯 Melhor Levantador' },
+  { key: 'Melhor Ponteiro',   label: '💥 Melhor Ponteiro' },
+  { key: 'Melhor Líbero',     label: '🛡️ Melhor Líbero' }
+];
+state.premiacaoVolei = {};
+
+async function loadPremiacaoVolei(manual = false) {
+  if (!VOLEI_APOIO_SCRIPT_URL) { renderPremiacaoGridVolei(); return; }
+  try {
+    const data = await fetch(VOLEI_APOIO_SCRIPT_URL + '?action=premiacao').then(r => r.json());
+    state.premiacaoVolei = {};
+    (data.premiacao || []).forEach(p => {
+      if (!p.categoria) return;
+      state.premiacaoVolei[p.categoria] = { nome: p.nome, equipe: p.equipe };
+    });
+    renderPremiacaoGridVolei();
+    if (manual) showToast('Melhores do campeonato (Vôlei) atualizados!');
+  } catch (e) {
+    console.error('Erro ao carregar premiação do vôlei:', e);
+    renderPremiacaoGridVolei();
+    if (manual) showToast('Erro ao carregar: ' + e.message, 'error');
+  }
+}
+
+function renderPremiacaoGridVolei() {
+  const c = document.getElementById('premiacao-grid-volei');
+  if (!c) return;
+  c.innerHTML = PREMIACAO_CATEGORIAS_VOLEI.map(cat => {
+    const atual = state.premiacaoVolei[cat.key] || {};
+    const safe = premCssSafe(cat.key);
+    return `
+    <div style="background:#fff;border:1px solid #E8ECF4;border-radius:14px;padding:14px 16px;">
+      <div style="font-weight:800;font-size:13px;color:var(--dark);margin-bottom:10px;">${cat.label}</div>
+      <input type="text" class="form-control" id="prem-v-nome-${safe}" placeholder="Nome do atleta" value="${atual.nome || ''}" style="margin-bottom:8px;">
+      <input type="text" class="form-control" id="prem-v-equipe-${safe}" placeholder="Equipe" value="${atual.equipe || ''}" style="margin-bottom:10px;">
+      <button class="btn btn-gold" style="width:100%;" onclick="salvarPremiacaoVolei('${cat.key}')"><i class='bx bx-save'></i> Salvar</button>
+    </div>`;
+  }).join('');
+}
+
+async function salvarPremiacaoVolei(categoria) {
+  if (!VOLEI_APOIO_SCRIPT_URL) { showToast('❌ Configure VOLEI_APOIO_SCRIPT_URL primeiro.', 'error'); return; }
+  const safe = premCssSafe(categoria);
+  const nome = document.getElementById('prem-v-nome-' + safe).value.trim();
+  const equipe = document.getElementById('prem-v-equipe-' + safe).value.trim();
+  if (!nome) { showToast('Digite o nome do atleta.', 'error'); return; }
+
+  showLoading(true);
+  try {
+    const r = await fetch(VOLEI_APOIO_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ acao: 'salvarPremiacao', categoria, nome, equipe })
+    });
+    const res = await r.json().catch(() => ({ ok: false, erro: 'Resposta inválida' }));
+    if (res && res.ok) {
+      showToast('✅ ' + categoria + ' (Vôlei) salvo com sucesso!');
+      await loadPremiacaoVolei();
     } else {
       showToast('❌ Erro: ' + (res?.erro || 'desconhecido'), 'error');
     }
