@@ -50,10 +50,14 @@ function doPost(e) {
       return okJson({ ok: true });
     }
 
-    // Destaque da Galera COROA
+    // Destaque da Galera COROA — aba propria do AFOHAND (nao mais a
+    // planilha compartilhada com a Supercopa)
     if (data.tipo === 'voto_destaque') {
-      const VOTE_SS_ID = '1jGuJHUHyY3p-PQHm7HmNjcYry_xPheuOT2RmVFHh_Go';
-      const sh = SpreadsheetApp.openById(VOTE_SS_ID).getActiveSheet();
+      let sh = ss.getSheetByName('Destaque');
+      if (!sh) {
+        sh = ss.insertSheet('Destaque');
+        sh.appendRow(['Data/Hora', 'Nome', 'Telefone', 'Modalidade', 'Time', 'Atleta', 'Num Atleta']);
+      }
       sh.appendRow([new Date(), data.nome, data.telefone, data.modalidade, data.time, data.atleta]);
       return okJson({ success: true });
     }

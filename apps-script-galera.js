@@ -1,10 +1,16 @@
 // ============================================================
 // COPA AFOHAND 2026 — Destaque da Galera
-// Planilha ID: 1jGuJHUHyY3p-PQHm7HmNjcYry_xPheuOT2RmVFHh_Go
+// Planilha ID: 1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU (planilha
+// propria do AFOHAND — a mesma de Fase de Grupos/Classificacao/Mata-Mata),
+// aba "Destaque"
+//
+// Antes esta planilha era compartilhada com o app da Supercopa
+// (1jGuJHUHyY3p...), o que misturava votos de basquete/volei no
+// ranking do AFOHAND. Agora cada evento tem sua propria aba de votos.
 //
 // PASSO A PASSO:
 // 1. Abra a planilha:
-//    https://docs.google.com/spreadsheets/d/1jGuJHUHyY3p-PQHm7HmNjcYry_xPheuOT2RmVFHh_Go
+//    https://docs.google.com/spreadsheets/d/1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU
 // 2. Clique em: Extensoes > Apps Script
 // 3. Apague tudo que tiver la e cole este codigo abaixo
 // 4. Salve com Ctrl+S
@@ -16,11 +22,17 @@
 //    nenhum app que ja use essa planilha.
 // ============================================================
 
-var SHEET_ID = '1jGuJHUHyY3p-PQHm7HmNjcYry_xPheuOT2RmVFHh_Go';
+var SHEET_ID = '1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU';
+var ABA_DESTAQUE = 'Destaque';
 
 function getSheet() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
-  return ss.getSheetByName('Página1') || ss.getSheetByName('Pagina1') || ss.getSheets()[0];
+  var sh = ss.getSheetByName(ABA_DESTAQUE);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_DESTAQUE);
+    sh.appendRow(['Data/Hora', 'Nome', 'Telefone', 'Modalidade', 'Time', 'Atleta', 'Num Atleta']);
+  }
+  return sh;
 }
 
 // ══════════════════════════════════════════════════════════
