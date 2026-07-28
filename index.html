@@ -2834,7 +2834,7 @@ async function loadHandebolFromSheet(manual = false) {
 function _handCard(j) {
   const label = j.fase === 'matamata'
     ? `🏆 ${j.faseName}`
-    : `Grupo ${j.grupo} · Jogo ${j.jogo}`;
+    : `Grupo ${j.grupo} · Jogo ${j.jogo}${j.hora ? ' · ⏰ ' + j.hora : ''}`;
   return `
     <div class="jogo-card sport-handebol" id="hand-card-${j.id}">
       <div class="jogo-header">
@@ -2882,6 +2882,33 @@ function _handCard(j) {
     </div>`;
 }
 
+// Mesma ordem cronológica usada no app AFOHAND (index.html do app), casada por par de times
+const HAND_HORARIOS_GRUPOS = {
+  masc: {
+    A: [ { teams:['DRAGONHAND','HANDIUNA'], hora:'08:00' }, { teams:['DRAGONHAND','ACV'], hora:'11:20' }, { teams:['ACV','HANDIUNA'], hora:'16:40' } ],
+    B: [ { teams:['AFOHAND','HANDVNI'], hora:'09:40' }, { teams:['HANDVNI','FAEG'], hora:'15:00' }, { teams:['AFOHAND','FAEG'], hora:'18:20' } ]
+  },
+  fem: {
+    A: [ { teams:['DRAGONHAND','HANDIUNA'], hora:'08:50' }, { teams:['DRAGONHAND','ACV'], hora:'12:10' }, { teams:['ACV','HANDIUNA'], hora:'17:30' } ],
+    B: [ { teams:['CBH','HANDVNI'], hora:'10:30' }, { teams:['HANDVNI','FAEG'], hora:'15:50' }, { teams:['CBH','FAEG'], hora:'19:10' } ]
+  }
+};
+function _handNormTeam(nome) {
+  return (nome || '').toString().toUpperCase()
+    .replace(/[ÁÀÂÃÄ]/g, 'A').replace(/[ÉÈÊË]/g, 'E').replace(/[ÍÌÎÏ]/g, 'I')
+    .replace(/[ÓÒÔÕÖ]/g, 'O').replace(/[ÚÙÛÜ]/g, 'U').replace(/Ç/g, 'C')
+    .replace(/[^A-Z0-9]/g, '');
+}
+function _handAchaHorario(naipe, grupo, equipeA, equipeB) {
+  const lista = ((HAND_HORARIOS_GRUPOS[naipe] || {})[grupo]) || [];
+  const a = _handNormTeam(equipeA), b = _handNormTeam(equipeB);
+  for (let i = 0; i < lista.length; i++) {
+    const t = lista[i].teams;
+    if ((t[0]===a && t[1]===b) || (t[0]===b && t[1]===a)) return { hora: lista[i].hora, ordem: i };
+  }
+  return { hora: '', ordem: 999 };
+}
+
 function renderHandebolJogos() {
   const grid = document.getElementById('handebol-jogos-grid');
   if (!state.jogos.handebol.length) {
@@ -2890,6 +2917,13 @@ function renderHandebolJogos() {
   }
   const grupos  = state.jogos.handebol.filter(j => j.fase === 'grupo');
   const matamata = state.jogos.handebol.filter(j => j.fase === 'matamata');
+
+  grupos.forEach(j => { const hm = _handAchaHorario(handNaipe, j.grupo, j.equipeA, j.equipeB); j.hora = hm.hora; j._ordem = hm.ordem; });
+  grupos.sort((a, b) => {
+    if (a.hora && b.hora && a.hora !== b.hora) return a.hora < b.hora ? -1 : 1;
+    if (a.grupo !== b.grupo) return a.grupo < b.grupo ? -1 : 1;
+    return a._ordem - b._ordem;
+  });
 
   let html = '';
   if (grupos.length) {
