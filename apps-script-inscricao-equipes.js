@@ -9,27 +9,24 @@
 // 2) Expõe um endpoint (doGet) que o Painel Admin usa para
 //    listar as equipes inscritas.
 //
-// Planilha de inscrições:
-// https://docs.google.com/spreadsheets/d/1hM1wRtCW-3GjQGB9flO3_sH5LAmOnjii7yN8d_Ob7VI/edit
+// Planilha de inscrições (Vôlei 2026):
+// https://docs.google.com/spreadsheets/d/1kmDTtkWMY0tWbzvtoqks9UYbNvlf5Mtp5I3A6DLFDXY/edit
 //
-// Pasta de escudos no Drive:
+// Pasta de escudos no Drive (mesma de sempre):
 // https://drive.google.com/drive/folders/1u8SuBSGXJHnzonB7rQKxfu6TeYyxymr_
 //
 // COMO USAR (passo a passo):
-// 1. Acesse https://script.google.com e clique em "Novo projeto"
-// 2. Apague o conteúdo padrão e cole todo este arquivo
+// 1. Acesse o projeto do Apps Script já existente (o mesmo de antes)
+// 2. Apague o conteúdo e cole todo este arquivo atualizado
 // 3. Rode a função "configurarInscricao" uma vez (autorize sua
 //    conta na primeira execução) — ela cria a linha de cabeçalho
-//    na planilha, caso ainda não exista.
-// 4. Clique em "Implantar" > "Nova implantação"
-//    - Tipo: "Aplicativo da Web"
-//    - Executar como: "Eu" (sua conta)
-//    - Quem tem acesso: "Qualquer pessoa"
-// 5. Copie a URL gerada (termina em /exec) e me envie aqui no
-//    chat — é o que eu uso para ligar o formulário do site e
-//    o dashboard do Painel Admin.
+//    na planilha nova, caso ainda não exista.
+// 4. Clique em "Implantar" > "Gerenciar implantações" > editar (ícone
+//    de lápis) > no dropdown "Versão" escolha "Nova versão" > Implantar
+//    (mantém a mesma URL /exec, não precisa mudar nada no site)
+// 5. Se a URL mudar por algum motivo, me envie aqui no chat.
 
-const SHEET_ID = '1hM1wRtCW-3GjQGB9flO3_sH5LAmOnjii7yN8d_Ob7VI';
+const SHEET_ID = '1kmDTtkWMY0tWbzvtoqks9UYbNvlf5Mtp5I3A6DLFDXY';
 const FOLDER_ID = '1u8SuBSGXJHnzonB7rQKxfu6TeYyxymr_';
 
 const HEADERS = [
