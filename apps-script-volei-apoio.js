@@ -127,6 +127,23 @@ function getSS_() {
   return SpreadsheetApp.openById(id);
 }
 
+// Rode esta função DIRETO NO EDITOR (▶ Executar) uma vez. Ela só
+// tenta abrir a planilha de jogos/placar do Vôlei e ler o nome —
+// isso força o Google a pedir autorização de acesso a essa planilha
+// especificamente, caso ainda não tenha sido concedida. Depois de
+// rodar (e autorizar, se pedir), o "Salvar Súmula" passa a
+// conseguir escrever o placar lá também.
+function testarAcessoJogos() {
+  try {
+    const ss = SpreadsheetApp.openById(JOGOS_SHEET_ID);
+    Logger.log('OK — consegui abrir: ' + ss.getName() + ' (' + ss.getUrl() + ')');
+    const sh = ss.getSheetByName(ABA_GRUPOS);
+    Logger.log('OK — aba "' + ABA_GRUPOS + '" encontrada, linha 11: ' + JSON.stringify(sh.getRange(11, 1, 1, 3).getValues()));
+  } catch (ex) {
+    Logger.log('ERRO: ' + ex.message);
+  }
+}
+
 // Rode esta função UMA VEZ para criar a aba "Sumulas" (não mexe em
 // mais nada nas outras abas).
 function configurarSumulas() {
