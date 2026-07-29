@@ -1250,6 +1250,14 @@
           <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-total">0</div><div style="font-size:12px;color:var(--dark-grey)">Equipes inscritas</div></div>
         </div>
         <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:26px;">🏐</div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-volei">0</div><div style="font-size:12px;color:var(--dark-grey)">Vôlei</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:26px;">🏀</div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-basquete">0</div><div style="font-size:12px;color:var(--dark-grey)">Basquete</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
           <div style="width:56px;height:56px;border-radius:14px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--orange);"><i class='bx bx-hotel'></i></div>
           <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-aloj">0</div><div style="font-size:12px;color:var(--dark-grey)">Precisam de alojamento</div></div>
         </div>
@@ -1257,6 +1265,15 @@
           <div style="width:56px;height:56px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--green);"><i class='bx bx-group'></i></div>
           <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-pessoas">0</div><div style="font-size:12px;color:var(--dark-grey)">Pessoas no alojamento</div></div>
         </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-blue);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--blue);"><i class='bx bx-image'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="insc-escudos">0</div><div style="font-size:12px;color:var(--dark-grey)">Com escudo enviado</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title"><i class='bx bx-bar-chart-alt-2'></i> Como conheceram a Supercopa</div>
+        <div id="insc-conheceu-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
       </div>
 
       <div id="inscEmptyState" class="card" style="text-align:center;padding:40px;color:var(--dark-grey)">
@@ -1265,6 +1282,17 @@
       </div>
 
       <div id="inscList" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+
+    <!-- Modal: Detalhes da Inscrição -->
+    <div class="modal-overlay" id="modal-inscricao">
+      <div class="modal">
+        <div class="modal-title"><i class='bx bxs-id-card'></i> Detalhes da Inscrição</div>
+        <div id="modal-inscricao-body" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-inscricao')">Fechar</button>
+        </div>
+      </div>
     </div>
 
     <!-- ─── EDIÇÕES ─── -->
@@ -2403,17 +2431,42 @@ async function loadInscricoesDashboard(manual) {
     const data = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
     if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
     const inscricoes = data.inscricoes || [];
+    window._inscricoesCache = inscricoes;
 
     document.getElementById('inscEmptyState').style.display = inscricoes.length ? 'none' : '';
     document.getElementById('insc-total').textContent = inscricoes.length;
+
+    document.getElementById('insc-volei').textContent = inscricoes.filter(i => i['Modalidade'] === 'Vôlei').length;
+    document.getElementById('insc-basquete').textContent = inscricoes.filter(i => i['Modalidade'] === 'Basquete').length;
+    document.getElementById('insc-escudos').textContent = inscricoes.filter(i => i['Link do Escudo']).length;
 
     const comAloj = inscricoes.filter(i => i['Precisa de Alojamento'] === 'Sim');
     document.getElementById('insc-aloj').textContent = comAloj.length;
     const totalPessoas = comAloj.reduce((sum, i) => sum + (parseInt(i['Pessoas no Alojamento']) || 0), 0);
     document.getElementById('insc-pessoas').textContent = totalPessoas;
 
+    const conheceuContagem = {};
+    inscricoes.forEach(i => {
+      const via = (i['Como conheceu a Supercopa'] || '').toString().trim() || 'Não informado';
+      conheceuContagem[via] = (conheceuContagem[via] || 0) + 1;
+    });
+    const conheceuList = document.getElementById('insc-conheceu-list');
+    const conheceuEntries = Object.entries(conheceuContagem).sort((a, b) => b[1] - a[1]);
+    conheceuList.innerHTML = conheceuEntries.length ? conheceuEntries.map(([via, qtd]) => {
+      const pct = inscricoes.length ? Math.round(qtd / inscricoes.length * 100) : 0;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+          <div style="flex:1;min-width:120px;color:var(--dark)">${via}</div>
+          <div style="flex:2;background:#f0f0f0;border-radius:6px;overflow:hidden;height:10px">
+            <div style="width:${pct}%;background:var(--blue);height:100%"></div>
+          </div>
+          <div style="width:70px;text-align:right;color:var(--dark-grey)">${qtd} (${pct}%)</div>
+        </div>`;
+    }).join('') : '<p style="color:var(--dark-grey);font-size:13px">Sem dados ainda.</p>';
+
     const list = document.getElementById('inscList');
-    list.innerHTML = inscricoes.slice().reverse().map(i => {
+    list.innerHTML = inscricoes.slice().reverse().map((i, idx) => {
+      const realIdx = inscricoes.length - 1 - idx;
       const escudo = i['Link do Escudo']
         ? `<img src="${i['Link do Escudo']}" style="width:52px;height:52px;object-fit:contain;border-radius:8px;background:#f5f5f5" onerror="this.style.display='none'">`
         : `<div style="width:52px;height:52px;border-radius:8px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:22px">🏆</div>`;
@@ -2421,7 +2474,7 @@ async function loadInscricoesDashboard(manual) {
         ? `🛏️ Sim · ${i['Pessoas no Alojamento'] || '—'} pessoa(s)`
         : '🏠 Não';
       return `
-        <div class="card" style="margin:0;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <div class="card" style="margin:0;display:flex;gap:14px;align-items:center;flex-wrap:wrap;cursor:pointer" onclick="abrirDetalheInscricao(${realIdx})">
           ${escudo}
           <div style="flex:1;min-width:200px">
             <div style="font-weight:800;font-size:14px;color:var(--dark)">${i['Modalidade'] === 'Basquete' ? '🏀' : '🏐'} ${i['Nome da Equipe'] || '—'}</div>
@@ -2429,6 +2482,7 @@ async function loadInscricoesDashboard(manual) {
             <div style="font-size:11px;color:var(--dark-grey);margin-top:2px">${i['Instagram'] ? '📷 ' + i['Instagram'] + ' · ' : ''}${aloj} · Conheceu via: ${i['Como conheceu a Supercopa'] || '—'}</div>
           </div>
           <span class="status-badge status-upcoming">${i['Status'] || 'Pendente'}</span>
+          <i class='bx bx-chevron-right' style="font-size:20px;color:var(--dark-grey)"></i>
         </div>`;
     }).join('');
 
@@ -2437,6 +2491,37 @@ async function loadInscricoesDashboard(manual) {
     console.error('Erro ao carregar inscrições:', e);
     if (manual) showToast('❌ Erro ao carregar inscrições: ' + e.message, 'error');
   }
+}
+
+function abrirDetalheInscricao(idx) {
+  const i = (window._inscricoesCache || [])[idx];
+  if (!i) return;
+  const campo = (label, valor, icone) => `
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f0f0f0">
+      <i class='bx ${icone}' style="font-size:18px;color:var(--dark-grey);margin-top:1px"></i>
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px">${label}</div>
+        <div style="font-size:14px;color:var(--dark);font-weight:600;margin-top:2px">${valor || '—'}</div>
+      </div>
+    </div>`;
+  const escudoHtml = i['Link do Escudo']
+    ? `<div style="text-align:center;margin-bottom:8px"><img src="${i['Link do Escudo']}" style="width:100px;height:100px;object-fit:contain;border-radius:12px;background:#f5f5f5" onerror="this.style.display='none'"></div>`
+    : '';
+  document.getElementById('modal-inscricao-body').innerHTML = escudoHtml +
+    campo('Modalidade', (i['Modalidade'] === 'Basquete' ? '🏀 ' : '🏐 ') + (i['Modalidade'] || '—'), 'bx-category') +
+    campo('Nome da Equipe', i['Nome da Equipe'], 'bxs-id-card') +
+    campo('Nome do Responsável', i['Nome do Responsável'], 'bx-user') +
+    campo('Telefone/WhatsApp', i['Telefone/WhatsApp'], 'bx-phone') +
+    campo('Instagram', i['Instagram'], 'bxl-instagram') +
+    campo('Cidade', i['Cidade'], 'bx-map') +
+    campo('Precisa de Alojamento', i['Precisa de Alojamento'], 'bx-hotel') +
+    campo('Pessoas no Alojamento', i['Pessoas no Alojamento'], 'bx-group') +
+    campo('Como conheceu a Supercopa', i['Como conheceu a Supercopa'], 'bx-search-alt') +
+    campo('Termo de Alojamento', i['Termo de Alojamento'], 'bx-file') +
+    campo('Termo de Compromisso', i['Termo de Compromisso'], 'bx-file') +
+    campo('Status', i['Status'], 'bx-flag') +
+    campo('Data/Hora da Inscrição', i['Carimbo de data/hora'] ? new Date(i['Carimbo de data/hora']).toLocaleString('pt-BR') : '', 'bx-time');
+  openModal('modal-inscricao');
 }
 
 async function loadFeedbackDashboard(manual) {
