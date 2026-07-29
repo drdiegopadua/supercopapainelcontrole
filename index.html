@@ -1986,6 +1986,7 @@ async function loadVoleiFromSheet(manual=false) {
 
         state.jogos.volei.push({
           id: 'volei_' + g.grp + '_' + i,
+          sumulaId: g.grp + (i+1),
           sport: 'volei',
           equipeA, equipeB,
           data: data || '28/11', hora: '13:00',
@@ -2004,22 +2005,25 @@ async function loadVoleiFromSheet(manual=false) {
 
     // Quartas
     const mataRows = await sheetRead(INDEX_VOLEI_SHEET_ID, "'Mata-Mata'!A1:Q21");
+    const mataIds = [['Q1','Q2','Q3','Q4'], ['SF1','SF2'], ['FINAL']];
     [[5,6,7,8], [12,13], [17]].forEach((round, rIdx) => {
       const fases = ['Quartas', 'Semi', 'Final'];
       round.forEach((rIdx2, i) => {
         const ea = _cc(mataRows, rIdx2, 1) || (rIdx === 0 ? `1º Grupo ${['A','B','C','D'][i]}` : 'Vencedor');
         const eb = _cc(mataRows, rIdx2, 11) || (rIdx === 0 ? `2º Grupo ${['B','A','D','C'][i]}` : 'Vencedor');
-        const s1a = _cc(mataRows, rIdx2, 12), s1b = _cc(mataRows, rIdx2, 13);
-        const s2a = _cc(mataRows, rIdx2+1, 1), s2b = _cc(mataRows, rIdx2+1, 7);
+        const s1a = _cc(mataRows, rIdx2, 2), s1b = _cc(mataRows, rIdx2, 7);
+        const s2a = _cc(mataRows, rIdx2, 3), s2b = _cc(mataRows, rIdx2, 8);
+        const s3a = _cc(mataRows, rIdx2, 4), s3b = _cc(mataRows, rIdx2, 9);
         if (!ea && !eb) return;
         state.jogos.volei.push({
           id: 'volei_mata_' + rIdx + '_' + i,
+          sumulaId: mataIds[rIdx][i],
           sport: 'volei',
           equipeA: ea, equipeB: eb,
           data: '28/11', hora: '13:00',
           rodada: fases[rIdx] + ' · Jogo ' + (i+1),
           status: 'upcoming',
-          placar: { sets: [{a:s1a,b:s1b},{a:s2a,b:s2b},{a:'',b:''}] }
+          placar: { sets: [{a:s1a,b:s1b},{a:s2a,b:s2b},{a:s3a,b:s3b}] }
         });
       });
     });
@@ -3287,6 +3291,7 @@ function renderJogoCard(j) {
         </div>
         <div class="jogo-footer">
           <button class="btn btn-success btn-sm" style="padding:5px 12px;font-size:12px" onclick="salvarPlacarVolei('${j.id}')"><i class='bx bxs-cloud-upload'></i> Enviar Placar</button>
+          ${j.sumulaId ? `<button class="btn btn-secondary btn-sm" style="padding:5px 12px;font-size:12px" onclick="gerarLinkSumula('${j.sumulaId}')"><i class='bx bx-link'></i> Súmula</button>` : ''}
           <button class="btn btn-danger btn-sm" style="padding:5px 12px;font-size:12px" onclick="excluirJogo('${j.id}','volei')"><i class='bx bx-trash'></i></button>
         </div>
       </div>`;
@@ -3549,6 +3554,17 @@ async function enviarPushCampeao(time) {
       })
     });
   } catch(e) { /* push falhou silenciosamente */ }
+}
+
+function gerarLinkSumula(sumulaId) {
+  const base = location.href.replace(/[^/]*$/, '');
+  const url = base + 'sumula.html?jogo=' + sumulaId;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('🔗 Link da súmula copiado! Cole no WhatsApp e envie pro tablet/celular da mesa.');
+  }).catch(() => {
+    showToast('Não deu pra copiar automaticamente. Link: ' + url, 'error');
+  });
+  window.open(url, '_blank');
 }
 
 function excluirJogo(id, sport) {

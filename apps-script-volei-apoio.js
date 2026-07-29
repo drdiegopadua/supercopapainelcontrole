@@ -38,6 +38,34 @@ const HEADERS_INSCRICOES = [
   'Link do Escudo', 'Status'
 ];
 
+// ── SÚMULA DIGITAL (jogos/placar do Vôlei) ─────────────────
+// Planilha separada, só de jogos/placar (Fase de Grupos + Mata-Mata):
+// https://docs.google.com/spreadsheets/d/12-yxLsIplLMAj0Y9jCpzl2OGJLKPhy_lWAtvYP-Vvh8/edit
+const ABA_SUMULAS = 'Sumulas';
+const JOGOS_SHEET_ID = '12-yxLsIplLMAj0Y9jCpzl2OGJLKPhy_lWAtvYP-Vvh8';
+const ABA_GRUPOS = 'Fase de Grupos';
+const ABA_MATA = 'Mata-Mata';
+
+// Linha (1-indexed) de cada jogo dentro da planilha de jogos.
+const ROW_MAP_GRUPOS = {
+  A1: 11, A2: 12, A3: 13,
+  B1: 23, B2: 24, B3: 25,
+  C1: 35, C2: 36, C3: 37,
+  D1: 47, D2: 48, D3: 49
+};
+const ROW_MAP_MATA = {
+  Q1: 6, Q2: 7, Q3: 8, Q4: 9,
+  SF1: 13, SF2: 14,
+  FINAL: 18
+};
+
+const HEADERS_SUMULAS = [
+  'ID Jogo', 'Aba', 'Linha', 'Equipe Casa', 'Equipe Visitante',
+  'Titulares Casa', 'Líbero Casa', 'Titulares Visitante', 'Líbero Visitante',
+  'Sets', 'Timeouts Casa', 'Timeouts Visitante', 'Cartões', 'Substituições',
+  'Árbitro', 'Anotador', 'Local', 'Status', 'Atualizado em'
+];
+
 function criarPlanilhaVolei() {
   const ss = SpreadsheetApp.create('Supercopa Vôlei 2026 - Destaque, Premiação e Galera');
 
@@ -99,6 +127,17 @@ function getSS_() {
   return SpreadsheetApp.openById(id);
 }
 
+// Rode esta função UMA VEZ para criar a aba "Sumulas" (não mexe em
+// mais nada nas outras abas).
+function configurarSumulas() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_SUMULAS);
+  if (!sh) sh = ss.insertSheet(ABA_SUMULAS);
+  sh.getRange(1, 1, 1, HEADERS_SUMULAS.length).setValues([HEADERS_SUMULAS]);
+  sh.setFrozenRows(1);
+  Logger.log('Aba "Sumulas" configurada em: ' + ss.getUrl());
+}
+
 // ── doPost ──────────────────────────────────────────────────
 function doPost(e) {
   try {
@@ -140,6 +179,11 @@ function doPost(e) {
       return okJson(inscreverEquipeV_(dados));
     }
 
+    // SÚMULA DIGITAL
+    if (acao === 'salvarSumula') {
+      return okJson(salvarSumula_(dados));
+    }
+
     return okJson({ ok: false, erro: 'ação inválida: ' + acao });
   } catch (ex) {
     return okJson({ ok: false, erro: ex.message });
@@ -155,6 +199,8 @@ function doGet(e) {
     if (action === 'ranking' || action === 'ranking_atleta') return okJson({ ok: true, ranking: montarRankingGaleraV_() });
     if (action === 'destaques') return okJson(listarDestaquesV_());
     if (action === 'inscricoes') return okJson(listarInscricoesV_());
+    if (action === 'jogo') return okJson(carregarJogoSumula_((e.parameter && e.parameter.id) || ''));
+    if (action === 'sumula') return okJson({ ok: true, sumula: buscarSumula_((e.parameter && e.parameter.id) || '') });
 
     return okJson({ ok: true, msg: 'Supercopa Vôlei — Destaque/Premiação/Galera OK' });
   } catch (ex) {
@@ -286,6 +332,139 @@ function listarInscricoesV_() {
     return obj;
   }).filter(o => o['Nome da Equipe']);
   return { ok: true, headers: headers, inscricoes: inscricoes };
+}
+
+// ============================================================
+//  SÚMULA DIGITAL
+// ============================================================
+function resolverJogoSumula_(id) {
+  id = (id || '').toString().trim().toUpperCase();
+  if (ROW_MAP_GRUPOS[id]) return { aba: ABA_GRUPOS, linha: ROW_MAP_GRUPOS[id], id: id };
+  if (ROW_MAP_MATA[id]) return { aba: ABA_MATA, linha: ROW_MAP_MATA[id], id: id };
+  return null;
+}
+
+function carregarJogoSumula_(id) {
+  const jogo = resolverJogoSumula_(id);
+  if (!jogo) return { ok: false, erro: 'Jogo não encontrado: ' + id };
+
+  const shJogo = SpreadsheetApp.openById(JOGOS_SHEET_ID).getSheetByName(jogo.aba);
+  const row = shJogo.getRange(jogo.linha, 1, 1, 17).getValues()[0];
+
+  const equipeA = (row[1] || '').toString().trim();
+  const equipeB = (row[11] || '').toString().trim();
+
+  return {
+    ok: true,
+    id: jogo.id,
+    aba: jogo.aba,
+    equipeA: equipeA,
+    equipeB: equipeB,
+    sets: [
+      { a: row[2], b: row[7] },
+      { a: row[3], b: row[8] },
+      { a: row[4], b: row[9] }
+    ],
+    sumula: buscarSumula_(id)
+  };
+}
+
+function buscarSumula_(id) {
+  id = (id || '').toString().trim().toUpperCase();
+  if (!id) return null;
+  const sh = getSS_().getSheetByName(ABA_SUMULAS);
+  if (!sh || sh.getLastRow() < 2) return null;
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if ((rows[i][0] || '').toString().trim().toUpperCase() === id) {
+      return {
+        idJogo: rows[i][0], aba: rows[i][1], linha: rows[i][2],
+        equipeCasa: rows[i][3], equipeVisitante: rows[i][4],
+        titularesCasa: parseJson_(rows[i][5], []), liberoCasa: rows[i][6],
+        titularesVisitante: parseJson_(rows[i][7], []), liberoVisitante: rows[i][8],
+        sets: parseJson_(rows[i][9], []),
+        timeoutsCasa: parseJson_(rows[i][10], []), timeoutsVisitante: parseJson_(rows[i][11], []),
+        cartoes: parseJson_(rows[i][12], []), substituicoes: parseJson_(rows[i][13], []),
+        arbitro: rows[i][14], anotador: rows[i][15], local: rows[i][16],
+        status: rows[i][17], atualizadoEm: rows[i][18]
+      };
+    }
+  }
+  return null;
+}
+
+function parseJson_(str, fallback) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch (ex) { return fallback; }
+}
+
+function salvarSumula_(d) {
+  const jogo = resolverJogoSumula_(d.id);
+  if (!jogo) return { ok: false, erro: 'Jogo não encontrado: ' + d.id };
+
+  const sets = (d.sets || []).slice(0, 3);
+  while (sets.length < 3) sets.push({ a: '', b: '' });
+
+  const setsVencidosA = sets.filter(s => parseInt(s.a || 0) > parseInt(s.b || 0)).length;
+  const setsVencidosB = sets.filter(s => parseInt(s.b || 0) > parseInt(s.a || 0)).length;
+  let vencedor = '—';
+  if (setsVencidosA > setsVencidosB) vencedor = d.equipeA || '';
+  else if (setsVencidosB > setsVencidosA) vencedor = d.equipeB || '';
+
+  // 1) Grava o placar simplificado na planilha de jogos (mesmo
+  //    lugar que o site/app e o painel já leem).
+  const shJogo = SpreadsheetApp.openById(JOGOS_SHEET_ID).getSheetByName(jogo.aba);
+  const linhaAtual = shJogo.getRange(jogo.linha, 1, 1, 17).getValues()[0];
+  const numeroJogo = linhaAtual[0] || '';
+
+  shJogo.getRange(jogo.linha, 1, 1, 17).setValues([[
+    numeroJogo,
+    d.equipeA || '',
+    (sets[0].a || '').toString(), (sets[1].a || '').toString(), (sets[2].a || '').toString(),
+    setsVencidosA.toString(),
+    'X',
+    (sets[0].b || '').toString(), (sets[1].b || '').toString(), (sets[2].b || '').toString(),
+    setsVencidosB.toString(),
+    d.equipeB || '',
+    setsVencidosA.toString(), setsVencidosB.toString(),
+    vencedor,
+    d.data || linhaAtual[15] || '',
+    d.local || linhaAtual[16] || ''
+  ]]);
+
+  // 2) Grava/atualiza o registro completo da súmula.
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_SUMULAS);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_SUMULAS);
+    sh.getRange(1, 1, 1, HEADERS_SUMULAS.length).setValues([HEADERS_SUMULAS]);
+    sh.setFrozenRows(1);
+  }
+
+  const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  const linhaDados = [
+    jogo.id, jogo.aba, jogo.linha, d.equipeA || '', d.equipeB || '',
+    JSON.stringify(d.titularesA || []), d.liberoA || '',
+    JSON.stringify(d.titularesB || []), d.liberoB || '',
+    JSON.stringify(sets),
+    JSON.stringify(d.timeoutsA || []), JSON.stringify(d.timeoutsB || []),
+    JSON.stringify(d.cartoes || []), JSON.stringify(d.substituicoes || []),
+    d.arbitro || '', d.anotador || '', d.local || '',
+    d.status || 'Encerrada', agora
+  ];
+
+  const rows = sh.getDataRange().getValues();
+  let achou = false;
+  for (let i = 1; i < rows.length; i++) {
+    if ((rows[i][0] || '').toString().trim().toUpperCase() === jogo.id) {
+      sh.getRange(i + 1, 1, 1, linhaDados.length).setValues([linhaDados]);
+      achou = true;
+      break;
+    }
+  }
+  if (!achou) sh.appendRow(linhaDados);
+
+  return { ok: true, setsVencidosA: setsVencidosA, setsVencidosB: setsVencidosB, vencedor: vencedor };
 }
 
 // ============================================================
