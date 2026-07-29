@@ -24,6 +24,19 @@
 const ABA_DESTAQUE = 'Destaque';
 const ABA_PREMIACAO_V = 'Premiacao';
 const ABA_GALERA = 'Galera';
+const ABA_INSCRICOES = 'Inscricoes';
+
+// Pasta de escudos no Drive (mesma de sempre, compartilhada como
+// "Qualquer pessoa com o link"):
+// https://drive.google.com/drive/folders/1u8SuBSGXJHnzonB7rQKxfu6TeYyxymr_
+const FOLDER_ID_ESCUDOS = '1u8SuBSGXJHnzonB7rQKxfu6TeYyxymr_';
+
+const HEADERS_INSCRICOES = [
+  'Carimbo de data/hora', 'Modalidade', 'Nome da Equipe', 'Nome do Responsável', 'Instagram',
+  'Telefone/WhatsApp', 'Cidade', 'Precisa de Alojamento', 'Pessoas no Alojamento',
+  'Como conheceu a Supercopa', 'Termo de Alojamento', 'Termo de Compromisso',
+  'Link do Escudo', 'Status'
+];
 
 function criarPlanilhaVolei() {
   const ss = SpreadsheetApp.create('Supercopa Vôlei 2026 - Destaque, Premiação e Galera');
@@ -41,11 +54,43 @@ function criarPlanilhaVolei() {
   shGalera.getRange(1, 1, 1, 3).setValues([['Data-Hora', 'Atleta', 'Time']]);
   shGalera.setFrozenRows(1);
 
+  const shInscricoes = ss.insertSheet(ABA_INSCRICOES);
+  shInscricoes.getRange(1, 1, 1, HEADERS_INSCRICOES.length).setValues([HEADERS_INSCRICOES]);
+  shInscricoes.setFrozenRows(1);
+
   PropertiesService.getScriptProperties().setProperty('SHEET_ID', ss.getId());
 
   Logger.log('====================================================');
   Logger.log('Planilha criada: ' + ss.getUrl());
   Logger.log('====================================================');
+}
+
+// Rode esta função UMA VEZ na planilha já existente para criar (ou
+// corrigir o cabeçalho de) a aba "Inscricoes", sem mexer nas outras
+// três abas (Destaque, Premiacao, Galera).
+function configurarInscricoes() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_INSCRICOES);
+  if (!sh) sh = ss.insertSheet(ABA_INSCRICOES);
+  sh.getRange(1, 1, 1, HEADERS_INSCRICOES.length).setValues([HEADERS_INSCRICOES]);
+  sh.setFrozenRows(1);
+  Logger.log('Aba "Inscricoes" configurada em: ' + ss.getUrl());
+}
+
+// Rode esta função UMA VEZ para desfazer o teste de diagnóstico que
+// foi gravado por engano na aba "Destaque" (linha de cabeçalho
+// sobrescrita + linha de teste "TESTE DIAGNOSTICO"). Não mexe em
+// mais nada.
+function repararAbaDestaque() {
+  const sh = getSS_().getSheetByName(ABA_DESTAQUE);
+  const max = sh.getMaxColumns();
+  if (max > 6) sh.getRange(1, 7, 1, max - 6).clearContent();
+  sh.getRange(1, 1, 1, 6).setValues([['Modalidade', 'Jogo', 'Nome', 'Equipe', 'Observação', 'Data/Hora']]);
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if ((rows[i][2] || '').toString().trim() === 'TESTE DIAGNOSTICO') sh.deleteRow(i + 1);
+  }
+  Logger.log('Aba "Destaque" reparada.');
 }
 
 function getSS_() {
@@ -90,6 +135,11 @@ function doPost(e) {
       return okJson({ ok: true });
     }
 
+    // INSCRIÇÃO DE EQUIPES
+    if (acao === 'inscrever') {
+      return okJson(inscreverEquipeV_(dados));
+    }
+
     return okJson({ ok: false, erro: 'ação inválida: ' + acao });
   } catch (ex) {
     return okJson({ ok: false, erro: ex.message });
@@ -104,6 +154,7 @@ function doGet(e) {
     if (action === 'premiacao') return okJson(listarPremiacaoV_());
     if (action === 'ranking' || action === 'ranking_atleta') return okJson({ ok: true, ranking: montarRankingGaleraV_() });
     if (action === 'destaques') return okJson(listarDestaquesV_());
+    if (action === 'inscricoes') return okJson(listarInscricoesV_());
 
     return okJson({ ok: true, msg: 'Supercopa Vôlei — Destaque/Premiação/Galera OK' });
   } catch (ex) {
@@ -178,6 +229,63 @@ function montarRankingGaleraV_() {
     contagem[key].votos++;
   });
   return Object.values(contagem).sort((a, b) => b.votos - a.votos).slice(0, 10);
+}
+
+// ============================================================
+//  INSCRIÇÃO DE EQUIPES
+// ============================================================
+function inscreverEquipeV_(dados) {
+  let linkEscudo = '';
+  if (dados.escudoBase64) {
+    const partes = dados.escudoBase64.split(',');
+    const bytes = Utilities.base64Decode(partes[1] || partes[0]);
+    const blob = Utilities.newBlob(bytes, 'image/png', dados.escudoNome || 'escudo.png');
+    const folder = DriveApp.getFolderById(FOLDER_ID_ESCUDOS);
+    const file = folder.createFile(blob);
+    // Não chama file.setSharing() aqui: a pasta já está compartilhada como
+    // "Qualquer pessoa com o link" e o arquivo herda essa permissão sozinho.
+    linkEscudo = file.getUrl();
+  }
+
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_INSCRICOES);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_INSCRICOES);
+    sh.getRange(1, 1, 1, HEADERS_INSCRICOES.length).setValues([HEADERS_INSCRICOES]);
+    sh.setFrozenRows(1);
+  }
+
+  sh.appendRow([
+    new Date(),
+    dados.modalidade || '',
+    dados.nomeEquipe || '',
+    dados.nomeResp || '',
+    dados.instagram || '',
+    dados.telefone || '',
+    dados.cidade || '',
+    dados.alojamento === 'sim' ? 'Sim' : 'Não',
+    dados.alojamento === 'sim' ? (dados.alojQty || '') : '',
+    dados.comoConheceu || '',
+    dados.termoAloj ? 'Assinado' : '',
+    dados.termoComp ? 'Assinado' : '',
+    linkEscudo,
+    'Pendente'
+  ]);
+
+  return { ok: true, status: 'ok' };
+}
+
+function listarInscricoesV_() {
+  const sh = getSS_().getSheetByName(ABA_INSCRICOES);
+  if (!sh || sh.getLastRow() < 2) return { ok: true, headers: HEADERS_INSCRICOES, inscricoes: [] };
+  const rows = sh.getDataRange().getValues();
+  const headers = rows.shift();
+  const inscricoes = rows.map((r, i) => {
+    const obj = { _linha: i + 2 };
+    headers.forEach((h, j) => obj[h] = r[j]);
+    return obj;
+  }).filter(o => o['Nome da Equipe']);
+  return { ok: true, headers: headers, inscricoes: inscricoes };
 }
 
 // ============================================================

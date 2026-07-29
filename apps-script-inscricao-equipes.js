@@ -1,4 +1,11 @@
 // ============================================================
+//  DESATIVADO — não use mais este arquivo.
+//  A inscrição de equipes foi incorporada ao
+//  apps-script-volei-apoio.js (aba "Inscricoes" na planilha
+//  "Supercopa Vôlei 2026 - Destaque, Premiação e Galera"),
+//  para não espalhar em mais uma planilha/script separado.
+//  Mantido aqui só como histórico.
+// ============================================================
 //  SUPERCOPA AFC — Inscrição de Equipes (formulário único)
 // ============================================================
 //

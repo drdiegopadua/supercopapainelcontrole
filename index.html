@@ -1585,7 +1585,7 @@ const HAND_SHEET_ID   = "1CT9nND4HHVakDZHydtDyF6g2ULwuF8iMpyE9OqaMQVU";
 const FEEDBACK_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwI8SlXs8chIPW9ounZjULMD-z0FdmkYjTZJDjKSQQqjfy8-HcpuXv2Zixw8ZiV16OH/exec";
 const FEEDBACK_FORM_URL = "https://www.supercopaafc.com.br/feedback.html"; // formulário bonito no site (feedback.html)
 // Preencha após rodar apps-script-inscricao-equipes.js e implantar como Web App:
-const INSCRICAO_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw96gGIjYMpdL4P6tP-jk8bKOMfd_5lQF65lXKfHdXiDjfjNfllRyVu0_fD2Lz1tMenRQ/exec";
+const INSCRICAO_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzKdXYBZZdDS9MQXvl-XPHWieX67o4Noi9coUYIxBE4-HP2oFndn7iU9OYhzFzSDU4P/exec";
 const HAND_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxend-S87O0BOTR58UTNShlqNHwYqdNVYizKEuvo0DLrXM8q3Q8iRLOCSW-C19-DqjIA/exec";
 
 // ════════════════════════════════════════════════════════
@@ -2400,7 +2400,7 @@ async function loadInscricoesDashboard(manual) {
     return;
   }
   try {
-    const data = await fetch(INSCRICAO_SCRIPT_URL).then(r => r.json());
+    const data = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
     if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
     const inscricoes = data.inscricoes || [];
 
