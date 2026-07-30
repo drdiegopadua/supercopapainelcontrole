@@ -82,6 +82,14 @@ const PLACAR_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF
 const params = new URLSearchParams(location.search);
 const jogoId = (params.get('jogo') || '').toUpperCase();
 
+const ROW_MAP_GRUPOS = { A1:11, A2:12, A3:13, B1:23, B2:24, B3:25, C1:35, C2:36, C3:37, D1:47, D2:48, D3:49 };
+const ROW_MAP_MATA = { Q1:6, Q2:7, Q3:8, Q4:9, SF1:13, SF2:14, FINAL:18 };
+function resolverJogoLocal(id){
+  if (ROW_MAP_GRUPOS[id]) return { aba:'Fase de Grupos', linha: ROW_MAP_GRUPOS[id], numero: id.slice(1) };
+  if (ROW_MAP_MATA[id]) return { aba:'Mata-Mata', linha: ROW_MAP_MATA[id], numero: id };
+  return null;
+}
+
 let state = {
   aba: '', linha: '', numero: '',
   equipeA: '', equipeB: '',
@@ -105,6 +113,14 @@ async function init(){
     document.getElementById('wrap').innerHTML = '<div class="err"><i class="bx bx-error-circle" style="font-size:32px"></i><p style="margin-top:8px">Link inválido: falta o parâmetro do jogo.</p></div>';
     return;
   }
+  const jogoLocal = resolverJogoLocal(jogoId);
+  if (!jogoLocal){
+    document.getElementById('wrap').innerHTML = '<div class="err"><i class="bx bx-error-circle" style="font-size:32px"></i><p style="margin-top:8px">Jogo não reconhecido: ' + jogoId + '</p></div>';
+    return;
+  }
+  state.aba = jogoLocal.aba;
+  state.linha = jogoLocal.linha;
+  state.numero = jogoLocal.numero;
   try{
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=jogo&id=' + encodeURIComponent(jogoId)).then(r=>r.json());
     if (!res.ok){
@@ -113,9 +129,6 @@ async function init(){
     }
     state.equipeA = res.equipeA || 'Equipe Casa';
     state.equipeB = res.equipeB || 'Equipe Visitante';
-    state.aba = res.aba || '';
-    state.linha = res.linha || '';
-    state.numero = res.numero || '';
 
     if (res.sumula){
       const s = res.sumula;
