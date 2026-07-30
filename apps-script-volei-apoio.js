@@ -375,6 +375,8 @@ function carregarJogoSumula_(id) {
     ok: true,
     id: jogo.id,
     aba: jogo.aba,
+    linha: jogo.linha,
+    numero: row[0],
     equipeA: equipeA,
     equipeB: equipeB,
     sets: [
@@ -428,28 +430,12 @@ function salvarSumula_(d) {
   if (setsVencidosA > setsVencidosB) vencedor = d.equipeA || '';
   else if (setsVencidosB > setsVencidosA) vencedor = d.equipeB || '';
 
-  // 1) Grava o placar simplificado na planilha de jogos (mesmo
-  //    lugar que o site/app e o painel já leem).
-  const shJogo = SpreadsheetApp.openById(JOGOS_SHEET_ID).getSheetByName(jogo.aba);
-  const linhaAtual = shJogo.getRange(jogo.linha, 1, 1, 17).getValues()[0];
-  const numeroJogo = linhaAtual[0] || '';
+  // O placar simplificado (Fase de Grupos/Mata-Mata) é gravado pelo
+  // PRÓPRIO sumula.html, direto no Apps Script que já tem permissão
+  // de escrita naquela planilha (o mesmo do botão "Enviar Placar"
+  // no painel) — este script não tem acesso de escrita lá.
 
-  shJogo.getRange(jogo.linha, 1, 1, 17).setValues([[
-    numeroJogo,
-    d.equipeA || '',
-    (sets[0].a || '').toString(), (sets[1].a || '').toString(), (sets[2].a || '').toString(),
-    setsVencidosA.toString(),
-    'X',
-    (sets[0].b || '').toString(), (sets[1].b || '').toString(), (sets[2].b || '').toString(),
-    setsVencidosB.toString(),
-    d.equipeB || '',
-    setsVencidosA.toString(), setsVencidosB.toString(),
-    vencedor,
-    d.data || linhaAtual[15] || '',
-    d.local || linhaAtual[16] || ''
-  ]]);
-
-  // 2) Grava/atualiza o registro completo da súmula.
+  // Grava/atualiza o registro completo da súmula.
   const ss = getSS_();
   let sh = ss.getSheetByName(ABA_SUMULAS);
   if (!sh) {

@@ -77,11 +77,13 @@ header .sub{font-size:12px;opacity:.7;margin-top:4px;}
 
 <script>
 const SUMULA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzKdXYBZZdDS9MQXvl-XPHWieX67o4Noi9coUYIxBE4-HP2oFndn7iU9OYhzFzSDU4P/exec";
+const PLACAR_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
 
 const params = new URLSearchParams(location.search);
 const jogoId = (params.get('jogo') || '').toUpperCase();
 
 let state = {
+  aba: '', linha: '', numero: '',
   equipeA: '', equipeB: '',
   titularesA: ['','','','','',''], liberoA: '',
   titularesB: ['','','','','',''], liberoB: '',
@@ -111,6 +113,9 @@ async function init(){
     }
     state.equipeA = res.equipeA || 'Equipe Casa';
     state.equipeB = res.equipeB || 'Equipe Visitante';
+    state.aba = res.aba || '';
+    state.linha = res.linha || '';
+    state.numero = res.numero || '';
 
     if (res.sumula){
       const s = res.sumula;
@@ -312,10 +317,36 @@ async function salvarSumula(){
       status: 'Encerrada'
     };
     const res = await fetch(SUMULA_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) }).then(r=>r.json());
-    if (res.ok){
+    if (!res.ok){
+      showToast('❌ Erro ao salvar súmula: ' + (res.erro || 'desconhecido'), 'error');
+      return;
+    }
+
+    // Atualiza o placar por set na planilha de jogos (mesmo endpoint
+    // já usado pelo botão "Enviar Placar" no painel).
+    const dadosPlacar = [
+      state.numero || '',
+      state.equipeA,
+      (state.sets[0].a||'').toString(), (state.sets[1].a||'').toString(), (state.sets[2].a||'').toString(),
+      res.setsVencidosA.toString(),
+      'X',
+      (state.sets[0].b||'').toString(), (state.sets[1].b||'').toString(), (state.sets[2].b||'').toString(),
+      res.setsVencidosB.toString(),
+      state.equipeB,
+      res.setsVencidosA.toString(), res.setsVencidosB.toString(),
+      res.vencedor,
+      '', state.local || ''
+    ];
+    const resPlacar = await fetch(PLACAR_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ acao: 'atualizar_placar_volei', aba: state.aba, linha: state.linha, dados: dadosPlacar })
+    }).then(r=>r.json()).catch(ex => ({ ok:false, erro: ex.message }));
+
+    if (resPlacar.ok){
       showToast('✅ Súmula salva! ' + state.equipeA + ' ' + res.setsVencidosA + ' × ' + res.setsVencidosB + ' ' + state.equipeB, 'ok');
     } else {
-      showToast('❌ Erro ao salvar: ' + (res.erro || 'desconhecido'), 'error');
+      showToast('⚠️ Súmula salva, mas o placar público não atualizou: ' + (resPlacar.erro || 'erro desconhecido'), 'error');
     }
   } catch(ex){
     showToast('❌ Erro: ' + ex.message, 'error');
