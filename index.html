@@ -634,6 +634,7 @@
     <li><a href="javascript:void(0)" onclick="navTo('social',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Social</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('feedback',this); return false;"><i class='bx bxs-message-square-detail'></i><span>Feedback</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('inscricoes',this); return false;"><i class='bx bxs-id-card'></i><span>Inscrições</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('sumulaLive',this); return false;"><i class='bx bxs-file-detail'></i><span>Súmula</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('edicoes',this); return false;"><i class='bx bxs-layer'></i><span>Edições</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
@@ -1295,6 +1296,40 @@
       </div>
     </div>
 
+    <!-- Modal: Cartão (súmula ao vivo) -->
+    <div class="modal-overlay" id="modal-sumula-cartao">
+      <div class="modal">
+        <div class="modal-title"><i class='bx bxs-flag-alt'></i> Registrar Cartão</div>
+        <div class="destaque-form">
+          <div class="form-group"><label>Equipe</label><select class="form-control" id="sc-equipe"></select></div>
+          <div class="form-group"><label>Jogador(a)</label><input class="form-control" id="sc-jogador" placeholder="Nome"></div>
+          <div class="form-group"><label>Tipo</label><select class="form-control" id="sc-tipo"><option value="Amarelo">🟨 Amarelo</option><option value="Vermelho">🟥 Vermelho</option></select></div>
+          <div class="form-group"><label>Motivo (opcional)</label><input class="form-control" id="sc-motivo"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-sumula-cartao')">Cancelar</button>
+          <button class="btn btn-primary" onclick="salvarCartaoSumula()"><i class='bx bx-save'></i> Registrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Substituição (súmula ao vivo) -->
+    <div class="modal-overlay" id="modal-sumula-sub">
+      <div class="modal">
+        <div class="modal-title"><i class='bx bx-transfer'></i> Registrar Substituição</div>
+        <div class="destaque-form">
+          <div class="form-group"><label>Equipe</label><select class="form-control" id="ss-equipe"></select></div>
+          <div class="form-group"><label>Saiu</label><input class="form-control" id="ss-saiu" placeholder="Nome de quem sai"></div>
+          <div class="form-group"><label>Entrou</label><input class="form-control" id="ss-entrou" placeholder="Nome de quem entra"></div>
+          <div class="form-group"><label>Número (opcional)</label><input class="form-control" id="ss-numero"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-sumula-sub')">Cancelar</button>
+          <button class="btn btn-primary" onclick="salvarSubSumula()"><i class='bx bx-save'></i> Registrar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Detalhes da Inscrição -->
     <div class="modal-overlay" id="modal-inscricao">
       <div class="modal">
@@ -1304,6 +1339,65 @@
           <button class="btn btn-secondary" onclick="closeModal('modal-inscricao')">Fechar</button>
         </div>
       </div>
+    </div>
+
+    <!-- ─── SÚMULA AO VIVO ─── -->
+    <div class="page" id="page-sumulaLive">
+      <div class="page-header">
+        <div>
+          <h1>Súmula</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Súmula</span></div>
+        </div>
+      </div>
+
+      <!-- Seletor de jogo -->
+      <div class="card" id="sumulaSeletorCard">
+        <div class="card-title"><i class='bx bxs-volume-full'></i> Escolher jogo</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="flex:1;min-width:240px;margin:0">
+            <label>Jogo</label>
+            <select class="form-control" id="sumula-select-jogo"></select>
+          </div>
+          <button class="btn btn-primary" onclick="abrirOuCriarPartida()"><i class='bx bx-play-circle'></i> Abrir Súmula</button>
+        </div>
+      </div>
+
+      <!-- Wizard de criação -->
+      <div id="sumulaWizard" style="display:none">
+        <div class="card" id="sumulaWizardStep1">
+          <div class="card-title"><i class='bx bx-list-ol'></i> 1. Dados da Partida</div>
+          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group"><label>Equipe Casa</label><input class="form-control" id="wz-equipeA"></div>
+            <div class="form-group"><label>Equipe Visitante</label><input class="form-control" id="wz-equipeB"></div>
+          </div>
+          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group"><label>1º Árbitro</label><input class="form-control" id="wz-arbitro1" placeholder="Nome"></div>
+            <div class="form-group"><label>2º Árbitro (opcional)</label><input class="form-control" id="wz-arbitro2" placeholder="Nome"></div>
+          </div>
+          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group"><label>Apontador(a)</label><input class="form-control" id="wz-apontador" placeholder="Nome"></div>
+            <div class="form-group">
+              <label>Quem saca primeiro?</label>
+              <select class="form-control" id="wz-saca-primeiro"><option value="A" id="wz-saca-a-label">Equipe Casa</option><option value="B" id="wz-saca-b-label">Equipe Visitante</option></select>
+            </div>
+          </div>
+          <div style="text-align:right;margin-top:8px">
+            <button class="btn btn-primary" onclick="wizardProximo()">Próximo <i class='bx bx-chevron-right'></i></button>
+          </div>
+        </div>
+
+        <div class="card" id="sumulaWizardStep2" style="display:none">
+          <div class="card-title"><i class='bx bx-group'></i> 2. Escalação Titular</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="wz-escalacao-grid"></div>
+          <div style="text-align:right;margin-top:14px;display:flex;justify-content:space-between">
+            <button class="btn btn-secondary" onclick="wizardVoltar()"><i class='bx bx-chevron-left'></i> Voltar</button>
+            <button class="btn btn-success" onclick="gerarSumula()"><i class='bx bxs-file-plus'></i> Gerar Súmula</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Console ao vivo -->
+      <div id="sumulaConsole" style="display:none"></div>
     </div>
 
     <!-- ─── EDIÇÕES ─── -->
@@ -1905,13 +1999,14 @@ function navTo(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',edicoes:'Edições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',sumulaLive:'Súmula',edicoes:'Edições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') { loadHandebolFromSheet(); carregarRankingGaleraHandebol(); }
   if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); loadLiveJogosList(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   if (page === 'feedback') loadFeedbackDashboard();
   if (page === 'inscricoes') loadInscricoesDashboard();
+  if (page === 'sumulaLive') initSumulaLive();
   if (page === 'edicoes') loadEdicoesDashboard();
   return false;
 }
@@ -3620,6 +3715,422 @@ async function verSumula(sumulaId) {
   } catch (ex) {
     document.getElementById('modal-sumula-body').innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Erro ao carregar: ' + ex.message + '</p>';
   }
+}
+
+// ════════════════════════════════════════════════════════
+// SÚMULA AO VIVO — CONSOLE DE ARBITRAGEM
+// ════════════════════════════════════════════════════════
+let sumulaLiveState = null;
+let sumulaLivePollTimer = null;
+let sumulaLiveWizardData = null;
+
+function initSumulaLive() {
+  const sel = document.getElementById('sumula-select-jogo');
+  sel.innerHTML = state.jogos.volei.filter(j => j.sumulaId).map(j =>
+    `<option value="${j.sumulaId}">${j.sumulaId} — ${j.equipeA} vs ${j.equipeB}</option>`
+  ).join('');
+  document.getElementById('sumulaSeletorCard').style.display = '';
+  document.getElementById('sumulaWizard').style.display = 'none';
+  document.getElementById('sumulaConsole').style.display = 'none';
+  document.getElementById('sumulaConsole').innerHTML = '';
+  if (sumulaLivePollTimer) { clearInterval(sumulaLivePollTimer); sumulaLivePollTimer = null; }
+}
+
+async function abrirOuCriarPartida() {
+  const sumulaId = document.getElementById('sumula-select-jogo').value;
+  if (!sumulaId) { showToast('Selecione um jogo.', 'error'); return; }
+  const jogo = state.jogos.volei.find(j => j.sumulaId === sumulaId);
+  showLoading(true);
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaId)).then(r => r.json());
+    if (res.ok && res.estado) {
+      document.getElementById('sumulaSeletorCard').style.display = 'none';
+      iniciarConsoleAoVivo(res.estado);
+    } else {
+      abrirWizard(sumulaId, jogo);
+    }
+  } catch (ex) {
+    showToast('❌ Erro: ' + ex.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function abrirWizard(sumulaId, jogo) {
+  sumulaLiveWizardData = { sumulaId: sumulaId, equipeA: jogo ? jogo.equipeA : '', equipeB: jogo ? jogo.equipeB : '' };
+  document.getElementById('sumulaSeletorCard').style.display = 'none';
+  document.getElementById('wz-equipeA').value = sumulaLiveWizardData.equipeA;
+  document.getElementById('wz-equipeB').value = sumulaLiveWizardData.equipeB;
+  document.getElementById('wz-arbitro1').value = '';
+  document.getElementById('wz-arbitro2').value = '';
+  document.getElementById('wz-apontador').value = '';
+  document.getElementById('wz-saca-a-label').textContent = sumulaLiveWizardData.equipeA || 'Equipe Casa';
+  document.getElementById('wz-saca-b-label').textContent = sumulaLiveWizardData.equipeB || 'Equipe Visitante';
+  document.getElementById('sumulaWizardStep1').style.display = '';
+  document.getElementById('sumulaWizardStep2').style.display = 'none';
+  document.getElementById('sumulaWizard').style.display = '';
+}
+
+async function wizardProximo() {
+  sumulaLiveWizardData.equipeA = document.getElementById('wz-equipeA').value.trim();
+  sumulaLiveWizardData.equipeB = document.getElementById('wz-equipeB').value.trim();
+  sumulaLiveWizardData.arbitro1 = document.getElementById('wz-arbitro1').value.trim();
+  sumulaLiveWizardData.arbitro2 = document.getElementById('wz-arbitro2').value.trim();
+  sumulaLiveWizardData.apontador = document.getElementById('wz-apontador').value.trim();
+  sumulaLiveWizardData.sacaPrimeiro = document.getElementById('wz-saca-primeiro').value;
+  if (!sumulaLiveWizardData.equipeA || !sumulaLiveWizardData.equipeB) { showToast('Preencha as duas equipes.', 'error'); return; }
+
+  showLoading(true);
+  const [sugA, sugB] = await Promise.all([
+    fetch(SUMULA_SCRIPT_URL + '?action=atletasTime&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeA)).then(r => r.json()).catch(() => ({ atletas: [] })),
+    fetch(SUMULA_SCRIPT_URL + '?action=atletasTime&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeB)).then(r => r.json()).catch(() => ({ atletas: [] }))
+  ]);
+  showLoading(false);
+
+  const grid = document.getElementById('wz-escalacao-grid');
+  grid.innerHTML = ['A', 'B'].map(lado => {
+    const nomeEquipe = lado === 'A' ? sumulaLiveWizardData.equipeA : sumulaLiveWizardData.equipeB;
+    const sugestoes = (lado === 'A' ? sugA.atletas : sugB.atletas) || [];
+    const linhas = [1, 2, 3, 4, 5, 6].map(n => `
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input class="form-control" style="width:56px" placeholder="Nº" id="wz-num-${lado}-${n}">
+        <input class="form-control" placeholder="Titular ${n}" value="${sugestoes[n - 1] ? sugestoes[n - 1].nome : ''}" id="wz-nome-${lado}-${n}">
+      </div>`).join('');
+    const chips = sugestoes.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">${sugestoes.map(s => `<span onclick="preencherProximoVago('${lado}','${s.nome.replace(/'/g, "\\'")}')" style="cursor:pointer;background:var(--light-blue);color:var(--blue);padding:4px 10px;border-radius:999px;font-size:11px">+ ${s.nome}</span>`).join('')}</div>` : '';
+    return `
+      <div>
+        <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:#eef3fc;color:var(--blue);text-align:center;margin-bottom:10px">${nomeEquipe}</div>
+        ${linhas}
+        <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border, #e5e7eb)">
+          <input class="form-control" style="width:56px" placeholder="Nº" id="wz-num-${lado}-lib">
+          <input class="form-control" placeholder="🟡 Líbero" id="wz-nome-${lado}-lib">
+        </div>
+        ${chips ? '<div style="font-size:11px;color:var(--dark-grey);margin-top:10px">Sugestões (Destaque/Galera) — clique pra preencher:</div>' + chips : ''}
+      </div>`;
+  }).join('');
+
+  document.getElementById('sumulaWizardStep1').style.display = 'none';
+  document.getElementById('sumulaWizardStep2').style.display = '';
+}
+
+function preencherProximoVago(lado, nome) {
+  for (let n = 1; n <= 6; n++) {
+    const el = document.getElementById('wz-nome-' + lado + '-' + n);
+    if (el && !el.value.trim()) { el.value = nome; return; }
+  }
+}
+
+function wizardVoltar() {
+  document.getElementById('sumulaWizardStep1').style.display = '';
+  document.getElementById('sumulaWizardStep2').style.display = 'none';
+}
+
+async function gerarSumula() {
+  const montarElenco = (lado) => {
+    const titulares = [];
+    for (let n = 1; n <= 6; n++) {
+      const nome = (document.getElementById('wz-nome-' + lado + '-' + n).value || '').trim();
+      const numero = (document.getElementById('wz-num-' + lado + '-' + n).value || '').trim();
+      titulares.push({ numero: numero, nome: nome });
+    }
+    const liberoNome = (document.getElementById('wz-nome-' + lado + '-lib').value || '').trim();
+    const liberoNumero = (document.getElementById('wz-num-' + lado + '-lib').value || '').trim();
+    return { titulares: titulares, libero: { numero: liberoNumero, nome: liberoNome } };
+  };
+
+  const payload = {
+    acao: 'criarPartida',
+    id: sumulaLiveWizardData.sumulaId,
+    equipeA: sumulaLiveWizardData.equipeA,
+    equipeB: sumulaLiveWizardData.equipeB,
+    arbitro1: sumulaLiveWizardData.arbitro1,
+    arbitro2: sumulaLiveWizardData.arbitro2,
+    apontador: sumulaLiveWizardData.apontador,
+    sacaPrimeiro: sumulaLiveWizardData.sacaPrimeiro,
+    elencoCasa: montarElenco('A'),
+    elencoVisitante: montarElenco('B')
+  };
+
+  showLoading(true);
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
+    if (!res.ok) { showToast('❌ Erro: ' + (res.erro || 'desconhecido'), 'error'); return; }
+    document.getElementById('sumulaWizard').style.display = 'none';
+    iniciarConsoleAoVivo(res.estado);
+  } catch (ex) {
+    showToast('❌ Erro: ' + ex.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function iniciarConsoleAoVivo(estado) {
+  sumulaLiveState = estado;
+  document.getElementById('sumulaConsole').style.display = '';
+  renderSumulaConsole();
+  if (sumulaLivePollTimer) clearInterval(sumulaLivePollTimer);
+  sumulaLivePollTimer = setInterval(pollSumulaLive, 4000);
+}
+
+async function pollSumulaLive() {
+  if (!sumulaLiveState || sumulaLiveState.status === 'finalizada') return;
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaLiveState.id)).then(r => r.json());
+    if (res.ok && res.estado) { sumulaLiveState = res.estado; renderSumulaConsole(); }
+  } catch (ex) { /* silencioso, tenta de novo no próximo ciclo */ }
+}
+
+function rotDots_(rotacao) {
+  if (!rotacao || !rotacao.length) return '<span style="color:var(--dark-grey);font-size:11px">sem escalação</span>';
+  return rotacao.map((p, i) => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;${i === 0 ? 'background:var(--gold,#f4c542);color:#0d1f5c;box-shadow:0 0 0 2px var(--gold,#f4c542)' : 'background:#eef1f6;color:var(--dark-grey)'}">${p.numero || '·'}</div>
+      ${i === 0 ? '<i class="bx bxs-volleyball" style="font-size:12px;color:var(--gold,#c8960c)"></i>' : ''}
+    </div>`).join('');
+}
+
+function setDots_(historico, idx, setsCasa, setsVisitante) {
+  const total = 3;
+  let html = '';
+  for (let i = 0; i < total; i++) {
+    if (historico[i]) {
+      const v = historico[i].a > historico[i].b ? 'A' : 'B';
+      html += `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;background:${v === 'A' ? 'var(--blue)' : 'var(--orange)'}"></span>`;
+    } else if (i === idx - 1) {
+      html += `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;border:2px solid var(--dark-grey)"></span>`;
+    } else {
+      html += `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;background:#e5e7eb"></span>`;
+    }
+  }
+  return html;
+}
+
+function renderSumulaConsole() {
+  const s = sumulaLiveState;
+  const el = document.getElementById('sumulaConsole');
+  const emAndamento = s.status === 'em_andamento';
+  const prontaFinalizar = s.status === 'sets_completos';
+  const finalizada = s.status === 'finalizada';
+
+  const timelineItens = [];
+  (s.timeouts || []).forEach((t, i) => timelineItens.push({ ordem: 900 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-time-five' style="color:var(--orange)"></i><span style="flex:1">Tempo técnico · ${t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${t.set}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('timeout',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
+  (s.cartoes || []).forEach((c, i) => timelineItens.push({ ordem: 800 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px">${c.tipo === 'Vermelho' ? '🟥' : '🟨'}<span style="flex:1">${c.jogador} · ${c.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${c.set}${c.motivo ? ' · ' + c.motivo : ''}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('cartao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
+  (s.substituicoes || []).forEach((sub, i) => timelineItens.push({ ordem: 700 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-transfer' style="color:var(--blue)"></i><span style="flex:1">${sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${sub.set} · ${sub.saiu} ➜ ${sub.entrou}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('substituicao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
+
+  el.innerHTML = `
+    <div class="card" style="text-align:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--dark-grey)">${finalizada ? '🏁 FINALIZADA' : prontaFinalizar ? '✅ PRONTA PRA FINALIZAR' : '🔴 AO VIVO'}</span>
+        <span style="font-size:11px;color:var(--dark-grey)">SET ${Math.min(s.setAtual, 3)}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin:10px 0">
+        <div style="flex:1;text-align:center">
+          <div style="font-weight:800;font-size:15px">${s.equipeCasa}</div>
+          <div style="margin-top:4px">${setDots_(s.historicoSets, s.setAtual, s.setsCasa, s.setsVisitante)}</div>
+        </div>
+        <div style="font-size:44px;font-weight:900;color:var(--dark)">${s.pontosCasa} <span style="color:var(--dark-grey);font-size:22px">×</span> ${s.pontosVisitante}</div>
+        <div style="flex:1;text-align:center">
+          <div style="font-weight:800;font-size:15px">${s.equipeVisitante}</div>
+          <div style="margin-top:4px">${setDots_(s.historicoSets, s.setAtual, s.setsCasa, s.setsVisitante)}</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--dark-grey)">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class='bx bxs-volleyball'></i> Ordem de Saque</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div style="display:flex;justify-content:center;gap:8px">${rotDots_(s.rotacaoCasa)}</div>
+        <div style="display:flex;justify-content:center;gap:8px">${rotDots_(s.rotacaoVisitante)}</div>
+      </div>
+    </div>
+
+    ${emAndamento ? `
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <button onclick="sumulaPonto('A')" style="background:var(--blue);color:#fff;border:none;border-radius:14px;padding:26px 10px;font-size:18px;font-weight:800;box-shadow:0 6px 18px rgba(21,101,192,.3)">+1 PONTO<br><span style="font-size:12px;font-weight:600;opacity:.85">${s.equipeCasa}</span></button>
+        <button onclick="sumulaPonto('B')" style="background:var(--orange);color:#fff;border:none;border-radius:14px;padding:26px 10px;font-size:18px;font-weight:800;box-shadow:0 6px 18px rgba(230,126,34,.3)">+1 PONTO<br><span style="font-size:12px;font-weight:600;opacity:.85">${s.equipeVisitante}</span></button>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn btn-secondary btn-sm" onclick="sumulaDesfazer()"><i class='bx bx-undo'></i> Desfazer último ponto</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class='bx bx-timer'></i> Ações</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('A')"><i class='bx bx-time-five'></i> Tempo · ${s.equipeCasa}</button>
+        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('B')"><i class='bx bx-time-five'></i> Tempo · ${s.equipeVisitante}</button>
+        <button class="btn btn-secondary btn-sm" onclick="abrirModalCartao()"><i class='bx bxs-flag-alt'></i> Cartão</button>
+        <button class="btn btn-secondary btn-sm" onclick="abrirModalSub()"><i class='bx bx-transfer'></i> Substituição</button>
+      </div>
+    </div>` : ''}
+
+    ${prontaFinalizar ? `
+    <div class="card" style="text-align:center;background:linear-gradient(135deg,#e8f5e9,#fff)">
+      <p style="margin-bottom:10px;font-weight:700;color:var(--green)">Partida decidida: ${s.setsCasa > s.setsVisitante ? s.equipeCasa : s.equipeVisitante} venceu por ${Math.max(s.setsCasa, s.setsVisitante)} sets a ${Math.min(s.setsCasa, s.setsVisitante)}.</p>
+      <button class="btn btn-success" onclick="sumulaFinalizarPartida()"><i class='bx bxs-file-export'></i> Finalizar Partida e Gerar PDF</button>
+    </div>` : ''}
+
+    ${finalizada ? `
+    <div class="card" style="text-align:center">
+      <p style="font-weight:700;color:var(--green);margin-bottom:10px"><i class='bx bx-check-circle'></i> Súmula finalizada.</p>
+      ${s.linkPdf ? `<a class="btn btn-primary" href="${s.linkPdf}" target="_blank"><i class='bx bxs-file-pdf'></i> Abrir PDF</a>` : ''}
+      <button class="btn btn-secondary" style="margin-left:8px" onclick="initSumulaLive()"><i class='bx bx-left-arrow-alt'></i> Voltar</button>
+    </div>` : ''}
+
+    <div class="card">
+      <div class="card-title"><i class='bx bx-list-ul'></i> Linha do tempo</div>
+      ${timelineItens.length ? timelineItens.sort((a, b) => b.ordem - a.ordem).map(t => t.html).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum evento ainda.</p>'}
+    </div>
+  `;
+}
+
+async function sumulaPonto(equipe) {
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'ponto', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
+    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+async function sumulaDesfazer() {
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'desfazerPonto', id: sumulaLiveState.id }) }).then(r => r.json());
+    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+async function sumulaTimeout(equipe) {
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'timeout', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
+    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); showToast('⏱ Tempo técnico registrado.'); }
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+async function sumulaRemoverEvento(tipo, index) {
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'removerEvento', id: sumulaLiveState.id, tipo: tipo, index: index }) }).then(r => r.json());
+    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); }
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+function abrirModalCartao() {
+  document.getElementById('sc-equipe').innerHTML = `<option value="A">${sumulaLiveState.equipeCasa}</option><option value="B">${sumulaLiveState.equipeVisitante}</option>`;
+  document.getElementById('sc-jogador').value = '';
+  document.getElementById('sc-motivo').value = '';
+  openModal('modal-sumula-cartao');
+}
+async function salvarCartaoSumula() {
+  const jogador = document.getElementById('sc-jogador').value.trim();
+  if (!jogador) { showToast('Informe o jogador.', 'error'); return; }
+  const payload = { acao: 'cartao', id: sumulaLiveState.id, equipe: document.getElementById('sc-equipe').value, jogador: jogador, tipo: document.getElementById('sc-tipo').value, motivo: document.getElementById('sc-motivo').value.trim() };
+  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
+  if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); closeModal('modal-sumula-cartao'); }
+  else showToast('❌ ' + (res.erro || 'erro'), 'error');
+}
+
+function abrirModalSub() {
+  document.getElementById('ss-equipe').innerHTML = `<option value="A">${sumulaLiveState.equipeCasa}</option><option value="B">${sumulaLiveState.equipeVisitante}</option>`;
+  document.getElementById('ss-saiu').value = '';
+  document.getElementById('ss-entrou').value = '';
+  document.getElementById('ss-numero').value = '';
+  openModal('modal-sumula-sub');
+}
+async function salvarSubSumula() {
+  const saiu = document.getElementById('ss-saiu').value.trim();
+  const entrou = document.getElementById('ss-entrou').value.trim();
+  if (!saiu || !entrou) { showToast('Informe quem saiu e quem entrou.', 'error'); return; }
+  const payload = { acao: 'substituicao', id: sumulaLiveState.id, equipe: document.getElementById('ss-equipe').value, saiu: saiu, entrou: entrou, numeroEntrou: document.getElementById('ss-numero').value.trim() };
+  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
+  if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); closeModal('modal-sumula-sub'); }
+  else showToast('❌ ' + (res.erro || 'erro'), 'error');
+}
+
+async function sumulaFinalizarPartida() {
+  showLoading(true);
+  try {
+    const pdfInfo = await gerarPdfSumula(sumulaLiveState);
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'finalizarPartida', id: sumulaLiveState.id, linkPdf: pdfInfo.link || '' }) }).then(r => r.json());
+    if (res.ok) {
+      sumulaLiveState = res.estado;
+      if (sumulaLivePollTimer) { clearInterval(sumulaLivePollTimer); sumulaLivePollTimer = null; }
+      renderSumulaConsole();
+      showToast('✅ Súmula finalizada!');
+    } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) {
+    showToast('❌ Erro ao finalizar: ' + ex.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function gerarPdfSumula(s) {
+  try {
+    if (typeof window.jspdf === 'undefined') await carregarJsPdf();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 18;
+    doc.setFontSize(16); doc.setFont(undefined, 'bold');
+    doc.text('SUPERCOPA AFC — SÚMULA DE VÔLEI', 105, y, { align: 'center' }); y += 10;
+    doc.setFontSize(13);
+    doc.text(s.equipeCasa + '  x  ' + s.equipeVisitante, 105, y, { align: 'center' }); y += 10;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text('Jogo: ' + s.id + '   |   Árbitro 1: ' + (s.arbitro1 || '—') + '   |   Árbitro 2: ' + (s.arbitro2 || '—'), 14, y); y += 6;
+    doc.text('Apontador(a): ' + (s.apontador || '—'), 14, y); y += 10;
+
+    doc.setFont(undefined, 'bold'); doc.text('Placar por Set', 14, y); doc.setFont(undefined, 'normal'); y += 6;
+    (s.historicoSets || []).forEach((set, i) => { doc.text('Set ' + (i + 1) + ': ' + set.a + ' x ' + set.b, 18, y); y += 6; });
+    doc.setFont(undefined, 'bold'); doc.text('Resultado: ' + s.setsCasa + ' x ' + s.setsVisitante, 18, y); doc.setFont(undefined, 'normal'); y += 10;
+
+    doc.setFont(undefined, 'bold'); doc.text('Escalação — ' + s.equipeCasa, 14, y); doc.setFont(undefined, 'normal'); y += 6;
+    (s.elencoCasa && s.elencoCasa.titulares || []).forEach(p => { if (p.nome) { doc.text((p.numero || '—') + ' - ' + p.nome, 18, y); y += 5; } });
+    if (s.elencoCasa && s.elencoCasa.libero && s.elencoCasa.libero.nome) { doc.text('Líbero: ' + (s.elencoCasa.libero.numero || '—') + ' - ' + s.elencoCasa.libero.nome, 18, y); y += 5; }
+    y += 4;
+
+    doc.setFont(undefined, 'bold'); doc.text('Escalação — ' + s.equipeVisitante, 14, y); doc.setFont(undefined, 'normal'); y += 6;
+    (s.elencoVisitante && s.elencoVisitante.titulares || []).forEach(p => { if (p.nome) { doc.text((p.numero || '—') + ' - ' + p.nome, 18, y); y += 5; } });
+    if (s.elencoVisitante && s.elencoVisitante.libero && s.elencoVisitante.libero.nome) { doc.text('Líbero: ' + (s.elencoVisitante.libero.numero || '—') + ' - ' + s.elencoVisitante.libero.nome, 18, y); y += 5; }
+    y += 6;
+
+    if ((s.cartoes || []).length) {
+      doc.setFont(undefined, 'bold'); doc.text('Cartões / Advertências', 14, y); doc.setFont(undefined, 'normal'); y += 6;
+      s.cartoes.forEach(c => { doc.text((c.tipo === 'Vermelho' ? '[V] ' : '[A] ') + c.jogador + ' — ' + (c.equipe === 'A' ? s.equipeCasa : s.equipeVisitante) + ' — Set ' + c.set, 18, y); y += 5; });
+      y += 4;
+    }
+    if ((s.substituicoes || []).length) {
+      doc.setFont(undefined, 'bold'); doc.text('Substituições', 14, y); doc.setFont(undefined, 'normal'); y += 6;
+      s.substituicoes.forEach(sub => { doc.text((sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante) + ' — Set ' + sub.set + ' — ' + sub.saiu + ' ➜ ' + sub.entrou, 18, y); y += 5; });
+      y += 4;
+    }
+    if ((s.timeouts || []).length) {
+      doc.setFont(undefined, 'bold'); doc.text('Tempos Técnicos', 14, y); doc.setFont(undefined, 'normal'); y += 6;
+      s.timeouts.forEach(t => { doc.text((t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante) + ' — Set ' + t.set, 18, y); y += 5; });
+    }
+
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text('Gerado automaticamente pelo Painel Admin da Supercopa AFC', 105, 290, { align: 'center' });
+
+    const pdfBase64 = doc.output('datauristring');
+    const up = await fetch(SUMULA_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ acao: 'uploadPdfSumula', id: s.id, pdfBase64: pdfBase64, nomeArquivo: 'sumula-' + s.id + '-' + s.equipeCasa.replace(/\s+/g, '') + '-x-' + s.equipeVisitante.replace(/\s+/g, '') + '.pdf' })
+    }).then(r => r.json());
+    return up.ok ? up : { link: '' };
+  } catch (ex) {
+    console.error('Erro ao gerar PDF:', ex);
+    return { link: '' };
+  }
+}
+
+function carregarJsPdf() {
+  return new Promise((resolve, reject) => {
+    if (typeof window.jspdf !== 'undefined') return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
 }
 
 function excluirJogo(id, sport) {
