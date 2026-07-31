@@ -266,6 +266,7 @@ function doGet(e) {
     if (action === 'sumula') return okJson({ ok: true, sumula: buscarSumula_((e.parameter && e.parameter.id) || '') });
     if (action === 'partida') return okJson(carregarPartida_((e.parameter && e.parameter.id) || ''));
     if (action === 'partidasFinalizadas') return okJson({ ok: true, partidas: listarPartidasFinalizadas_() });
+    if (action === 'partidasAoVivo') return okJson({ ok: true, partidas: listarPartidasAoVivo_() });
     if (action === 'atletasTime') return okJson(atletasTime_((e.parameter && e.parameter.equipe) || ''));
 
     return okJson({ ok: true, msg: 'Supercopa Vôlei — Destaque/Premiação/Galera OK' });
@@ -817,6 +818,19 @@ function empurrarPlacarParaJogos_(estado, isFinal) {
     payload: JSON.stringify({ acao: 'atualizar_placar_volei', aba: jogo.aba, linha: jogo.linha, dados: dadosArray }),
     muteHttpExceptions: true
   });
+}
+
+function listarPartidasAoVivo_() {
+  const sh = getPartidasSheet_();
+  if (sh.getLastRow() < 2) return [];
+  const rows = sh.getDataRange().getValues().slice(1);
+  return rows.filter(r => r[PC.status] === 'em_andamento' || r[PC.status] === 'sets_completos').map(r => ({
+    id: r[PC.id], equipeCasa: r[PC.equipeCasa], equipeVisitante: r[PC.equipeVisitante],
+    setAtual: r[PC.setAtual], pontosCasa: r[PC.pontosCasa], pontosVisitante: r[PC.pontosVisitante],
+    setsCasa: r[PC.setsCasa], setsVisitante: r[PC.setsVisitante],
+    historicoSets: parseJson_(r[PC.historicoSets], []),
+    status: r[PC.status]
+  }));
 }
 
 function listarPartidasFinalizadas_() {
