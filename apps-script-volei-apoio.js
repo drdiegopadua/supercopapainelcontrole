@@ -793,6 +793,19 @@ function finalizarPartida_(d) {
   return { ok: true, estado: estado };
 }
 
+// Rode esta função DIRETO NO EDITOR (▶ Executar) uma vez. Ela só
+// tenta chamar o outro Apps Script (o que grava na Fase de Grupos)
+// — isso força o Google a pedir autorização de "conexões externas"
+// caso ainda não tenha sido concedida.
+function testarUrlFetch() {
+  try {
+    const resp = UrlFetchApp.fetch(PLACAR_SCRIPT_URL + '?action=teste', { muteHttpExceptions: true });
+    Logger.log('OK — status: ' + resp.getResponseCode() + ' — corpo: ' + resp.getContentText().slice(0, 200));
+  } catch (ex) {
+    Logger.log('ERRO: ' + ex.message);
+  }
+}
+
 function empurrarPlacarParaJogos_(estado, isFinal) {
   const jogo = resolverJogoSumula_(estado.id);
   if (!jogo) return;
