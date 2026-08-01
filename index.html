@@ -1359,6 +1359,33 @@
             <select class="form-control" id="sumula-select-jogo"></select>
           </div>
           <button class="btn btn-primary" onclick="abrirOuCriarPartida()"><i class='bx bx-play-circle'></i> Abrir Súmula</button>
+          <button class="btn btn-secondary" onclick="abrirCadastroAtletas()"><i class='bx bx-group'></i> Cadastro de Times e Atletas</button>
+        </div>
+      </div>
+
+      <!-- Cadastro de Times e Atletas -->
+      <div id="cadastroAtletasCard" style="display:none">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div class="card-title" style="margin:0"><i class='bx bx-group'></i> Cadastro de Times e Atletas</div>
+            <button class="btn btn-secondary btn-sm" onclick="fecharCadastroAtletas()"><i class='bx bx-left-arrow-alt'></i> Voltar</button>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+            <div class="form-group" style="flex:1;min-width:200px;margin:0">
+              <label>Equipe</label>
+              <select class="form-control" id="ca-equipe-select" onchange="onCadastroEquipeChange()"></select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Ou digite uma equipe nova</label>
+              <input class="form-control" id="ca-equipe-nova" placeholder="Nome da equipe">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;padding:14px;background:#f8f9fc;border-radius:12px">
+            <div class="form-group" style="width:100px;margin:0"><label>Número</label><input class="form-control" id="ca-numero" placeholder="Nº"></div>
+            <div class="form-group" style="flex:1;margin:0"><label>Nome do Atleta</label><input class="form-control" id="ca-nome" placeholder="Nome completo"></div>
+            <button class="btn btn-primary" onclick="salvarAtletaCadastro()"><i class='bx bx-user-plus'></i> Adicionar</button>
+          </div>
+          <div id="ca-lista-atletas"></div>
         </div>
       </div>
 
@@ -3733,7 +3760,82 @@ function initSumulaLive() {
   document.getElementById('sumulaWizard').style.display = 'none';
   document.getElementById('sumulaConsole').style.display = 'none';
   document.getElementById('sumulaConsole').innerHTML = '';
+  document.getElementById('cadastroAtletasCard').style.display = 'none';
   if (sumulaLivePollTimer) { clearInterval(sumulaLivePollTimer); sumulaLivePollTimer = null; }
+}
+
+let cadastroEquipeAtual = '';
+
+async function abrirCadastroAtletas() {
+  document.getElementById('sumulaWizard').style.display = 'none';
+  document.getElementById('sumulaConsole').style.display = 'none';
+  document.getElementById('cadastroAtletasCard').style.display = '';
+  const sel = document.getElementById('ca-equipe-select');
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=equipesConhecidas').then(r => r.json());
+    const equipes = (res && res.equipes) || [];
+    sel.innerHTML = '<option value="">— selecione —</option>' + equipes.map(e => `<option value="${e}">${e}</option>`).join('');
+  } catch (ex) {
+    sel.innerHTML = '<option value="">— selecione —</option>';
+  }
+}
+
+function fecharCadastroAtletas() {
+  document.getElementById('cadastroAtletasCard').style.display = 'none';
+  document.getElementById('sumulaSeletorCard').style.display = '';
+}
+
+function equipeAtivaCadastro() {
+  const nova = document.getElementById('ca-equipe-nova').value.trim();
+  return nova || document.getElementById('ca-equipe-select').value;
+}
+
+async function onCadastroEquipeChange() {
+  document.getElementById('ca-equipe-nova').value = '';
+  await carregarListaAtletas();
+}
+
+async function carregarListaAtletas() {
+  const equipe = equipeAtivaCadastro();
+  cadastroEquipeAtual = equipe;
+  const wrap = document.getElementById('ca-lista-atletas');
+  if (!equipe) { wrap.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Selecione ou digite uma equipe.</p>'; return; }
+  wrap.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(equipe)).then(r => r.json());
+    const atletas = (res && res.atletas) || [];
+    wrap.innerHTML = atletas.length ? atletas.sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0)).map(a => `
+      <div class="list-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8f9fc;border-radius:10px;margin-bottom:8px">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">${a.numero || '·'}</div>
+        <div style="flex:1;font-weight:600;font-size:13px">${a.nome}</div>
+        <button onclick="removerAtletaCadastro('${(a.numero||'').replace(/'/g,"\\'")}','${a.nome.replace(/'/g,"\\'")}')" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-trash"></i></button>
+      </div>`).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum atleta cadastrado ainda pra essa equipe.</p>';
+  } catch (ex) {
+    wrap.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar atletas.</p>';
+  }
+}
+
+async function salvarAtletaCadastro() {
+  const equipe = equipeAtivaCadastro();
+  const numero = document.getElementById('ca-numero').value.trim();
+  const nome = document.getElementById('ca-nome').value.trim();
+  if (!equipe) { showToast('Selecione ou digite uma equipe.', 'error'); return; }
+  if (!nome) { showToast('Informe o nome do atleta.', 'error'); return; }
+  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'cadastrarAtleta', equipe: equipe, numero: numero, nome: nome }) }).then(r => r.json());
+  if (res.ok) {
+    document.getElementById('ca-numero').value = '';
+    document.getElementById('ca-nome').value = '';
+    showToast('✅ Atleta salvo!');
+    carregarListaAtletas();
+  } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+}
+
+async function removerAtletaCadastro(numero, nome) {
+  if (!confirm('Remover ' + nome + '?')) return;
+  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'removerAtleta', equipe: cadastroEquipeAtual, numero: numero, nome: nome }) }).then(r => r.json());
+  if (res.ok) carregarListaAtletas();
+  else showToast('❌ ' + (res.erro || 'erro'), 'error');
 }
 
 async function abrirOuCriarPartida() {
@@ -3781,43 +3883,49 @@ async function wizardProximo() {
   if (!sumulaLiveWizardData.equipeA || !sumulaLiveWizardData.equipeB) { showToast('Preencha as duas equipes.', 'error'); return; }
 
   showLoading(true);
-  const [sugA, sugB] = await Promise.all([
-    fetch(SUMULA_SCRIPT_URL + '?action=atletasTime&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeA)).then(r => r.json()).catch(() => ({ atletas: [] })),
-    fetch(SUMULA_SCRIPT_URL + '?action=atletasTime&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeB)).then(r => r.json()).catch(() => ({ atletas: [] }))
+  const [resA, resB] = await Promise.all([
+    fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeA)).then(r => r.json()).catch(() => ({ atletas: [] })),
+    fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeB)).then(r => r.json()).catch(() => ({ atletas: [] }))
   ]);
   showLoading(false);
 
+  wizardAtletasA = ((resA && resA.atletas) || []).sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
+  wizardAtletasB = ((resB && resB.atletas) || []).sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
+
   const grid = document.getElementById('wz-escalacao-grid');
-  grid.innerHTML = ['A', 'B'].map(lado => {
-    const nomeEquipe = lado === 'A' ? sumulaLiveWizardData.equipeA : sumulaLiveWizardData.equipeB;
-    const sugestoes = (lado === 'A' ? sugA.atletas : sugB.atletas) || [];
-    const linhas = [1, 2, 3, 4, 5, 6].map(n => `
-      <div style="display:flex;gap:6px;margin-bottom:6px">
-        <input class="form-control" style="width:56px" placeholder="Nº" id="wz-num-${lado}-${n}">
-        <input class="form-control" placeholder="Titular ${n}" value="${sugestoes[n - 1] ? sugestoes[n - 1].nome : ''}" id="wz-nome-${lado}-${n}">
-      </div>`).join('');
-    const chips = sugestoes.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">${sugestoes.map(s => `<span onclick="preencherProximoVago('${lado}','${s.nome.replace(/'/g, "\\'")}')" style="cursor:pointer;background:var(--light-blue);color:var(--blue);padding:4px 10px;border-radius:999px;font-size:11px">+ ${s.nome}</span>`).join('')}</div>` : '';
-    return `
-      <div>
-        <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:#eef3fc;color:var(--blue);text-align:center;margin-bottom:10px">${nomeEquipe}</div>
-        ${linhas}
-        <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border, #e5e7eb)">
-          <input class="form-control" style="width:56px" placeholder="Nº" id="wz-num-${lado}-lib">
-          <input class="form-control" placeholder="🟡 Líbero" id="wz-nome-${lado}-lib">
-        </div>
-        ${chips ? '<div style="font-size:11px;color:var(--dark-grey);margin-top:10px">Sugestões (Destaque/Galera) — clique pra preencher:</div>' + chips : ''}
-      </div>`;
-  }).join('');
+  grid.innerHTML = renderQuadra_('A', sumulaLiveWizardData.equipeA, wizardAtletasA) + renderQuadra_('B', sumulaLiveWizardData.equipeB, wizardAtletasB);
 
   document.getElementById('sumulaWizardStep1').style.display = 'none';
   document.getElementById('sumulaWizardStep2').style.display = '';
 }
 
-function preencherProximoVago(lado, nome) {
-  for (let n = 1; n <= 6; n++) {
-    const el = document.getElementById('wz-nome-' + lado + '-' + n);
-    if (el && !el.value.trim()) { el.value = nome; return; }
-  }
+let wizardAtletasA = [], wizardAtletasB = [];
+
+// Layout de quadra em ordem de rotação: linha da rede (P4,P3,P2)
+// depois linha de trás (P5,P6,P1 — P1 é quem saca).
+function renderQuadra_(lado, nomeEquipe, atletas) {
+  const opcoes = atletas.map(a => `<option value="${a.numero}|${a.nome.replace(/"/g, '')}">${a.numero ? a.numero + ' · ' : ''}${a.nome}</option>`).join('');
+  const semAtletas = !atletas.length;
+  const posSelect = (pos) => `
+    <select class="form-control ct-pos" id="wz-pos-${lado}-${pos}" style="text-align:center;font-weight:700;padding:10px 4px">
+      <option value="">P${pos}</option>
+      ${opcoes}
+    </select>`;
+  return `
+    <div>
+      <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:#eef3fc;color:var(--blue);text-align:center;margin-bottom:10px">${nomeEquipe}</div>
+      ${semAtletas ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:10px 12px;border-radius:8px;margin-bottom:10px"><i class='bx bx-error'></i> Nenhum atleta cadastrado. <a href="javascript:void(0)" onclick="abrirCadastroAtletas();document.getElementById('ca-equipe-nova').value='${nomeEquipe.replace(/'/g, "\\'")}';carregarListaAtletas();" style="color:#856404;text-decoration:underline">Cadastrar agora</a></div>` : ''}
+      <div style="background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:10px;padding:10px">
+        <div style="text-align:center;font-size:9px;font-weight:800;color:#2e7d32;letter-spacing:1px;margin-bottom:6px">◤ REDE ◥</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">${posSelect(4)}${posSelect(3)}${posSelect(2)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">${posSelect(5)}${posSelect(6)}${posSelect(1)}</div>
+        <div style="text-align:center;font-size:9px;color:#2e7d32;margin-top:4px">P1 = saque inicial</div>
+      </div>
+      <div style="margin-top:10px">
+        <label style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase">🟡 Líbero</label>
+        <select class="form-control" id="wz-libero-${lado}"><option value="">— nenhum —</option>${opcoes}</select>
+      </div>
+    </div>`;
 }
 
 function wizardVoltar() {
@@ -3826,17 +3934,36 @@ function wizardVoltar() {
 }
 
 async function gerarSumula() {
+  const parseSel = (val) => {
+    if (!val) return { numero: '', nome: '' };
+    const idx = val.indexOf('|');
+    return { numero: val.slice(0, idx), nome: val.slice(idx + 1) };
+  };
   const montarElenco = (lado) => {
     const titulares = [];
-    for (let n = 1; n <= 6; n++) {
-      const nome = (document.getElementById('wz-nome-' + lado + '-' + n).value || '').trim();
-      const numero = (document.getElementById('wz-num-' + lado + '-' + n).value || '').trim();
-      titulares.push({ numero: numero, nome: nome });
+    const usados = new Set();
+    for (let pos = 1; pos <= 6; pos++) {
+      const val = document.getElementById('wz-pos-' + lado + '-' + pos).value;
+      if (val) usados.add(val);
+      titulares.push(parseSel(val));
     }
-    const liberoNome = (document.getElementById('wz-nome-' + lado + '-lib').value || '').trim();
-    const liberoNumero = (document.getElementById('wz-num-' + lado + '-lib').value || '').trim();
-    return { titulares: titulares, libero: { numero: liberoNumero, nome: liberoNome } };
+    const semDuplicado = new Set(titulares.filter(t => t.nome).map(t => t.nome)).size === titulares.filter(t => t.nome).length;
+    if (!semDuplicado) throw new Error('Tem jogador(a) repetido(a) em mais de uma posição da equipe ' + (lado === 'A' ? sumulaLiveWizardData.equipeA : sumulaLiveWizardData.equipeB) + '.');
+    const libero = parseSel(document.getElementById('wz-libero-' + lado).value);
+    return { titulares: titulares, libero: libero };
   };
+
+  let elencoCasa, elencoVisitante;
+  try {
+    elencoCasa = montarElenco('A');
+    elencoVisitante = montarElenco('B');
+  } catch (ex) {
+    showToast('❌ ' + ex.message, 'error');
+    return;
+  }
+  if (elencoCasa.titulares.filter(t => t.nome).length < 6 || elencoVisitante.titulares.filter(t => t.nome).length < 6) {
+    if (!confirm('Alguma posição da quadra ainda está sem jogador(a). Continuar mesmo assim?')) return;
+  }
 
   const payload = {
     acao: 'criarPartida',
@@ -3847,8 +3974,8 @@ async function gerarSumula() {
     arbitro2: sumulaLiveWizardData.arbitro2,
     apontador: sumulaLiveWizardData.apontador,
     sacaPrimeiro: sumulaLiveWizardData.sacaPrimeiro,
-    elencoCasa: montarElenco('A'),
-    elencoVisitante: montarElenco('B')
+    elencoCasa: elencoCasa,
+    elencoVisitante: elencoVisitante
   };
 
   showLoading(true);
