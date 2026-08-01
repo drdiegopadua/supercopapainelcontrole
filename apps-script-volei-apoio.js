@@ -66,6 +66,10 @@ const HEADERS_SUMULAS = [
   'Árbitro', 'Anotador', 'Local', 'Status', 'Atualizado em'
 ];
 
+// ── CADASTRO DE ATLETAS (número + nome por time) ────────────
+const ABA_ATLETAS = 'Atletas';
+const HEADERS_ATLETAS = ['Equipe', 'Numero', 'Nome', 'Cadastrado em'];
+
 // ── SÚMULA AO VIVO (console de arbitragem, dentro do painel) ──
 const ABA_PARTIDAS = 'Partidas';
 const PLACAR_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec';
@@ -179,6 +183,17 @@ function configurarSumulas() {
   Logger.log('Aba "Sumulas" configurada em: ' + ss.getUrl());
 }
 
+// Rode esta função UMA VEZ para criar a aba "Atletas" (cadastro de
+// número + nome por time). Não mexe em mais nada nas outras abas.
+function configurarAtletas() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_ATLETAS);
+  if (!sh) sh = ss.insertSheet(ABA_ATLETAS);
+  sh.getRange(1, 1, 1, HEADERS_ATLETAS.length).setValues([HEADERS_ATLETAS]);
+  sh.setFrozenRows(1);
+  Logger.log('Aba "Atletas" configurada em: ' + ss.getUrl());
+}
+
 // Rode esta função UMA VEZ para criar a aba "Partidas" (console de
 // arbitragem ao vivo). Não mexe em mais nada nas outras abas.
 function configurarPartidas() {
@@ -236,6 +251,10 @@ function doPost(e) {
       return okJson(salvarSumula_(dados));
     }
 
+    // CADASTRO DE ATLETAS
+    if (acao === 'cadastrarAtleta') return okJson(cadastrarAtleta_(dados));
+    if (acao === 'removerAtleta') return okJson(removerAtleta_(dados));
+
     // CONSOLE DE ARBITRAGEM AO VIVO
     if (acao === 'criarPartida') return okJson(criarPartida_(dados));
     if (acao === 'ponto') return okJson(registrarPonto_(dados));
@@ -268,6 +287,9 @@ function doGet(e) {
     if (action === 'partidasFinalizadas') return okJson({ ok: true, partidas: listarPartidasFinalizadas_() });
     if (action === 'partidasAoVivo') return okJson({ ok: true, partidas: listarPartidasAoVivo_() });
     if (action === 'atletasTime') return okJson(atletasTime_((e.parameter && e.parameter.equipe) || ''));
+    if (action === 'atletasEquipe') return okJson({ ok: true, atletas: listarAtletasEquipe_((e.parameter && e.parameter.equipe) || '') });
+    if (action === 'atletasTodos') return okJson({ ok: true, atletas: listarTodosAtletas_() });
+    if (action === 'equipesConhecidas') return okJson({ ok: true, equipes: listarEquipesConhecidas_() });
 
     return okJson({ ok: true, msg: 'Supercopa Vôlei — Destaque/Premiação/Galera OK' });
   } catch (ex) {
@@ -883,6 +905,102 @@ function atletasTime_(equipe) {
     });
   }
   return { ok: true, atletas: Object.keys(nomes).map(n => ({ nome: n })) };
+}
+
+// ============================================================
+//  CADASTRO DE ATLETAS
+// ============================================================
+function getAtletasSheet_() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_ATLETAS);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_ATLETAS);
+    sh.getRange(1, 1, 1, HEADERS_ATLETAS.length).setValues([HEADERS_ATLETAS]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function cadastrarAtleta_(d) {
+  const equipe = (d.equipe || '').toString().trim();
+  const numero = (d.numero || '').toString().trim();
+  const nome = (d.nome || '').toString().trim();
+  if (!equipe || !nome) return { ok: false, erro: 'Equipe e nome são obrigatórios.' };
+
+  const sh = getAtletasSheet_();
+  const rows = sh.getDataRange().getValues();
+  // Atualiza se já existir o mesmo número nessa equipe; senão adiciona.
+  if (numero) {
+    for (let i = 1; i < rows.length; i++) {
+      if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe.toLowerCase() &&
+          (rows[i][1] || '').toString().trim() === numero) {
+        sh.getRange(i + 1, 3).setValue(nome);
+        return { ok: true, atualizado: true };
+      }
+    }
+  }
+  const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  sh.appendRow([equipe, numero, nome, agora]);
+  return { ok: true };
+}
+
+function removerAtleta_(d) {
+  const equipe = (d.equipe || '').toString().trim().toLowerCase();
+  const numero = (d.numero || '').toString().trim();
+  const nome = (d.nome || '').toString().trim();
+  const sh = getAtletasSheet_();
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const eqOk = (rows[i][0] || '').toString().trim().toLowerCase() === equipe;
+    const numOk = numero ? (rows[i][1] || '').toString().trim() === numero : true;
+    const nomeOk = (rows[i][2] || '').toString().trim() === nome;
+    if (eqOk && numOk && nomeOk) { sh.deleteRow(i + 1); return { ok: true }; }
+  }
+  return { ok: false, erro: 'Atleta não encontrado.' };
+}
+
+function listarAtletasEquipe_(equipe) {
+  equipe = (equipe || '').toString().trim().toLowerCase();
+  if (!equipe) return [];
+  const sh = getAtletasSheet_();
+  if (sh.getLastRow() < 2) return [];
+  const rows = sh.getDataRange().getValues().slice(1);
+  return rows.filter(r => (r[0] || '').toString().trim().toLowerCase() === equipe)
+    .map(r => ({ equipe: r[0], numero: (r[1] || '').toString(), nome: r[2] }))
+    .filter(a => a.nome);
+}
+
+function listarTodosAtletas_() {
+  const sh = getAtletasSheet_();
+  if (sh.getLastRow() < 2) return [];
+  const rows = sh.getDataRange().getValues().slice(1);
+  return rows.map(r => ({ equipe: r[0], numero: (r[1] || '').toString(), nome: r[2] })).filter(a => a.nome);
+}
+
+function listarEquipesConhecidas_() {
+  const nomes = {};
+  const ss = getSS_();
+  const shInsc = ss.getSheetByName(ABA_INSCRICOES);
+  if (shInsc && shInsc.getLastRow() >= 2) {
+    const rows = shInsc.getDataRange().getValues();
+    const headers = rows[0];
+    const colEquipe = headers.indexOf('Nome da Equipe');
+    if (colEquipe >= 0) {
+      rows.slice(1).forEach(r => { const n = (r[colEquipe] || '').toString().trim(); if (n) nomes[n] = true; });
+    }
+  }
+  try {
+    const shJogos = SpreadsheetApp.openById(JOGOS_SHEET_ID).getSheetByName(ABA_GRUPOS);
+    const rows = shJogos.getDataRange().getValues();
+    Object.keys(ROW_MAP_GRUPOS).forEach(id => {
+      const linha = ROW_MAP_GRUPOS[id] - 1;
+      const a = (rows[linha] && rows[linha][1] || '').toString().trim();
+      const b = (rows[linha] && rows[linha][11] || '').toString().trim();
+      if (a) nomes[a] = true;
+      if (b) nomes[b] = true;
+    });
+  } catch (ex) { /* leitura é opcional, não quebra o fluxo */ }
+  return Object.keys(nomes).sort();
 }
 
 // ── PDF DA SÚMULA ───────────────────────────────────────────
