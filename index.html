@@ -3117,6 +3117,8 @@ async function loadHandebolFromSheet(manual = false) {
 }
 
 function _handCard(j) {
+  const nomeA = handNaipe==='fem' ? _handFemName(j.equipeA) : j.equipeA;
+  const nomeB = handNaipe==='fem' ? _handFemName(j.equipeB) : j.equipeB;
   const label = j.fase === 'matamata'
     ? `🏆 ${j.faseName}`
     : `Grupo ${j.grupo} · Jogo ${j.jogo}${j.hora ? ' · ⏰ ' + j.hora : ''}`;
@@ -3128,12 +3130,12 @@ function _handCard(j) {
       </div>
       <div class="jogo-body">
         <div class="jogo-equipes">
-          <div class="equipe-name">${j.equipeA || '—'}</div>
+          <div class="equipe-name">${nomeA || '—'}</div>
           <div class="jogo-vs" style="color:#2E7D32">VS</div>
-          <div class="equipe-name">${j.equipeB || '—'}</div>
+          <div class="equipe-name">${nomeB || '—'}</div>
         </div>
         <div class="placar-section">
-          <div class="placar-title">Placar — ${j.equipeA} × ${j.equipeB}</div>
+          <div class="placar-title">Placar — ${nomeA} × ${nomeB}</div>
           <div class="sets-grid" style="max-width:300px;margin:0 auto;">
             <div class="set-col">
               <div class="set-label">GOLS A</div>
@@ -3183,6 +3185,11 @@ function _handNormTeam(nome) {
     .replace(/[ÁÀÂÃÄ]/g, 'A').replace(/[ÉÈÊË]/g, 'E').replace(/[ÍÌÎÏ]/g, 'I')
     .replace(/[ÓÒÔÕÖ]/g, 'O').replace(/[ÚÙÛÜ]/g, 'U').replace(/Ç/g, 'C')
     .replace(/[^A-Z0-9]/g, '');
+}
+// Feminino: nome oficial da equipe é CHb (planilha às vezes traz CBH/AFOHAND antigo)
+const _handFemRename = { 'AFONSOCLAUDIO': 'CHb', 'AFOHAND': 'CHb', 'CBH': 'CHb' };
+function _handFemName(nome) {
+  return _handFemRename[_handNormTeam(nome)] || nome;
 }
 function _handAchaHorario(naipe, grupo, equipeA, equipeB) {
   const lista = ((HAND_HORARIOS_GRUPOS[naipe] || {})[grupo]) || [];
@@ -3358,7 +3365,7 @@ function renderHandebolClassif() {
     tbody.innerHTML = sorted.length
       ? sorted.map((t, i) => `<tr>
           <td>${medals[i] || (i+1)+'º'}</td>
-          <td style="text-align:left;font-weight:700">${t.nome}</td>
+          <td style="text-align:left;font-weight:700">${handNaipe==='fem' ? _handFemName(t.nome) : t.nome}</td>
           <td>${t.j}</td><td style="color:#2E7D32;font-weight:700">${t.v}</td>
           <td>${t.e}</td><td style="color:var(--red)">${t.d}</td>
           <td>${t.gp}</td><td>${t.gc}</td>
