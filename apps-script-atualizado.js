@@ -11,6 +11,8 @@ const ABA_QUIZ      = 'QUIZ';
 const ABA_PUSH      = 'PUSH_SUBS';
 const ABA_INSTALL   = 'INSTALACOES';
 const ABA_ACESSOS   = 'ACESSOS';
+const ABA_ACESSOS_SITE = 'ACESSOS_SITE';
+const ABA_ACESSOS_LOG  = 'ACESSOS_LOG';
 
 // ── doPost ──────────────────────────────────────────────────
 function doPost(e) {
@@ -52,6 +54,11 @@ function doPost(e) {
     // ACESSO AO APP — registra visita (1x por sessão, controlado no cliente)
     if (data.tipo === 'app_acesso') {
       return okJson(registrarAcesso(ss, data.deviceId || ''));
+    }
+
+    // ACESSO AO SITE — registra visita (1x por sessão, controlado no cliente)
+    if (data.tipo === 'site_acesso') {
+      return okJson(registrarAcessoSite(ss, data.deviceId || ''));
     }
 
     return ok();
@@ -102,6 +109,14 @@ function doGet(e) {
 
     if (action === 'count_acessos') {
       return okJson(contarAcessos(ss));
+    }
+
+    if (action === 'count_acessos_site') {
+      return okJson(contarAcessosSite(ss));
+    }
+
+    if (action === 'acessos_log') {
+      return okJson(listarAcessosLog(ss));
     }
 
     if (action === 'listar_edicoes') {
@@ -201,6 +216,8 @@ function registrarAcesso(ss, deviceId) {
   const dados = sheet.getDataRange().getValues();
   const agora = new Date().toLocaleString('pt-BR');
 
+  registrarAcessoLog_(ss, 'app');
+
   for (let i = 1; i < dados.length; i++) {
     if (dados[i][0] === deviceId) {
       sheet.getRange(i + 1, 3).setValue(agora);
@@ -219,6 +236,61 @@ function contarAcessos(ss) {
   let total = 0;
   dados.forEach(r => { total += parseInt(r[3]) || 0; });
   return { unicos: dados.length, total: total };
+}
+
+// ============================================================
+//  ACESSOS AO SITE (visitas)
+// ============================================================
+
+function registrarAcessoSite(ss, deviceId) {
+  if (!deviceId) return { ok: false, erro: 'deviceId ausente' };
+  const sheet = getOrCreate(ss, ABA_ACESSOS_SITE, ['DeviceId', 'Primeira visita', 'Última visita', 'Visitas']);
+  const dados = sheet.getDataRange().getValues();
+  const agora = new Date().toLocaleString('pt-BR');
+
+  registrarAcessoLog_(ss, 'site');
+
+  for (let i = 1; i < dados.length; i++) {
+    if (dados[i][0] === deviceId) {
+      sheet.getRange(i + 1, 3).setValue(agora);
+      sheet.getRange(i + 1, 4).setValue((parseInt(dados[i][3]) || 0) + 1);
+      return { ok: true, novo: false };
+    }
+  }
+  sheet.appendRow([deviceId, agora, agora, 1]);
+  return { ok: true, novo: true };
+}
+
+function contarAcessosSite(ss) {
+  const sheet = ss.getSheetByName(ABA_ACESSOS_SITE);
+  if (!sheet || sheet.getLastRow() < 2) return { unicos: 0, total: 0 };
+  const dados = sheet.getDataRange().getValues().slice(1);
+  let total = 0;
+  dados.forEach(r => { total += parseInt(r[3]) || 0; });
+  return { unicos: dados.length, total: total };
+}
+
+// ============================================================
+//  LOG DE ACESSOS (diário/semanal/mensal — app + site)
+// ============================================================
+// Uma linha por visita (não sobrescreve), pra dar pra montar
+// gráfico por dia/semana/mês no painel.
+
+function registrarAcessoLog_(ss, plataforma) {
+  const sheet = getOrCreate(ss, ABA_ACESSOS_LOG, ['Data', 'Plataforma']);
+  const hoje = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  sheet.appendRow([hoje, plataforma]);
+}
+
+function listarAcessosLog(ss) {
+  const sheet = ss.getSheetByName(ABA_ACESSOS_LOG);
+  if (!sheet || sheet.getLastRow() < 2) return { ok: true, log: [] };
+  const rows = sheet.getDataRange().getValues().slice(1);
+  const log = rows.map(r => ({
+    data: r[0] instanceof Date ? Utilities.formatDate(r[0], Session.getScriptTimeZone(), 'yyyy-MM-dd') : (r[0] || '').toString(),
+    plataforma: r[1]
+  })).filter(r => r.data);
+  return { ok: true, log: log };
 }
 
 function contarInstalacoes(ss) {
@@ -245,7 +317,7 @@ function arquivarEdicaoAtual() {
   const NOME_EDICAO_ATUAL = 'BASQUETE_2026'; // <<< ajuste antes de rodar
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  [ABA_INSTALL, ABA_ACESSOS, ABA_QUIZ].forEach(nomeAba => {
+  [ABA_INSTALL, ABA_ACESSOS, ABA_ACESSOS_SITE, ABA_QUIZ].forEach(nomeAba => {
     const sheet = ss.getSheetByName(nomeAba);
     if (!sheet) return; // nada a arquivar
     const novoNome = nomeAba + '_' + NOME_EDICAO_ATUAL;
