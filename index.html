@@ -1405,7 +1405,8 @@
           </div>
           <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;padding:14px;background:#f8f9fc;border-radius:12px">
             <div class="form-group" style="width:100px;margin:0"><label>Número</label><input class="form-control" id="ca-numero" placeholder="Nº"></div>
-            <div class="form-group" style="flex:1;margin:0"><label>Nome do Atleta</label><input class="form-control" id="ca-nome" placeholder="Nome completo"></div>
+            <div class="form-group" style="flex:1;margin:0"><label>Nome</label><input class="form-control" id="ca-nome" placeholder="Nome completo"></div>
+            <div class="form-group" style="width:170px;margin:0"><label>Tipo</label><select class="form-control" id="ca-tipo"><option value="Atleta">Atleta (máx. 14)</option><option value="Comissão Técnica">Comissão Técnica (máx. 2)</option></select></div>
             <button class="btn btn-primary" onclick="salvarAtletaCadastro()"><i class='bx bx-user-plus'></i> Adicionar</button>
           </div>
           <div id="ca-lista-atletas"></div>
@@ -3859,12 +3860,15 @@ async function carregarListaAtletas() {
   try {
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(equipe)).then(r => r.json());
     const atletas = (res && res.atletas) || [];
-    wrap.innerHTML = atletas.length ? atletas.sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0)).map(a => `
+    const nAtletas = atletas.filter(a => (a.tipo || 'Atleta') !== 'Comissão Técnica').length;
+    const nComissao = atletas.filter(a => a.tipo === 'Comissão Técnica').length;
+    const contador = `<div style="display:flex;gap:8px;margin-bottom:10px;font-size:12px;color:var(--dark-grey)"><span><strong>${nAtletas}/14</strong> atletas</span><span><strong>${nComissao}/2</strong> comissão técnica</span></div>`;
+    wrap.innerHTML = contador + (atletas.length ? atletas.sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0)).map(a => `
       <div class="list-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8f9fc;border-radius:10px;margin-bottom:8px">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">${a.numero || '·'}</div>
-        <div style="flex:1;font-weight:600;font-size:13px">${a.nome}</div>
+        <div style="width:36px;height:36px;border-radius:50%;background:${a.tipo === 'Comissão Técnica' ? '#c8960c' : 'var(--blue)'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">${a.numero || '·'}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${a.nome}</div><div style="font-size:10px;color:var(--dark-grey)">${a.tipo === 'Comissão Técnica' ? 'Comissão Técnica' : 'Atleta'}</div></div>
         <button onclick="removerAtletaCadastro('${(a.numero||'').replace(/'/g,"\\'")}','${a.nome.replace(/'/g,"\\'")}')" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-trash"></i></button>
-      </div>`).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum atleta cadastrado ainda pra essa equipe.</p>';
+      </div>`).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum atleta cadastrado ainda pra essa equipe.</p>');
   } catch (ex) {
     wrap.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar atletas.</p>';
   }
@@ -3874,13 +3878,14 @@ async function salvarAtletaCadastro() {
   const equipe = equipeAtivaCadastro();
   const numero = document.getElementById('ca-numero').value.trim();
   const nome = document.getElementById('ca-nome').value.trim();
+  const tipo = document.getElementById('ca-tipo').value;
   if (!equipe) { showToast('Selecione ou digite uma equipe.', 'error'); return; }
   if (!nome) { showToast('Informe o nome do atleta.', 'error'); return; }
-  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'cadastrarAtleta', equipe: equipe, numero: numero, nome: nome }) }).then(r => r.json());
+  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'cadastrarAtleta', equipe: equipe, numero: numero, nome: nome, tipo: tipo }) }).then(r => r.json());
   if (res.ok) {
     document.getElementById('ca-numero').value = '';
     document.getElementById('ca-nome').value = '';
-    showToast('✅ Atleta salvo!');
+    showToast('✅ Salvo!');
     carregarListaAtletas();
   } else showToast('❌ ' + (res.erro || 'erro'), 'error');
 }
