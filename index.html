@@ -635,6 +635,7 @@
     <li><a href="javascript:void(0)" onclick="navTo('feedback',this); return false;"><i class='bx bxs-message-square-detail'></i><span>Feedback</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('inscricoes',this); return false;"><i class='bx bxs-id-card'></i><span>Inscrições</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('sumulaLive',this); return false;"><i class='bx bxs-file-detail'></i><span>Súmula</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('convite',this); return false;"><i class='bx bxs-envelope'></i><span>Convite</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('edicoes',this); return false;"><i class='bx bxs-layer'></i><span>Edições</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
@@ -1395,14 +1396,6 @@
               <input class="form-control" id="ca-equipe-nova" placeholder="Nome da equipe" onblur="onCadastroEquipeChange()">
             </div>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;padding:14px;background:#eef3fc;border-radius:12px">
-            <div style="flex:1">
-              <div style="font-size:12px;font-weight:700;color:var(--blue)"><i class='bx bx-lock-alt'></i> PIN de acesso da equipe</div>
-              <div style="font-size:11px;color:var(--dark-grey);margin-top:2px">Manda esse PIN junto com o convite — só quem tiver ele consegue ver/cadastrar os atletas dessa equipe no app</div>
-              <div id="ca-pin-atual" style="font-family:monospace;font-size:22px;font-weight:800;color:var(--dark);margin-top:6px;letter-spacing:4px">— — — —</div>
-            </div>
-            <button class="btn btn-primary" onclick="gerarPinEquipeCadastro()"><i class='bx bx-refresh'></i> Gerar Novo PIN</button>
-          </div>
           <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;padding:14px;background:#f8f9fc;border-radius:12px">
             <div class="form-group" style="width:100px;margin:0"><label>Número</label><input class="form-control" id="ca-numero" placeholder="Nº"></div>
             <div class="form-group" style="flex:1;margin:0"><label>Nome</label><input class="form-control" id="ca-nome" placeholder="Nome completo"></div>
@@ -1449,6 +1442,50 @@
 
       <!-- Console ao vivo -->
       <div id="sumulaConsole" style="display:none"></div>
+    </div>
+
+    <!-- ─── CONVITE ─── -->
+    <div class="page" id="page-convite">
+      <div class="page-header">
+        <div>
+          <h1>Convite</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Convite</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class='bx bxs-envelope'></i> Gerar convite pra uma equipe inscrita</div>
+        <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 14px">Gera o PIN da equipe, monta o link da landing page de convite e deixa pronta a mensagem pra mandar no WhatsApp do responsável.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="flex:1;min-width:260px;margin:0">
+            <label>Equipe inscrita</label>
+            <select class="form-control" id="cv-equipe-select"></select>
+          </div>
+          <button class="btn btn-primary" onclick="gerarConvite()"><i class='bx bx-magic-wand'></i> Gerar Convite</button>
+        </div>
+      </div>
+
+      <div id="cv-resultado" style="display:none">
+        <div class="card">
+          <div class="card-title"><i class='bx bx-link'></i> Link do Convite</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input class="form-control" id="cv-link" readonly style="flex:1;min-width:260px;font-family:monospace;font-size:12px">
+            <button class="btn btn-secondary btn-sm" onclick="copiarLinkConvite()"><i class='bx bx-copy'></i> Copiar</button>
+            <a class="btn btn-secondary btn-sm" id="cv-abrir-link" href="#" target="_blank"><i class='bx bx-show'></i> Ver Página</a>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--dark-grey)">PIN gerado: <strong id="cv-pin-mostrado" style="font-family:monospace;font-size:15px;color:var(--dark)"></strong></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><i class='bx bxl-whatsapp'></i> Enviar pelo WhatsApp</div>
+          <div class="form-group">
+            <label>Mensagem</label>
+            <textarea class="form-control" id="cv-mensagem" rows="6" style="resize:vertical"></textarea>
+          </div>
+          <div style="font-size:11px;color:var(--dark-grey);margin-bottom:10px">Vai abrir o WhatsApp Web/App já com o número e a mensagem prontos — você só confere e clica em enviar.</div>
+          <a class="btn btn-success" id="cv-btn-whatsapp" href="#" target="_blank" style="width:100%;justify-content:center"><i class='bx bxl-whatsapp'></i> Abrir WhatsApp e Enviar</a>
+        </div>
+      </div>
     </div>
 
     <!-- ─── EDIÇÕES ─── -->
@@ -2050,7 +2087,7 @@ function navTo(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',sumulaLive:'Súmula',edicoes:'Edições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
+  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',handebol:'Handebol',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',sumulaLive:'Súmula',convite:'Convite',edicoes:'Edições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'handebol') { loadHandebolFromSheet(); carregarRankingGaleraHandebol(); }
   if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); loadLiveJogosList(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
@@ -2058,6 +2095,7 @@ function navTo(page, el) {
   if (page === 'feedback') loadFeedbackDashboard();
   if (page === 'inscricoes') loadInscricoesDashboard();
   if (page === 'sumulaLive') initSumulaLive();
+  if (page === 'convite') initConvitePage();
   if (page === 'edicoes') loadEdicoesDashboard();
   return false;
 }
@@ -3782,6 +3820,84 @@ let sumulaLiveState = null;
 let sumulaLivePollTimer = null;
 let sumulaLiveWizardData = null;
 
+// ════════════════════════════════════════════════════════
+// CONVITE
+// ════════════════════════════════════════════════════════
+let convideEquipesCache = [];
+
+async function initConvitePage() {
+  const sel = document.getElementById('cv-equipe-select');
+  sel.innerHTML = '<option value="">Carregando equipes inscritas...</option>';
+  document.getElementById('cv-resultado').style.display = 'none';
+  try {
+    const res = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
+    convideEquipesCache = (res && res.inscricoes) || [];
+    if (!convideEquipesCache.length) {
+      sel.innerHTML = '<option value="">Nenhuma equipe inscrita ainda</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— selecione a equipe —</option>' + convideEquipesCache.map((i, idx) =>
+      `<option value="${idx}">${i['Nome da Equipe']} — ${i['Nome do Responsável'] || 'sem responsável'} (${i['Telefone/WhatsApp'] || 'sem telefone'})</option>`
+    ).join('');
+  } catch (ex) {
+    sel.innerHTML = '<option value="">Erro ao carregar inscrições</option>';
+  }
+}
+
+function telefoneParaWhats_(tel) {
+  let digitos = (tel || '').toString().replace(/\D/g, '');
+  if (!digitos) return '';
+  if (digitos.length <= 11) digitos = '55' + digitos;
+  return digitos;
+}
+
+async function gerarConvite() {
+  const idx = document.getElementById('cv-equipe-select').value;
+  if (idx === '') { showToast('Selecione uma equipe.', 'error'); return; }
+  const inscricao = convideEquipesCache[idx];
+  const equipe = inscricao['Nome da Equipe'];
+  const responsavel = inscricao['Nome do Responsável'] || '';
+  const telefone = inscricao['Telefone/WhatsApp'] || '';
+
+  showLoading(true);
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'gerarPinEquipe', equipe: equipe }) }).then(r => r.json());
+    if (!res.ok) { showToast('❌ ' + (res.erro || 'erro ao gerar PIN'), 'error'); return; }
+
+    const link = 'https://www.supercopaafc.com.br/convite.html?equipe=' + encodeURIComponent(equipe) + '&pin=' + encodeURIComponent(res.pin);
+    document.getElementById('cv-link').value = link;
+    document.getElementById('cv-abrir-link').href = link;
+    document.getElementById('cv-pin-mostrado').textContent = res.pin;
+
+    const mensagem = `🏆 Olá, ${responsavel || 'tudo bem'}!\n\nA equipe *${equipe}* foi selecionada pela comissão organizadora para participar da *Supercopa de Vôlei de Afonso Cláudio 2026*! 🎉\n\nAcesse o link abaixo pra ver os detalhes e cadastrar os atletas da equipe no app oficial:\n${link}\n\nQualquer dúvida, é só chamar por aqui.`;
+    document.getElementById('cv-mensagem').value = mensagem;
+
+    const numeroWhats = telefoneParaWhats_(telefone);
+    const btnWpp = document.getElementById('cv-btn-whatsapp');
+    if (numeroWhats) {
+      btnWpp.href = 'https://wa.me/' + numeroWhats + '?text=' + encodeURIComponent(mensagem);
+      btnWpp.style.opacity = '';
+      btnWpp.style.pointerEvents = '';
+    } else {
+      btnWpp.href = 'https://wa.me/?text=' + encodeURIComponent(mensagem);
+      showToast('⚠️ Essa equipe não tem telefone cadastrado — abrindo o WhatsApp sem número, você escolhe o contato manualmente.');
+    }
+
+    document.getElementById('cv-resultado').style.display = '';
+    showToast('✅ Convite gerado!');
+  } catch (ex) {
+    showToast('❌ Erro: ' + ex.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function copiarLinkConvite() {
+  const el = document.getElementById('cv-link');
+  el.select();
+  navigator.clipboard.writeText(el.value).then(() => showToast('🔗 Link copiado!'));
+}
+
 function initSumulaLive() {
   const sel = document.getElementById('sumula-select-jogo');
   sel.innerHTML = state.jogos.volei.filter(j => j.sumulaId).map(j =>
@@ -3825,30 +3941,6 @@ function equipeAtivaCadastro() {
 async function onCadastroEquipeChange() {
   document.getElementById('ca-equipe-nova').value = '';
   await carregarListaAtletas();
-  await carregarPinEquipeCadastro();
-}
-
-async function carregarPinEquipeCadastro() {
-  const equipe = equipeAtivaCadastro();
-  const el = document.getElementById('ca-pin-atual');
-  if (!equipe) { el.textContent = '— — — —'; return; }
-  try {
-    const res = await fetch(SUMULA_SCRIPT_URL + '?action=verPinEquipeAdmin&equipe=' + encodeURIComponent(equipe)).then(r => r.json());
-    el.textContent = (res && res.pin) ? res.pin : 'Nenhum PIN gerado ainda';
-  } catch (ex) {
-    el.textContent = '— — — —';
-  }
-}
-
-async function gerarPinEquipeCadastro() {
-  const equipe = equipeAtivaCadastro();
-  if (!equipe) { showToast('Selecione ou digite uma equipe primeiro.', 'error'); return; }
-  if (!confirm('Gerar um PIN novo pra "' + equipe + '"? Se já existia um PIN, ele deixa de funcionar.')) return;
-  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'gerarPinEquipe', equipe: equipe }) }).then(r => r.json());
-  if (res.ok) {
-    document.getElementById('ca-pin-atual').textContent = res.pin;
-    showToast('✅ PIN gerado: ' + res.pin + ' — copia e manda no convite!');
-  } else showToast('❌ ' + (res.erro || 'erro'), 'error');
 }
 
 async function carregarListaAtletas() {
