@@ -313,6 +313,8 @@ function doGet(e) {
     if (action === 'atletasTodos') return okJson({ ok: true, atletas: listarTodosAtletas_() });
     if (action === 'equipesConhecidas') return okJson({ ok: true, equipes: listarEquipesConhecidas_() });
     if (action === 'temPinEquipe') return okJson({ ok: true, temPin: !!buscarPinEquipe_((e.parameter && e.parameter.equipe) || '') });
+    // Só o painel usa isso (área administrativa) — devolve o PIN de verdade.
+    if (action === 'verPinEquipeAdmin') return okJson({ ok: true, pin: buscarPinEquipe_((e.parameter && e.parameter.equipe) || '') });
     if (action === 'verificarPinEquipe') {
       const okPin = verificarPin_((e.parameter && e.parameter.equipe) || '', (e.parameter && e.parameter.pin) || '');
       return okJson({ ok: okPin });
