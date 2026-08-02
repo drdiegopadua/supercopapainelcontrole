@@ -70,6 +70,10 @@ const HEADERS_SUMULAS = [
 const ABA_ATLETAS = 'Atletas';
 const HEADERS_ATLETAS = ['Equipe', 'Numero', 'Nome', 'Cadastrado em'];
 
+// ── PIN DE ACESSO POR EQUIPE (protege o cadastro de atletas) ──
+const ABA_EQUIPES_PIN = 'EquipesPin';
+const HEADERS_EQUIPES_PIN = ['Equipe', 'PIN', 'Gerado em'];
+
 // ── SÚMULA AO VIVO (console de arbitragem, dentro do painel) ──
 const ABA_PARTIDAS = 'Partidas';
 const PLACAR_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec';
@@ -194,6 +198,17 @@ function configurarAtletas() {
   Logger.log('Aba "Atletas" configurada em: ' + ss.getUrl());
 }
 
+// Rode esta função UMA VEZ para criar a aba "EquipesPin" (PINs de
+// acesso por equipe). Não mexe em mais nada nas outras abas.
+function configurarEquipesPin() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_EQUIPES_PIN);
+  if (!sh) sh = ss.insertSheet(ABA_EQUIPES_PIN);
+  sh.getRange(1, 1, 1, HEADERS_EQUIPES_PIN.length).setValues([HEADERS_EQUIPES_PIN]);
+  sh.setFrozenRows(1);
+  Logger.log('Aba "EquipesPin" configurada em: ' + ss.getUrl());
+}
+
 // Rode esta função UMA VEZ para criar a aba "Partidas" (console de
 // arbitragem ao vivo). Não mexe em mais nada nas outras abas.
 function configurarPartidas() {
@@ -251,9 +266,16 @@ function doPost(e) {
       return okJson(salvarSumula_(dados));
     }
 
-    // CADASTRO DE ATLETAS
+    // CADASTRO DE ATLETAS (painel — sem PIN, já é área administrativa)
     if (acao === 'cadastrarAtleta') return okJson(cadastrarAtleta_(dados));
     if (acao === 'removerAtleta') return okJson(removerAtleta_(dados));
+
+    // PIN DE ACESSO DA EQUIPE (gerado pelo painel, usado pelo app)
+    if (acao === 'gerarPinEquipe') return okJson(gerarPinEquipe_(dados));
+
+    // CADASTRO DE ATLETAS (app — exige PIN da equipe)
+    if (acao === 'cadastrarAtletaApp') return okJson(cadastrarAtletaApp_(dados));
+    if (acao === 'removerAtletaApp') return okJson(removerAtletaApp_(dados));
 
     // CONSOLE DE ARBITRAGEM AO VIVO
     if (acao === 'criarPartida') return okJson(criarPartida_(dados));
@@ -290,6 +312,17 @@ function doGet(e) {
     if (action === 'atletasEquipe') return okJson({ ok: true, atletas: listarAtletasEquipe_((e.parameter && e.parameter.equipe) || '') });
     if (action === 'atletasTodos') return okJson({ ok: true, atletas: listarTodosAtletas_() });
     if (action === 'equipesConhecidas') return okJson({ ok: true, equipes: listarEquipesConhecidas_() });
+    if (action === 'temPinEquipe') return okJson({ ok: true, temPin: !!buscarPinEquipe_((e.parameter && e.parameter.equipe) || '') });
+    if (action === 'verificarPinEquipe') {
+      const okPin = verificarPin_((e.parameter && e.parameter.equipe) || '', (e.parameter && e.parameter.pin) || '');
+      return okJson({ ok: okPin });
+    }
+    if (action === 'atletasEquipeApp') {
+      const eq = (e.parameter && e.parameter.equipe) || '';
+      const pin = (e.parameter && e.parameter.pin) || '';
+      if (!verificarPin_(eq, pin)) return okJson({ ok: false, erro: 'PIN incorreto.' });
+      return okJson({ ok: true, atletas: listarAtletasEquipe_(eq) });
+    }
 
     return okJson({ ok: true, msg: 'Supercopa Vôlei — Destaque/Premiação/Galera OK' });
   } catch (ex) {
@@ -994,6 +1027,69 @@ function listarTodosAtletas_() {
   if (sh.getLastRow() < 2) return [];
   const rows = sh.getDataRange().getValues().slice(1);
   return rows.map(r => ({ equipe: r[0], numero: (r[1] || '').toString(), nome: r[2] })).filter(a => a.nome);
+}
+
+// ============================================================
+//  PIN DE ACESSO POR EQUIPE
+// ============================================================
+function getEquipesPinSheet_() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_EQUIPES_PIN);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_EQUIPES_PIN);
+    sh.getRange(1, 1, 1, HEADERS_EQUIPES_PIN.length).setValues([HEADERS_EQUIPES_PIN]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function buscarPinEquipe_(equipe) {
+  equipe = (equipe || '').toString().trim().toLowerCase();
+  if (!equipe) return null;
+  const sh = getEquipesPinSheet_();
+  if (sh.getLastRow() < 2) return null;
+  const rows = sh.getDataRange().getValues().slice(1);
+  for (let i = 0; i < rows.length; i++) {
+    if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe) return (rows[i][1] || '').toString();
+  }
+  return null;
+}
+
+function verificarPin_(equipe, pin) {
+  const real = buscarPinEquipe_(equipe);
+  if (!real) return false;
+  return real === (pin || '').toString().trim();
+}
+
+// Chamado pelo painel: gera (ou substitui) o PIN de 4 dígitos de
+// uma equipe, pra você mandar junto do convite/confirmação.
+function gerarPinEquipe_(d) {
+  const equipe = (d.equipe || '').toString().trim();
+  if (!equipe) return { ok: false, erro: 'Equipe é obrigatória.' };
+
+  const pin = (Math.floor(1000 + Math.random() * 9000)).toString();
+  const sh = getEquipesPinSheet_();
+  const rows = sh.getDataRange().getValues();
+  const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+
+  for (let i = 1; i < rows.length; i++) {
+    if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe.toLowerCase()) {
+      sh.getRange(i + 1, 2, 1, 2).setValues([[pin, agora]]);
+      return { ok: true, equipe: equipe, pin: pin };
+    }
+  }
+  sh.appendRow([equipe, pin, agora]);
+  return { ok: true, equipe: equipe, pin: pin };
+}
+
+function cadastrarAtletaApp_(d) {
+  if (!verificarPin_(d.equipe, d.pin)) return { ok: false, erro: 'PIN incorreto. Confirme o PIN da sua equipe.' };
+  return cadastrarAtleta_(d);
+}
+
+function removerAtletaApp_(d) {
+  if (!verificarPin_(d.equipe, d.pin)) return { ok: false, erro: 'PIN incorreto. Confirme o PIN da sua equipe.' };
+  return removerAtleta_(d);
 }
 
 function listarEquipesConhecidas_() {
