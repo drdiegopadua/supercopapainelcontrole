@@ -760,6 +760,21 @@
         </div>
       </div>
 
+      <!-- ═══ ACESSOS AO LONGO DO TEMPO ═══ -->
+      <div class="card" style="margin:0 0 22px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:2px">
+          <div class="card-title" style="margin:0"><i class='bx bx-line-chart'></i> Acessos ao Longo do Tempo</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm periodo-btn" data-periodo="dia" onclick="mudarPeriodoAcessos('dia')" style="padding:5px 12px;font-size:11px">Diário</button>
+            <button class="btn btn-sm periodo-btn" data-periodo="semana" onclick="mudarPeriodoAcessos('semana')" style="padding:5px 12px;font-size:11px">Semanal</button>
+            <button class="btn btn-sm periodo-btn" data-periodo="mes" onclick="mudarPeriodoAcessos('mes')" style="padding:5px 12px;font-size:11px">Mensal</button>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--dark-grey);margin:2px 0 10px;">Visitas registradas no site e no app (1 por sessão de usuário)</p>
+        <div style="position:relative;height:260px;"><canvas id="chartAcessosPeriodo"></canvas></div>
+        <div id="dash-acessos-legend" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;"></div>
+      </div>
+
       <!-- ═══ LISTAS ═══ -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap;">
         <div class="card" style="margin:0;">
@@ -4917,11 +4932,114 @@ async function renderChartEngajamento() {
   }
 }
 
+let _chartAcessosPeriodo = null, _acessosLogCache = null, _periodoAcessosAtual = 'dia';
+
+async function carregarAcessosLog_() {
+  if (_acessosLogCache) return _acessosLogCache;
+  try {
+    const res = await fetch(BOLAO_SHEETS_URL + '?action=acessos_log').then(r => r.json());
+    _acessosLogCache = (res && res.log) || [];
+  } catch (e) {
+    _acessosLogCache = [];
+  }
+  return _acessosLogCache;
+}
+
+function inicioDaSemana_(d) {
+  const dt = new Date(d + 'T00:00:00');
+  const dia = dt.getDay();
+  const diff = (dia === 0 ? -6 : 1) - dia; // volta pra segunda-feira
+  dt.setDate(dt.getDate() + diff);
+  return dt.toISOString().slice(0, 10);
+}
+
+function bucketizarAcessos_(log, periodo) {
+  const buckets = {};
+  const chave = (data) => {
+    if (periodo === 'dia') return data;
+    if (periodo === 'semana') return inicioDaSemana_(data);
+    return data.slice(0, 7); // mes: YYYY-MM
+  };
+  log.forEach(r => {
+    if (!r.data) return;
+    const k = chave(r.data);
+    if (!buckets[k]) buckets[k] = { app: 0, site: 0 };
+    if (r.plataforma === 'site') buckets[k].site++; else buckets[k].app++;
+  });
+
+  const chaves = Object.keys(buckets).sort();
+  const limite = periodo === 'dia' ? 30 : periodo === 'semana' ? 12 : 12;
+  const selecionadas = chaves.slice(-limite);
+
+  const formatLabel = (k) => {
+    if (periodo === 'mes') {
+      const [ano, mes] = k.split('-');
+      return ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][parseInt(mes, 10) - 1] + '/' + ano.slice(2);
+    }
+    const [, mm, dd] = k.split('-');
+    return dd + '/' + mm;
+  };
+
+  return {
+    labels: selecionadas.map(formatLabel),
+    app: selecionadas.map(k => buckets[k].app),
+    site: selecionadas.map(k => buckets[k].site)
+  };
+}
+
+async function mudarPeriodoAcessos(periodo) {
+  _periodoAcessosAtual = periodo;
+  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.toggle('btn-primary', b.dataset.periodo === periodo));
+  await renderChartAcessosPeriodo();
+}
+
+async function renderChartAcessosPeriodo() {
+  const canvas = document.getElementById('chartAcessosPeriodo');
+  if (!canvas || typeof Chart === 'undefined') return;
+  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.toggle('btn-primary', b.dataset.periodo === _periodoAcessosAtual));
+
+  const log = await carregarAcessosLog_();
+  const { labels, app, site } = bucketizarAcessos_(log, _periodoAcessosAtual);
+
+  if (_chartAcessosPeriodo) _chartAcessosPeriodo.destroy();
+  _chartAcessosPeriodo = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'App', data: app, borderColor: '#1565C0', backgroundColor: 'rgba(21,101,192,.12)', tension: .3, fill: true, pointRadius: 3 },
+        { label: 'Site', data: site, borderColor: '#E65100', backgroundColor: 'rgba(230,81,0,.10)', tension: .3, fill: true, pointRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+
+  const totalApp = app.reduce((a, b) => a + b, 0);
+  const totalSite = site.reduce((a, b) => a + b, 0);
+  const legend = document.getElementById('dash-acessos-legend');
+  if (legend) {
+    legend.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;background:var(--light);border-radius:10px;padding:8px 10px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:#1565C022;color:#1565C0;display:flex;align-items:center;justify-content:center;font-size:15px;"><i class='bx bx-mobile-alt'></i></div>
+        <div><div style="font-size:15px;font-weight:800;color:var(--dark);line-height:1;">${totalApp}</div><div style="font-size:9px;color:var(--dark-grey);">Acessos ao App (período)</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--light);border-radius:10px;padding:8px 10px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:#E6510022;color:#E65100;display:flex;align-items:center;justify-content:center;font-size:15px;"><i class='bx bx-globe'></i></div>
+        <div><div style="font-size:15px;font-weight:800;color:var(--dark);line-height:1;">${totalSite}</div><div style="font-size:9px;color:var(--dark-grey);">Acessos ao Site (período)</div></div>
+      </div>`;
+  }
+}
+
 function updateDashboard() {
   updateDashCountdowns();
   updateDashSportCards();
   renderChartProgresso();
   renderChartEngajamento();
+  renderChartAcessosPeriodo();
   const allJogos = [...state.jogos.volei, ...state.jogos.basquete, ...state.jogos.handebolMasc, ...state.jogos.handebolFem]
     .sort((a, b) => (b.status === 'live') - (a.status === 'live'));
   const djl = document.getElementById('dash-jogos-list');
