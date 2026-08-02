@@ -370,6 +370,25 @@ function montarRankingGaleraV_() {
 //  INSCRIÇÃO DE EQUIPES
 // ============================================================
 function inscreverEquipeV_(dados) {
+  const nomeEquipe = (dados.nomeEquipe || '').toString().trim();
+  if (!nomeEquipe) return { ok: false, status: 'erro', erro: 'Nome da equipe é obrigatório.', msg: 'Nome da equipe é obrigatório.' };
+
+  const shCheck = getSS_().getSheetByName(ABA_INSCRICOES);
+  if (shCheck && shCheck.getLastRow() >= 2) {
+    const rows = shCheck.getDataRange().getValues();
+    const headers = rows[0];
+    const colEquipe = headers.indexOf('Nome da Equipe');
+    const colModalidade = headers.indexOf('Modalidade');
+    const jaInscrita = rows.slice(1).some(r =>
+      (r[colEquipe] || '').toString().trim().toLowerCase() === nomeEquipe.toLowerCase() &&
+      (r[colModalidade] || '').toString().trim().toLowerCase() === (dados.modalidade || '').toString().trim().toLowerCase()
+    );
+    if (jaInscrita) {
+      const msg = 'Essa equipe já está inscrita nessa modalidade. Se precisar corrigir algo, fale com a organização.';
+      return { ok: false, status: 'erro', erro: msg, msg: msg };
+    }
+  }
+
   let linkEscudo = '';
   if (dados.escudoBase64) {
     const partes = dados.escudoBase64.split(',');
