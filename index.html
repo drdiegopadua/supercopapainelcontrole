@@ -745,12 +745,12 @@
       </div>
 
       <!-- ═══ GRÁFICOS ═══ -->
-      <div class="card-title" style="margin:0 0 12px 2px;"><i class='bx bx-bar-chart-alt-2'></i> Engajamento &amp; Progresso</div>
+      <div class="card-title" style="margin:0 0 12px 2px;"><i class='bx bx-bar-chart-alt-2'></i> Engajamento &amp; Inscrições</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:22px;">
         <div class="card" style="margin:0;">
-          <div class="card-title"><i class='bx bx-trending-up'></i> Progresso dos Placares por Esporte</div>
-          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 10px;">% dos jogos cadastrados que já têm resultado lançado</p>
-          <div style="position:relative;height:220px;"><canvas id="chartProgresso"></canvas></div>
+          <div class="card-title"><i class='bx bx-line-chart'></i> Inscrições por Dia</div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 10px;">Equipes inscritas ao longo do tempo</p>
+          <div style="position:relative;height:220px;"><canvas id="chartInscricoesPorDia"></canvas></div>
         </div>
         <div class="card" style="margin:0;">
           <div class="card-title"><i class='bx bx-group'></i> Engajamento do Público</div>
@@ -775,15 +775,15 @@
         <div id="dash-acessos-legend" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;"></div>
       </div>
 
-      <!-- ═══ LISTAS ═══ -->
+      <!-- ═══ INSCRIÇÕES POR LOCAL ═══ -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap;">
         <div class="card" style="margin:0;">
-          <div class="card-title"><i class='bx bx-run'></i> Próximos Jogos</div>
-          <div id="dash-jogos-list"><div class="empty-state"><i class='bx bx-calendar'></i><p>Nenhum jogo cadastrado ainda.</p></div></div>
+          <div class="card-title"><i class='bx bx-map'></i> Equipes por Estado</div>
+          <div style="position:relative;height:240px;"><canvas id="chartTimesPorEstado"></canvas></div>
         </div>
         <div class="card" style="margin:0;">
-          <div class="card-title"><i class='bx bxs-star'></i> Últimos Destaques</div>
-          <div id="dash-destaques-list"><div class="empty-state"><i class='bx bxs-star'></i><p>Nenhum destaque registrado ainda.</p></div></div>
+          <div class="card-title"><i class='bx bx-buildings'></i> Equipes por Cidade</div>
+          <div style="position:relative;height:240px;"><canvas id="chartTimesPorCidade"></canvas></div>
         </div>
       </div>
     </div>
@@ -4838,34 +4838,114 @@ function updateDashSportCards() {
   }).join('');
 }
 
-let _chartProgresso = null, _chartEngajamento = null;
+let _chartEngajamento = null, _chartInscricoesPorDia = null, _chartTimesPorEstado = null, _chartTimesPorCidade = null;
+let _inscricoesDashCache = null;
 
-function renderChartProgresso() {
-  const canvas = document.getElementById('chartProgresso');
+async function carregarInscricoesDash_() {
+  if (_inscricoesDashCache) return _inscricoesDashCache;
+  try {
+    const res = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
+    _inscricoesDashCache = (res && res.inscricoes) || [];
+  } catch (e) {
+    _inscricoesDashCache = [];
+  }
+  return _inscricoesDashCache;
+}
+
+function parseCidadeEstado_(campo) {
+  campo = (campo || '').toString().trim();
+  const partes = campo.split(' - ');
+  if (partes.length >= 2) return { cidade: partes.slice(0, -1).join(' - ').trim(), estado: partes[partes.length - 1].trim() };
+  return { cidade: campo, estado: '—' };
+}
+
+function parseCarimbo_(str) {
+  str = (str || '').toString().trim();
+  // Formatos possíveis: "dd/MM/yyyy HH:mm:ss" ou ISO
+  const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return m[3] + '-' + m[2] + '-' + m[1];
+  const iso = str.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+async function renderChartInscricoesPorDia() {
+  const canvas = document.getElementById('chartInscricoesPorDia');
   if (!canvas || typeof Chart === 'undefined') return;
-  const dados = DASH_SPORTS.map(s => {
-    const jogos = getDashJogos(s.key);
-    const total = jogos.length;
-    const done = jogos.filter(j => j.status === 'done').length;
-    return { label: s.label, color: s.color, pct: total ? Math.round(done / total * 100) : 0 };
+  const inscricoes = await carregarInscricoesDash_();
+
+  const porDia = {};
+  inscricoes.forEach(i => {
+    const dia = parseCarimbo_(i['Carimbo de data/hora']);
+    if (!dia) return;
+    porDia[dia] = (porDia[dia] || 0) + 1;
   });
-  if (_chartProgresso) _chartProgresso.destroy();
-  _chartProgresso = new Chart(canvas, {
-    type: 'bar',
+  const dias = Object.keys(porDia).sort();
+  const labels = dias.map(d => { const [, mm, dd] = d.split('-'); return dd + '/' + mm; });
+  let acumulado = 0;
+  const acumuladoData = dias.map(d => (acumulado += porDia[d]));
+
+  if (_chartInscricoesPorDia) _chartInscricoesPorDia.destroy();
+  _chartInscricoesPorDia = new Chart(canvas, {
+    type: 'line',
     data: {
-      labels: dados.map(d => d.label),
-      datasets: [{
-        label: '% com placar lançado',
-        data: dados.map(d => d.pct),
-        backgroundColor: dados.map(d => d.color),
-        borderRadius: 8,
-        maxBarThickness: 56
-      }]
+      labels: labels,
+      datasets: [
+        { label: 'Novas inscrições', data: dias.map(d => porDia[d]), borderColor: '#1565C0', backgroundColor: 'rgba(21,101,192,.12)', tension: .3, fill: true, pointRadius: 3, yAxisID: 'y' },
+        { label: 'Acumulado', data: acumuladoData, borderColor: '#c8960c', borderDash: [5, 4], tension: .3, pointRadius: 2, yAxisID: 'y' }
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.parsed.y + '% concluído' } } },
-      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+async function renderChartTimesPorEstado() {
+  const canvas = document.getElementById('chartTimesPorEstado');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const inscricoes = await carregarInscricoesDash_();
+  const porEstado = {};
+  inscricoes.forEach(i => {
+    const { estado } = parseCidadeEstado_(i['Cidade']);
+    porEstado[estado] = (porEstado[estado] || 0) + 1;
+  });
+  const labels = Object.keys(porEstado).sort((a, b) => porEstado[b] - porEstado[a]);
+
+  if (_chartTimesPorEstado) _chartTimesPorEstado.destroy();
+  _chartTimesPorEstado = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ data: labels.map(l => porEstado[l]), backgroundColor: '#1565C0', borderRadius: 8, maxBarThickness: 46 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+async function renderChartTimesPorCidade() {
+  const canvas = document.getElementById('chartTimesPorCidade');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const inscricoes = await carregarInscricoesDash_();
+  const porCidade = {};
+  inscricoes.forEach(i => {
+    const { cidade } = parseCidadeEstado_(i['Cidade']);
+    if (!cidade) return;
+    porCidade[cidade] = (porCidade[cidade] || 0) + 1;
+  });
+  const labels = Object.keys(porCidade).sort((a, b) => porCidade[b] - porCidade[a]).slice(0, 10);
+
+  if (_chartTimesPorCidade) _chartTimesPorCidade.destroy();
+  _chartTimesPorCidade = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ data: labels.map(l => porCidade[l]), backgroundColor: '#E65100', borderRadius: 8, maxBarThickness: 46 }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
     }
   });
 }
@@ -5037,34 +5117,11 @@ async function renderChartAcessosPeriodo() {
 function updateDashboard() {
   updateDashCountdowns();
   updateDashSportCards();
-  renderChartProgresso();
+  renderChartInscricoesPorDia();
   renderChartEngajamento();
   renderChartAcessosPeriodo();
-  const allJogos = [...state.jogos.volei, ...state.jogos.basquete, ...state.jogos.handebolMasc, ...state.jogos.handebolFem]
-    .sort((a, b) => (b.status === 'live') - (a.status === 'live'));
-  const djl = document.getElementById('dash-jogos-list');
-  if (!allJogos.length) {
-    djl.innerHTML = `<div class="empty-state"><i class='bx bx-calendar'></i><p>Nenhum jogo cadastrado.</p></div>`;
-  } else {
-    djl.innerHTML = allJogos.slice(0, 5).map(j => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grey)">
-        <span style="font-size:18px">${j.sport === 'volei' ? '🏐' : j.sport === 'basquete' ? '🏀' : '🤾'}</span>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">${j.equipeA} × ${j.equipeB}</div>
-        <div style="font-size:11px;color:var(--dark-grey)">${j.rodada || ''} · ${j.data || '—'}</div></div>
-        <div class="status-badge ${j.status === 'live' ? 'status-live' : j.status === 'done' ? 'status-done' : 'status-upcoming'}" style="font-size:10px;padding:2px 8px">${j.status === 'live' ? 'Ao Vivo' : j.status === 'done' ? 'Encerrado' : 'Agendado'}</div>
-      </div>`).join('');
-  }
-  const ddl = document.getElementById('dash-destaques-list');
-  if (!state.destaques.length) {
-    ddl.innerHTML = `<div class="empty-state"><i class='bx bxs-star'></i><p>Nenhum destaque.</p></div>`;
-  } else {
-    ddl.innerHTML = state.destaques.slice(0, 4).map(d => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grey)">
-        <span style="font-size:18px">⭐</span>
-        <div><div style="font-size:13px;font-weight:700;color:var(--dark)">${d.nome}</div>
-        <div style="font-size:11px;color:var(--dark-grey)">${d.equipe} · ${d.jogo}</div></div>
-      </div>`).join('');
-  }
+  renderChartTimesPorEstado();
+  renderChartTimesPorCidade();
 }
 
 // ════════════════════════════════════════════════════════
