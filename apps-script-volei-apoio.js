@@ -68,7 +68,9 @@ const HEADERS_SUMULAS = [
 
 // ── CADASTRO DE ATLETAS (número + nome por time) ────────────
 const ABA_ATLETAS = 'Atletas';
-const HEADERS_ATLETAS = ['Equipe', 'Numero', 'Nome', 'Cadastrado em'];
+const HEADERS_ATLETAS = ['Equipe', 'Numero', 'Nome', 'Tipo', 'Cadastrado em'];
+const LIMITE_ATLETAS = 14;
+const LIMITE_COMISSAO = 2;
 
 // ── PIN DE ACESSO POR EQUIPE (protege o cadastro de atletas) ──
 const ABA_EQUIPES_PIN = 'EquipesPin';
@@ -979,22 +981,35 @@ function cadastrarAtleta_(d) {
   const equipe = (d.equipe || '').toString().trim();
   const numero = (d.numero || '').toString().trim();
   const nome = (d.nome || '').toString().trim();
+  const tipo = (d.tipo || '').toString().trim() === 'Comissão Técnica' ? 'Comissão Técnica' : 'Atleta';
   if (!equipe || !nome) return { ok: false, erro: 'Equipe e nome são obrigatórios.' };
 
   const sh = getAtletasSheet_();
   const rows = sh.getDataRange().getValues();
+
   // Atualiza se já existir o mesmo número nessa equipe; senão adiciona.
   if (numero) {
     for (let i = 1; i < rows.length; i++) {
       if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe.toLowerCase() &&
           (rows[i][1] || '').toString().trim() === numero) {
-        sh.getRange(i + 1, 3).setValue(nome);
+        sh.getRange(i + 1, 3, 1, 2).setValues([[nome, tipo]]);
         return { ok: true, atualizado: true };
       }
     }
   }
+
+  const limite = tipo === 'Comissão Técnica' ? LIMITE_COMISSAO : LIMITE_ATLETAS;
+  const jaTem = rows.slice(1).filter(r =>
+    (r[0] || '').toString().trim().toLowerCase() === equipe.toLowerCase() &&
+    ((r[3] || 'Atleta').toString().trim() === tipo)
+  ).length;
+  if (jaTem >= limite) {
+    const rotulo = tipo === 'Comissão Técnica' ? 'membros da comissão técnica' : 'atletas';
+    return { ok: false, erro: 'Limite de ' + limite + ' ' + rotulo + ' já foi atingido pra essa equipe.' };
+  }
+
   const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-  sh.appendRow([equipe, numero, nome, agora]);
+  sh.appendRow([equipe, numero, nome, tipo, agora]);
   return { ok: true };
 }
 
@@ -1020,7 +1035,7 @@ function listarAtletasEquipe_(equipe) {
   if (sh.getLastRow() < 2) return [];
   const rows = sh.getDataRange().getValues().slice(1);
   return rows.filter(r => (r[0] || '').toString().trim().toLowerCase() === equipe)
-    .map(r => ({ equipe: r[0], numero: (r[1] || '').toString(), nome: r[2] }))
+    .map(r => ({ equipe: r[0], numero: (r[1] || '').toString(), nome: r[2], tipo: (r[3] || 'Atleta').toString() }))
     .filter(a => a.nome);
 }
 
@@ -1028,7 +1043,7 @@ function listarTodosAtletas_() {
   const sh = getAtletasSheet_();
   if (sh.getLastRow() < 2) return [];
   const rows = sh.getDataRange().getValues().slice(1);
-  return rows.map(r => ({ equipe: r[0], numero: (r[1] || '').toString(), nome: r[2] })).filter(a => a.nome);
+  return rows.map(r => ({ equipe: r[0], numero: (r[1] || '').toString(), nome: r[2], tipo: (r[3] || 'Atleta').toString() })).filter(a => a.nome);
 }
 
 // ============================================================
