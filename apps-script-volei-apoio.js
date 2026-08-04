@@ -88,7 +88,8 @@ const HEADERS_PARTIDAS = [
   'Sacando', 'RotacaoCasa', 'RotacaoVisitante', 'PrimeiroSaqueSet',
   'HistoricoSets', 'Timeouts', 'Cartoes', 'Substituicoes', 'EventosLog',
   'Status', 'LinkPDF', 'CriadoEm', 'AtualizadoEm',
-  'CapitaoCasa', 'CapitaoVisitante', 'Observacoes'
+  'CapitaoCasa', 'CapitaoVisitante', 'Observacoes',
+  'HistoricoPontos', 'CapitaoQuadraCasa', 'CapitaoQuadraVisitante'
 ];
 // Índices das colunas (0-based) para referência rápida.
 const PC = {
@@ -99,7 +100,8 @@ const PC = {
   sacando:15, rotacaoCasa:16, rotacaoVisitante:17, primeiroSaqueSet:18,
   historicoSets:19, timeouts:20, cartoes:21, substituicoes:22, eventosLog:23,
   status:24, linkPdf:25, criadoEm:26, atualizadoEm:27,
-  capitaoCasa:28, capitaoVisitante:29, observacoes:30
+  capitaoCasa:28, capitaoVisitante:29, observacoes:30,
+  historicoPontos:31, capitaoQuadraCasa:32, capitaoQuadraVisitante:33
 };
 
 function criarPlanilhaVolei() {
@@ -286,6 +288,7 @@ function doPost(e) {
     if (acao === 'ponto') return okJson(registrarPonto_(dados));
     if (acao === 'desfazerPonto') return okJson(desfazerPonto_(dados));
     if (acao === 'pontoMenos') return okJson(pontoMenos_(dados));
+    if (acao === 'definirCapitaoQuadra') return okJson(definirCapitaoQuadra_(dados));
     if (acao === 'timeout') return okJson(registrarTimeout_(dados));
     if (acao === 'atualizarObservacoes') return okJson(atualizarObservacoes_(dados));
     if (acao === 'excluirPartida') return okJson(excluirPartida_(dados));
@@ -659,7 +662,10 @@ function linhaParaEstado_(row) {
     status: row[PC.status], linkPdf: row[PC.linkPdf],
     criadoEm: row[PC.criadoEm], atualizadoEm: row[PC.atualizadoEm],
     capitaoCasa: row[PC.capitaoCasa] || '', capitaoVisitante: row[PC.capitaoVisitante] || '',
-    observacoes: row[PC.observacoes] || ''
+    observacoes: row[PC.observacoes] || '',
+    historicoPontos: parseJson_(row[PC.historicoPontos], []),
+    capitaoQuadraCasa: row[PC.capitaoQuadraCasa] || row[PC.capitaoCasa] || '',
+    capitaoQuadraVisitante: row[PC.capitaoQuadraVisitante] || row[PC.capitaoVisitante] || ''
   };
 }
 
@@ -706,6 +712,9 @@ function criarPartida_(d) {
   linhaDados[PC.capitaoCasa] = d.capitaoCasa || '';
   linhaDados[PC.capitaoVisitante] = d.capitaoVisitante || '';
   linhaDados[PC.observacoes] = '';
+  linhaDados[PC.historicoPontos] = JSON.stringify([]);
+  linhaDados[PC.capitaoQuadraCasa] = d.capitaoCasa || '';
+  linhaDados[PC.capitaoQuadraVisitante] = d.capitaoVisitante || '';
 
   const existenteInfo = acharLinhaPartida_(sh, jogo.id);
   if (existenteInfo) {
@@ -757,6 +766,9 @@ function salvarLinhaPartida_(sh, linhaNum, estado) {
   linhaDados[PC.capitaoCasa] = estado.capitaoCasa || '';
   linhaDados[PC.capitaoVisitante] = estado.capitaoVisitante || '';
   linhaDados[PC.observacoes] = estado.observacoes || '';
+  linhaDados[PC.historicoPontos] = JSON.stringify(estado.historicoPontos || []);
+  linhaDados[PC.capitaoQuadraCasa] = estado.capitaoQuadraCasa || '';
+  linhaDados[PC.capitaoQuadraVisitante] = estado.capitaoQuadraVisitante || '';
   sh.getRange(linhaNum, 1, 1, linhaDados.length).setValues([linhaDados]);
 }
 
@@ -776,6 +788,9 @@ function aplicarPontoNoEstado_(estado, equipe) {
   }
 
   if (equipe === 'A') estado.pontosCasa++; else estado.pontosVisitante++;
+  // .concat em vez de .push pra não mutar o array que já foi
+  // guardado no snapshot de desfazer (senão o undo desfaria errado).
+  estado.historicoPontos = (estado.historicoPontos || []).concat([{ set: estado.setAtual, equipe: equipe }]);
 
   let setFechado = false;
   const a = estado.pontosCasa, b = estado.pontosVisitante;
@@ -797,7 +812,8 @@ function snapshotEstado_(estado) {
     setAtual: estado.setAtual, pontosCasa: estado.pontosCasa, pontosVisitante: estado.pontosVisitante,
     setsCasa: estado.setsCasa, setsVisitante: estado.setsVisitante, sacando: estado.sacando,
     rotacaoCasa: estado.rotacaoCasa, rotacaoVisitante: estado.rotacaoVisitante,
-    primeiroSaqueSet: estado.primeiroSaqueSet, historicoSets: estado.historicoSets, status: estado.status
+    primeiroSaqueSet: estado.primeiroSaqueSet, historicoSets: estado.historicoSets, status: estado.status,
+    historicoPontos: estado.historicoPontos
   };
 }
 
@@ -843,6 +859,31 @@ function pontoMenos_(d) {
   if (equipe === 'A') estado.pontosCasa = Math.max(0, estado.pontosCasa - 1);
   else estado.pontosVisitante = Math.max(0, estado.pontosVisitante - 1);
 
+  // Remove o último ponto marcado desse time no histórico (não
+  // necessariamente o último ponto geral, já que a correção pode
+  // ser feita bem depois do lance).
+  const hist = (estado.historicoPontos || []).slice();
+  for (let i = hist.length - 1; i >= 0; i--) {
+    if (hist[i].equipe === equipe) { hist.splice(i, 1); break; }
+  }
+  estado.historicoPontos = hist;
+
+  salvarLinhaPartida_(sh, info.linha, estado);
+  delete estado._eventosLog;
+  return { ok: true, estado: estado };
+}
+
+// Define quem é o capitão "em quadra" no momento (pode ser diferente
+// do capitão oficial se ele tiver sido substituído ou não estiver
+// entre os titulares) — regra do vôlei exige sempre ter um em quadra.
+function definirCapitaoQuadra_(d) {
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  const estado = linhaParaEstado_(info.dados);
+  if (d.equipe === 'B') estado.capitaoQuadraVisitante = d.numero || '';
+  else estado.capitaoQuadraCasa = d.numero || '';
+  estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
   salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;
   return { ok: true, estado: estado };
@@ -860,6 +901,7 @@ function desfazerPonto_(d) {
   estado.setsCasa = snap.setsCasa; estado.setsVisitante = snap.setsVisitante; estado.sacando = snap.sacando;
   estado.rotacaoCasa = snap.rotacaoCasa; estado.rotacaoVisitante = snap.rotacaoVisitante;
   estado.primeiroSaqueSet = snap.primeiroSaqueSet; estado.historicoSets = snap.historicoSets; estado.status = snap.status;
+  estado.historicoPontos = snap.historicoPontos || [];
   estado._eventosLog = rawEventos;
   salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;

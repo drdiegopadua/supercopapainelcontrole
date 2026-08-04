@@ -4252,6 +4252,54 @@ function tempoBadge_(timeouts, equipe, setAtual, cor) {
   return `<div title="${horarios ? 'Pedidos às ' + horarios : 'Nenhum tempo pedido neste set'}" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:${cor};margin-top:4px"><i class='bx bx-time-five'></i> Tempos: ${doSet.length}/2</div>`;
 }
 
+// O vôlei exige sempre ter um capitão em quadra. Se o capitão
+// oficial saiu (substituição) ou nunca esteve entre os titulares,
+// isso resolve quem está "no papel" de capitão em quadra agora.
+function capitaoEmQuadra_(s, lado) {
+  const capOficial = lado === 'A' ? s.capitaoCasa : s.capitaoVisitante;
+  const capQuadra = (lado === 'A' ? s.capitaoQuadraCasa : s.capitaoQuadraVisitante) || capOficial;
+  const rotacao = lado === 'A' ? s.rotacaoCasa : s.rotacaoVisitante;
+  const emQuadra = (rotacao || []).some(p => p.numero && capQuadra && p.numero.toString() === capQuadra.toString());
+  return { numero: capQuadra, emQuadra: emQuadra, capOficial: capOficial };
+}
+
+async function definirCapitaoQuadra(equipe, numero) {
+  if (!numero) return;
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'definirCapitaoQuadra', id: sumulaLiveState.id, equipe: equipe, numero: numero }) }).then(r => r.json());
+    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); showToast('🅲 Capitão em quadra atualizado.'); }
+    else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+function bannerCapitaoFora_(s, lado, cor) {
+  const info = capitaoEmQuadra_(s, lado);
+  if (info.emQuadra) return '';
+  const rotacao = lado === 'A' ? s.rotacaoCasa : s.rotacaoVisitante;
+  const nomeEquipe = lado === 'A' ? s.equipeCasa : s.equipeVisitante;
+  const opcoes = (rotacao || []).filter(p => p.nome).map(p => `<option value="${p.numero}">${p.numero} · ${p.nome}</option>`).join('');
+  return `<div style="background:#fff3cd;border:1px solid #ffe08a;border-radius:10px;padding:8px 12px;margin-top:8px;font-size:11px;color:#8a6100">
+    <i class='bx bx-error'></i> O capitão de <strong>${nomeEquipe}</strong> não está em quadra. Escolha quem assume como capitão em quadra:
+    <select class="form-control" style="margin-top:6px;font-size:11px;padding:4px" onchange="definirCapitaoQuadra('${lado}', this.value)">
+      <option value="">— selecionar —</option>${opcoes}
+    </select>
+  </div>`;
+}
+
+// Sequência de quem marcou cada ponto no set atual (histórico de
+// pontos), pra acompanhar o andamento do set tipo um placar corrido.
+function historicoPontosSetAtual_(s, corA, corB) {
+  const seq = (s.historicoPontos || []).filter(p => p.set === s.setAtual);
+  if (!seq.length) return '<p style="color:var(--dark-grey);font-size:12px;margin:0">Nenhum ponto registrado neste set ainda.</p>';
+  let a = 0, b = 0;
+  const chips = seq.map(p => {
+    if (p.equipe === 'A') a++; else b++;
+    const cor = p.equipe === 'A' ? corA : corB;
+    return `<span title="${a}-${b}" style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;padding:0 4px;border-radius:6px;background:${cor};color:#fff;font-size:10px;font-weight:800">${p.equipe}</span>`;
+  }).join('');
+  return `<div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>`;
+}
+
 function renderSumulaConsole() {
   const s = sumulaLiveState;
   const el = document.getElementById('sumulaConsole');
@@ -4262,7 +4310,7 @@ function renderSumulaConsole() {
   const timelineItens = [];
   (s.timeouts || []).forEach((t, i) => timelineItens.push({ ordem: 900 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-time-five' style="color:var(--orange)"></i><span style="flex:1">Tempo técnico · ${t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${t.set}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('timeout',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
   (s.cartoes || []).forEach((c, i) => timelineItens.push({ ordem: 800 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px">${c.tipo === 'Vermelho' ? '🟥' : '🟨'}<span style="flex:1">${c.jogador} · ${c.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${c.set}${c.motivo ? ' · ' + c.motivo : ''}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('cartao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
-  (s.substituicoes || []).forEach((sub, i) => timelineItens.push({ ordem: 700 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-transfer' style="color:var(--blue)"></i><span style="flex:1">${sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${sub.set} · ${sub.saiu} ➜ ${sub.entrou}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('substituicao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
+  (s.substituicoes || []).forEach((sub, i) => timelineItens.push({ ordem: 700 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-transfer' style="color:var(--blue)"></i><span style="flex:1">${sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${sub.set} · ${sub.saiu} → ${sub.entrou}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('substituicao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
 
   const corA = 'var(--blue)', corB = 'var(--orange)';
 
@@ -4286,16 +4334,17 @@ function renderSumulaConsole() {
         </div>
       </div>
       <div style="text-align:center;font-size:11px;color:var(--dark-grey);margin:6px 0 12px">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
+      ${emAndamento ? bannerCapitaoFora_(s, 'A', corA) + bannerCapitaoFora_(s, 'B', corB) : ''}
 
-      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;margin-top:12px">
         <div style="flex:1 1 260px;max-width:340px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
             <div style="text-align:center;font-size:9px;font-weight:700;color:${corA};margin-bottom:3px">${s.equipeCasa}</div>
-            ${renderQuadraAoVivo_(s.rotacaoCasa, s.capitaoCasa)}
+            ${renderQuadraAoVivo_(s.rotacaoCasa, capitaoEmQuadra_(s, 'A').numero)}
           </div>
           <div>
             <div style="text-align:center;font-size:9px;font-weight:700;color:${corB};margin-bottom:3px">${s.equipeVisitante}</div>
-            ${renderQuadraAoVivo_(s.rotacaoVisitante, s.capitaoVisitante)}
+            ${renderQuadraAoVivo_(s.rotacaoVisitante, capitaoEmQuadra_(s, 'B').numero)}
           </div>
         </div>
 
@@ -4323,6 +4372,11 @@ function renderSumulaConsole() {
         </div>
       </div>
     </div>` : ''}
+
+    <div class="card">
+      <div class="card-title"><i class='bx bx-line-chart'></i> Histórico de Pontos — Set ${Math.min(s.setAtual, 3)}</div>
+      ${historicoPontosSetAtual_(s, corA, corB)}
+    </div>
 
     ${prontaFinalizar ? `
     <div class="card" style="text-align:center;background:linear-gradient(135deg,#e8f5e9,#fff)">
