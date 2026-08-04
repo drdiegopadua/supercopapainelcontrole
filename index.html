@@ -4229,20 +4229,27 @@ function renderQuadraAoVivo_(rotacao, capitaoNumero) {
     </div>`;
 }
 
-function setDots_(historico, idx, setsCasa, setsVisitante) {
-  const total = 3;
-  let html = '';
-  for (let i = 0; i < total; i++) {
-    if (historico[i]) {
-      const v = historico[i].a > historico[i].b ? 'A' : 'B';
-      html += `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;background:${v === 'A' ? 'var(--blue)' : 'var(--orange)'}"></span>`;
-    } else if (i === idx - 1) {
-      html += `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;border:2px solid var(--dark-grey)"></span>`;
-    } else {
-      html += `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;background:#e5e7eb"></span>`;
-    }
+// Uma "caixinha" por set (Set1/Set2/Set3) marcada com check pro time
+// que ganhou aquele set — em vez das bolinhas antigas.
+function setChecks_(historico, ladoKey, cor) {
+  let html = '<div style="display:flex;gap:4px;justify-content:center;margin-top:4px">';
+  for (let i = 0; i < 3; i++) {
+    const set = historico[i];
+    const jogado = !!set;
+    const ganhou = jogado && (ladoKey === 'a' ? set.a > set.b : set.b > set.a);
+    html += `<div style="width:36px;height:22px;border-radius:6px;border:1.5px solid ${jogado ? cor : '#dcdcdc'};background:${ganhou ? cor : '#fff'};color:${ganhou ? '#fff' : '#9aa0ab'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">${ganhou ? '✓ ' : ''}SET${i + 1}</div>`;
   }
+  html += '</div>';
   return html;
+}
+
+// Badge de tempos técnicos pedidos NESTE set (zera sozinho quando o
+// set muda, já que filtra por s.setAtual). Guarda o horário de cada
+// pedido — isso é o que vai pra súmula final.
+function tempoBadge_(timeouts, equipe, setAtual, cor) {
+  const doSet = (timeouts || []).filter(t => t.equipe === equipe && t.set === setAtual);
+  const horarios = doSet.map(t => t.hora).join(', ');
+  return `<div title="${horarios ? 'Pedidos às ' + horarios : 'Nenhum tempo pedido neste set'}" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:${cor};margin-top:4px"><i class='bx bx-time-five'></i> Tempos: ${doSet.length}/2</div>`;
 }
 
 function renderSumulaConsole() {
@@ -4257,48 +4264,63 @@ function renderSumulaConsole() {
   (s.cartoes || []).forEach((c, i) => timelineItens.push({ ordem: 800 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px">${c.tipo === 'Vermelho' ? '🟥' : '🟨'}<span style="flex:1">${c.jogador} · ${c.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${c.set}${c.motivo ? ' · ' + c.motivo : ''}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('cartao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
   (s.substituicoes || []).forEach((sub, i) => timelineItens.push({ ordem: 700 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-transfer' style="color:var(--blue)"></i><span style="flex:1">${sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${sub.set} · ${sub.saiu} ➜ ${sub.entrou}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('substituicao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
 
+  const corA = 'var(--blue)', corB = 'var(--orange)';
+
   el.innerHTML = `
-    <div class="card" style="text-align:center;padding:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:11px;color:var(--dark-grey)">${finalizada ? '🏁 FINALIZADA' : prontaFinalizar ? '✅ PRONTA PRA FINALIZAR' : '🔴 AO VIVO'}</span>
-        <span style="font-size:11px;color:var(--dark-grey)">SET ${Math.min(s.setAtual, 3)}</span>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:${finalizada ? 'var(--dark-grey)' : prontaFinalizar ? 'var(--green)' : 'var(--red)'}">${finalizada ? '🏁 FINALIZADA' : prontaFinalizar ? '✅ PRONTA PRA FINALIZAR' : '🔴 AO VIVO'}</span>
+        <span style="font-size:11px;color:var(--dark-grey);font-weight:700">SET ${Math.min(s.setAtual, 3)}</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin:6px 0">
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px">
         <div style="flex:1;text-align:center">
-          <div style="font-weight:800;font-size:14px">${s.equipeCasa}</div>
-          <div style="margin-top:2px">${setDots_(s.historicoSets, s.setAtual, s.setsCasa, s.setsVisitante)}</div>
+          <div style="font-weight:800;font-size:15px;color:${corA}">${s.equipeCasa}</div>
+          ${setChecks_(s.historicoSets, 'a', corA)}
+          ${tempoBadge_(s.timeouts, 'A', s.setAtual, corA)}
         </div>
-        <div style="font-size:36px;font-weight:900;color:var(--dark)">${s.pontosCasa} <span style="color:var(--dark-grey);font-size:18px">×</span> ${s.pontosVisitante}</div>
+        <div style="font-size:38px;font-weight:900;color:var(--dark);flex-shrink:0">${s.pontosCasa}<span style="color:var(--dark-grey);font-size:18px"> × </span>${s.pontosVisitante}</div>
         <div style="flex:1;text-align:center">
-          <div style="font-weight:800;font-size:14px">${s.equipeVisitante}</div>
-          <div style="margin-top:2px">${setDots_(s.historicoSets, s.setAtual, s.setsCasa, s.setsVisitante)}</div>
+          <div style="font-weight:800;font-size:15px;color:${corB}">${s.equipeVisitante}</div>
+          ${setChecks_(s.historicoSets, 'b', corB)}
+          ${tempoBadge_(s.timeouts, 'B', s.setAtual, corB)}
         </div>
       </div>
-      <div style="font-size:12px;color:var(--dark-grey);margin-bottom:8px">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--blue);margin-bottom:3px">${s.equipeCasa}</div>
-          ${renderQuadraAoVivo_(s.rotacaoCasa, s.capitaoCasa)}
+      <div style="text-align:center;font-size:11px;color:var(--dark-grey);margin:6px 0 12px">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch">
+        <div style="flex:1 1 260px;max-width:340px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div style="text-align:center;font-size:9px;font-weight:700;color:${corA};margin-bottom:3px">${s.equipeCasa}</div>
+            ${renderQuadraAoVivo_(s.rotacaoCasa, s.capitaoCasa)}
+          </div>
+          <div>
+            <div style="text-align:center;font-size:9px;font-weight:700;color:${corB};margin-bottom:3px">${s.equipeVisitante}</div>
+            ${renderQuadraAoVivo_(s.rotacaoVisitante, s.capitaoVisitante)}
+          </div>
         </div>
-        <div>
-          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--orange);margin-bottom:3px">${s.equipeVisitante}</div>
-          ${renderQuadraAoVivo_(s.rotacaoVisitante, s.capitaoVisitante)}
-        </div>
+
+        ${emAndamento ? `
+        <div style="flex:1 1 160px;display:flex;flex-direction:column;gap:6px;justify-content:center">
+          <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('A')" style="justify-content:flex-start"><i class='bx bx-time-five' style="color:${corA}"></i> Tempo · ${s.equipeCasa}</button>
+          <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('B')" style="justify-content:flex-start"><i class='bx bx-time-five' style="color:${corB}"></i> Tempo · ${s.equipeVisitante}</button>
+          <button class="btn btn-secondary btn-sm" onclick="abrirModalCartao()" style="justify-content:flex-start"><i class='bx bxs-flag-alt'></i> Cartão</button>
+          <button class="btn btn-secondary btn-sm" onclick="abrirModalSub()" style="justify-content:flex-start"><i class='bx bx-transfer'></i> Substituição</button>
+          <button class="btn btn-secondary btn-sm" onclick="sumulaDesfazer()" style="justify-content:flex-start"><i class='bx bx-undo'></i> Desfazer último evento</button>
+        </div>` : ''}
       </div>
     </div>
 
     ${emAndamento ? `
     <div class="card" style="padding:12px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <button onclick="sumulaPonto('A')" style="background:var(--blue);color:#fff;border:none;border-radius:12px;padding:16px 10px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(21,101,192,.3)">+1 PONTO<br><span style="font-size:11px;font-weight:600;opacity:.85">${s.equipeCasa}</span></button>
-        <button onclick="sumulaPonto('B')" style="background:var(--orange);color:#fff;border:none;border-radius:12px;padding:16px 10px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(230,126,34,.3)">+1 PONTO<br><span style="font-size:11px;font-weight:600;opacity:.85">${s.equipeVisitante}</span></button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:10px">
-        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('A')" title="Tempo · ${s.equipeCasa}"><i class='bx bx-time-five'></i> T. ${s.equipeCasa}</button>
-        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('B')" title="Tempo · ${s.equipeVisitante}"><i class='bx bx-time-five'></i> T. ${s.equipeVisitante}</button>
-        <button class="btn btn-secondary btn-sm" onclick="abrirModalCartao()"><i class='bx bxs-flag-alt'></i> Cartão</button>
-        <button class="btn btn-secondary btn-sm" onclick="abrirModalSub()"><i class='bx bx-transfer'></i> Substituição</button>
-        <button class="btn btn-secondary btn-sm" onclick="sumulaDesfazer()"><i class='bx bx-undo'></i> Desfazer</button>
+        <div style="display:flex;gap:6px;align-items:stretch">
+          <button onclick="sumulaPonto('A')" style="flex:1;background:${corA};color:#fff;border:none;border-radius:12px;padding:16px 8px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(21,101,192,.3)">+1 PONTO<br><span style="font-size:11px;font-weight:600;opacity:.85">${s.equipeCasa}</span></button>
+          <button onclick="sumulaPontoMenos('A')" title="Corrigir: -1 ponto ${s.equipeCasa}" style="width:44px;background:#fff;color:${corA};border:2px solid ${corA};border-radius:12px;font-size:20px;font-weight:900">−1</button>
+        </div>
+        <div style="display:flex;gap:6px;align-items:stretch">
+          <button onclick="sumulaPontoMenos('B')" title="Corrigir: -1 ponto ${s.equipeVisitante}" style="width:44px;background:#fff;color:${corB};border:2px solid ${corB};border-radius:12px;font-size:20px;font-weight:900">−1</button>
+          <button onclick="sumulaPonto('B')" style="flex:1;background:${corB};color:#fff;border:none;border-radius:12px;padding:16px 8px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(230,126,34,.3)">+1 PONTO<br><span style="font-size:11px;font-weight:600;opacity:.85">${s.equipeVisitante}</span></button>
+        </div>
       </div>
     </div>` : ''}
 
@@ -4331,6 +4353,13 @@ function renderSumulaConsole() {
 async function sumulaPonto(equipe) {
   try {
     const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'ponto', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
+    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+async function sumulaPontoMenos(equipe) {
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'pontoMenos', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
     if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
   } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
 }
@@ -4552,7 +4581,7 @@ async function gerarPdfSumula(s) {
     const ocorrencias = [];
     (s.cartoes || []).forEach(c => ocorrencias.push(['Set ' + c.set, c.tipo === 'Vermelho' ? 'Cartão Vermelho' : 'Cartão Amarelo', c.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, c.jogador + (c.motivo ? ' — ' + c.motivo : '')]));
     (s.substituicoes || []).forEach(sub => ocorrencias.push(['Set ' + sub.set, 'Substituição', sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, sub.saiu + ' -> ' + sub.entrou]));
-    (s.timeouts || []).forEach(t => ocorrencias.push(['Set ' + t.set, 'Tempo Técnico', t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, '—']));
+    (s.timeouts || []).forEach(t => ocorrencias.push(['Set ' + t.set, 'Tempo Técnico', t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, 'Pedido às ' + (t.hora || '—')]));
 
     if (ocorrencias.length) {
       if (y > 220) { doc.addPage(); y = 18; }

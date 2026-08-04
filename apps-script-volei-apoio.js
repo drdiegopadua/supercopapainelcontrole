@@ -285,6 +285,7 @@ function doPost(e) {
     if (acao === 'criarPartida') return okJson(criarPartida_(dados));
     if (acao === 'ponto') return okJson(registrarPonto_(dados));
     if (acao === 'desfazerPonto') return okJson(desfazerPonto_(dados));
+    if (acao === 'pontoMenos') return okJson(pontoMenos_(dados));
     if (acao === 'timeout') return okJson(registrarTimeout_(dados));
     if (acao === 'atualizarObservacoes') return okJson(atualizarObservacoes_(dados));
     if (acao === 'excluirPartida') return okJson(excluirPartida_(dados));
@@ -821,6 +822,28 @@ function registrarPonto_(d) {
     try { empurrarPlacarParaJogos_(estado); } catch (ex) { /* não interrompe o fluxo */ }
   }
 
+  delete estado._eventosLog;
+  return { ok: true, estado: estado };
+}
+
+// Correção manual: tira 1 ponto do time (marcação errada), sem
+// mexer em rotação/saque — é só ajuste de placar, não um rally.
+function pontoMenos_(d) {
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  const estado = linhaParaEstado_(info.dados);
+  if (estado.status !== 'em_andamento') return { ok: false, erro: 'Partida não está em andamento.' };
+  const equipe = d.equipe === 'B' ? 'B' : 'A';
+
+  const rawEventos = parseJson_(info.dados[PC.eventosLog], []);
+  rawEventos.push(snapshotEstado_(estado));
+  estado._eventosLog = rawEventos;
+
+  if (equipe === 'A') estado.pontosCasa = Math.max(0, estado.pontosCasa - 1);
+  else estado.pontosVisitante = Math.max(0, estado.pontosVisitante - 1);
+
+  salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;
   return { ok: true, estado: estado };
 }
