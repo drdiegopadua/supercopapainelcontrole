@@ -764,24 +764,10 @@ function rotacionar_(arr) {
   return arr.slice(1).concat([arr[0]]);
 }
 
-function registrarPonto_(d) {
-  const sh = getPartidasSheet_();
-  const info = acharLinhaPartida_(sh, d.id);
-  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
-  const estado = linhaParaEstado_(info.dados);
-  if (estado.status !== 'em_andamento') return { ok: false, erro: 'Partida não está em andamento.' };
-  const equipe = d.equipe === 'B' ? 'B' : 'A';
-
-  // snapshot para permitir desfazer
-  const rawEventos = parseJson_(info.dados[PC.eventosLog], []);
-  rawEventos.push({
-    setAtual: estado.setAtual, pontosCasa: estado.pontosCasa, pontosVisitante: estado.pontosVisitante,
-    setsCasa: estado.setsCasa, setsVisitante: estado.setsVisitante, sacando: estado.sacando,
-    rotacaoCasa: estado.rotacaoCasa, rotacaoVisitante: estado.rotacaoVisitante,
-    primeiroSaqueSet: estado.primeiroSaqueSet, historicoSets: estado.historicoSets, status: estado.status
-  });
-  estado._eventosLog = rawEventos;
-
+// Aplica um ponto pra equipe informada diretamente no objeto estado
+// (rotação/saque/placar/fechamento de set). Usado tanto pelo ponto
+// manual quanto pelo cartão vermelho (que soma ponto pro adversário).
+function aplicarPontoNoEstado_(estado, equipe) {
   if (equipe !== estado.sacando) {
     if (equipe === 'A') estado.rotacaoCasa = rotacionar_(estado.rotacaoCasa);
     else estado.rotacaoVisitante = rotacionar_(estado.rotacaoVisitante);
@@ -802,6 +788,32 @@ function registrarPonto_(d) {
     estado.sacando = estado.primeiroSaqueSet;
     if (estado.setsCasa >= 2 || estado.setsVisitante >= 2) estado.status = 'sets_completos';
   }
+  return setFechado;
+}
+
+function snapshotEstado_(estado) {
+  return {
+    setAtual: estado.setAtual, pontosCasa: estado.pontosCasa, pontosVisitante: estado.pontosVisitante,
+    setsCasa: estado.setsCasa, setsVisitante: estado.setsVisitante, sacando: estado.sacando,
+    rotacaoCasa: estado.rotacaoCasa, rotacaoVisitante: estado.rotacaoVisitante,
+    primeiroSaqueSet: estado.primeiroSaqueSet, historicoSets: estado.historicoSets, status: estado.status
+  };
+}
+
+function registrarPonto_(d) {
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  const estado = linhaParaEstado_(info.dados);
+  if (estado.status !== 'em_andamento') return { ok: false, erro: 'Partida não está em andamento.' };
+  const equipe = d.equipe === 'B' ? 'B' : 'A';
+
+  // snapshot para permitir desfazer
+  const rawEventos = parseJson_(info.dados[PC.eventosLog], []);
+  rawEventos.push(snapshotEstado_(estado));
+  estado._eventosLog = rawEventos;
+
+  const setFechado = aplicarPontoNoEstado_(estado, equipe);
 
   salvarLinhaPartida_(sh, info.linha, estado);
 
@@ -872,8 +884,23 @@ function registrarCartao_(d) {
   if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
   const estado = linhaParaEstado_(info.dados);
   estado.cartoes.push({ equipe: d.equipe, jogador: d.jogador || '', tipo: d.tipo || 'Amarelo', motivo: d.motivo || '', set: estado.setAtual });
-  estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
+
+  // Cartão vermelho soma ponto automático pro adversário (regra CBV).
+  const rawEventos = parseJson_(info.dados[PC.eventosLog], []);
+  let setFechado = false;
+  if (d.tipo === 'Vermelho' && estado.status === 'em_andamento') {
+    rawEventos.push(snapshotEstado_(estado));
+    const equipeAdversaria = d.equipe === 'A' ? 'B' : 'A';
+    setFechado = aplicarPontoNoEstado_(estado, equipeAdversaria);
+  }
+  estado._eventosLog = rawEventos;
+
   salvarLinhaPartida_(sh, info.linha, estado);
+
+  if (setFechado) {
+    try { empurrarPlacarParaJogos_(estado); } catch (ex) { /* não interrompe o fluxo */ }
+  }
+
   delete estado._eventosLog;
   return { ok: true, estado: estado };
 }
