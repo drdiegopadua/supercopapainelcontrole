@@ -1366,22 +1366,22 @@
       </div>
 
       <!-- Seletor de jogo -->
-      <div class="card" id="sumulaSeletorCard">
-        <div class="card-title"><i class='bx bxs-volume-full'></i> Escolher jogo</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-          <div class="form-group" style="flex:1;min-width:240px;margin:0">
-            <label>Jogo</label>
-            <select class="form-control" id="sumula-select-jogo"></select>
+      <div class="card" id="sumulaSeletorCard" style="background:linear-gradient(135deg,#0d1f5c,#1565c0);color:#fff">
+        <div class="card-title" style="color:#fff"><i class='bx bxs-volleyball'></i> Escolher jogo</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="flex:1;min-width:260px;margin:0">
+            <label style="color:rgba(255,255,255,.85)">Jogo</label>
+            <select class="form-control" id="sumula-select-jogo" style="border:none"></select>
           </div>
-          <button class="btn btn-primary" onclick="abrirOuCriarPartida()"><i class='bx bx-play-circle'></i> Abrir Súmula</button>
-          <button class="btn btn-secondary" onclick="abrirCadastroAtletas()"><i class='bx bx-group'></i> Cadastro de Times e Atletas</button>
+          <button class="btn" style="background:#fff;color:var(--blue)" onclick="abrirOuCriarPartida()"><i class='bx bx-play-circle'></i> Abrir Súmula</button>
+          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="abrirCadastroAtletas()"><i class='bx bx-group'></i> Times e Atletas</button>
         </div>
       </div>
 
       <!-- Cadastro de Times e Atletas -->
       <div id="cadastroAtletasCard" style="display:none">
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eef0f5">
             <div class="card-title" style="margin:0"><i class='bx bx-group'></i> Cadastro de Times e Atletas</div>
             <button class="btn btn-secondary btn-sm" onclick="fecharCadastroAtletas()"><i class='bx bx-left-arrow-alt'></i> Voltar</button>
           </div>
@@ -1395,10 +1395,10 @@
               <input class="form-control" id="ca-equipe-nova" placeholder="Nome da equipe" onblur="onCadastroEquipeChange()">
             </div>
           </div>
-          <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;padding:14px;background:#f8f9fc;border-radius:12px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:16px;background:#f8f9fc;border:1px solid #eef0f5;border-radius:14px">
             <div class="form-group" style="width:100px;margin:0"><label>Número</label><input class="form-control" id="ca-numero" placeholder="Nº"></div>
-            <div class="form-group" style="flex:1;margin:0"><label>Nome</label><input class="form-control" id="ca-nome" placeholder="Nome completo"></div>
-            <div class="form-group" style="width:170px;margin:0"><label>Tipo</label><select class="form-control" id="ca-tipo"><option value="Atleta">Atleta (máx. 14)</option><option value="Comissão Técnica">Comissão Técnica (máx. 2)</option></select></div>
+            <div class="form-group" style="flex:1;min-width:180px;margin:0"><label>Nome</label><input class="form-control" id="ca-nome" placeholder="Nome completo"></div>
+            <div class="form-group" style="width:190px;margin:0"><label>Tipo</label><select class="form-control" id="ca-tipo"><option value="Atleta">Atleta (máx. 14)</option><option value="Comissão Técnica">Comissão Técnica (máx. 2)</option></select></div>
             <button class="btn btn-primary" onclick="salvarAtletaCadastro()"><i class='bx bx-user-plus'></i> Adicionar</button>
           </div>
           <div id="ca-lista-atletas"></div>
@@ -1408,31 +1408,40 @@
       <!-- Wizard de criação -->
       <div id="sumulaWizard" style="display:none">
         <div class="card" id="sumulaWizardStep1">
-          <div class="card-title"><i class='bx bx-list-ol'></i> 1. Dados da Partida</div>
-          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group"><label>Equipe Casa</label><input class="form-control" id="wz-equipeA"></div>
-            <div class="form-group"><label>Equipe Visitante</label><input class="form-control" id="wz-equipeB"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            <span style="width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">1</span>
+            <div class="card-title" style="margin:0"><i class='bx bx-list-ol'></i> Dados da Partida</div>
           </div>
-          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group"><label>1º Árbitro</label><input class="form-control" id="wz-arbitro1" placeholder="Nome"></div>
-            <div class="form-group"><label>2º Árbitro (opcional)</label><input class="form-control" id="wz-arbitro2" placeholder="Nome"></div>
+          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+            <div class="form-group" style="margin:0"><label>Equipe Casa</label><input class="form-control" id="wz-equipeA"></div>
+            <div class="form-group" style="margin:0"><label>Equipe Visitante</label><input class="form-control" id="wz-equipeB"></div>
           </div>
-          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group"><label>Apontador(a)</label><input class="form-control" id="wz-apontador" placeholder="Nome"></div>
-            <div class="form-group">
-              <label>Quem saca primeiro?</label>
-              <select class="form-control" id="wz-saca-primeiro"><option value="A" id="wz-saca-a-label">Equipe Casa</option><option value="B" id="wz-saca-b-label">Equipe Visitante</option></select>
+          <div style="padding:16px;background:#f8f9fc;border:1px solid #eef0f5;border-radius:14px;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px"><i class='bx bx-shield-quarter'></i> Equipe de arbitragem e mesa</div>
+            <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div class="form-group" style="margin:0"><label>1º Árbitro</label><input class="form-control" id="wz-arbitro1" placeholder="Nome"></div>
+              <div class="form-group" style="margin:0"><label>2º Árbitro (opcional)</label><input class="form-control" id="wz-arbitro2" placeholder="Nome"></div>
+            </div>
+            <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group" style="margin:0"><label>Apontador(a) / Mesa</label><input class="form-control" id="wz-apontador" placeholder="Nome"></div>
+              <div class="form-group" style="margin:0">
+                <label>Quem saca primeiro?</label>
+                <select class="form-control" id="wz-saca-primeiro"><option value="A" id="wz-saca-a-label">Equipe Casa</option><option value="B" id="wz-saca-b-label">Equipe Visitante</option></select>
+              </div>
             </div>
           </div>
-          <div style="text-align:right;margin-top:8px">
+          <div style="text-align:right;margin-top:14px">
             <button class="btn btn-primary" onclick="wizardProximo()">Próximo <i class='bx bx-chevron-right'></i></button>
           </div>
         </div>
 
         <div class="card" id="sumulaWizardStep2" style="display:none">
-          <div class="card-title"><i class='bx bx-group'></i> 2. Escalação Titular</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            <span style="width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">2</span>
+            <div class="card-title" style="margin:0"><i class='bx bx-group'></i> Escalação Titular</div>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="wz-escalacao-grid"></div>
-          <div style="text-align:right;margin-top:14px;display:flex;justify-content:space-between">
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eef0f5;display:flex;justify-content:space-between">
             <button class="btn btn-secondary" onclick="wizardVoltar()"><i class='bx bx-chevron-left'></i> Voltar</button>
             <button class="btn btn-success" onclick="gerarSumula()"><i class='bx bxs-file-plus'></i> Gerar Súmula</button>
           </div>
@@ -3899,9 +3908,15 @@ function copiarLinkConvite() {
 
 function initSumulaLive() {
   const sel = document.getElementById('sumula-select-jogo');
-  sel.innerHTML = state.jogos.volei.filter(j => j.sumulaId).map(j =>
+  const opcoesReais = state.jogos.volei.filter(j => j.sumulaId).map(j =>
     `<option value="${j.sumulaId}">${j.sumulaId} — ${j.equipeA} vs ${j.equipeB}</option>`
   ).join('');
+  // Jogo de teste fixo: id começa com "TESTE" então nunca mexe na chave
+  // real nem aparece no site público — só serve pra treinar a súmula.
+  sel.innerHTML = `<optgroup label="🧪 Teste (não afeta a chave real nem o site)">
+      <option value="TESTE1">TESTE1 — EQUIPE TESTE A vs EQUIPE TESTE B</option>
+    </optgroup>
+    <optgroup label="Jogos da chave">${opcoesReais}</optgroup>`;
   document.getElementById('sumulaSeletorCard').style.display = '';
   document.getElementById('sumulaWizard').style.display = 'none';
   document.getElementById('sumulaConsole').style.display = 'none';
@@ -4009,7 +4024,12 @@ async function abrirOuCriarPartida() {
 }
 
 function abrirWizard(sumulaId, jogo) {
-  sumulaLiveWizardData = { sumulaId: sumulaId, equipeA: jogo ? jogo.equipeA : '', equipeB: jogo ? jogo.equipeB : '' };
+  const ehTeste = /^TESTE/i.test(sumulaId);
+  sumulaLiveWizardData = {
+    sumulaId: sumulaId,
+    equipeA: jogo ? jogo.equipeA : (ehTeste ? 'EQUIPE TESTE A' : ''),
+    equipeB: jogo ? jogo.equipeB : (ehTeste ? 'EQUIPE TESTE B' : '')
+  };
   document.getElementById('sumulaSeletorCard').style.display = 'none';
   document.getElementById('wz-equipeA').value = sumulaLiveWizardData.equipeA;
   document.getElementById('wz-equipeB').value = sumulaLiveWizardData.equipeB;
