@@ -4076,6 +4076,10 @@ function renderQuadra_(lado, nomeEquipe, atletas) {
         <label style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase">🟡 Líbero</label>
         <select class="form-control" id="wz-libero-${lado}"><option value="">— nenhum —</option>${opcoes}</select>
       </div>
+      <div style="margin-top:10px">
+        <label style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase">🅲 Capitão</label>
+        <select class="form-control" id="wz-capitao-${lado}"><option value="">— nenhum —</option>${opcoes}</select>
+      </div>
     </div>`;
 }
 
@@ -4126,7 +4130,9 @@ async function gerarSumula() {
     apontador: sumulaLiveWizardData.apontador,
     sacaPrimeiro: sumulaLiveWizardData.sacaPrimeiro,
     elencoCasa: elencoCasa,
-    elencoVisitante: elencoVisitante
+    elencoVisitante: elencoVisitante,
+    capitaoCasa: (document.getElementById('wz-capitao-A').value || '').split('|')[0] || '',
+    capitaoVisitante: (document.getElementById('wz-capitao-B').value || '').split('|')[0] || ''
   };
 
   showLoading(true);
@@ -4154,17 +4160,35 @@ async function pollSumulaLive() {
   if (!sumulaLiveState || sumulaLiveState.status === 'finalizada') return;
   try {
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaLiveState.id)).then(r => r.json());
-    if (res.ok && res.estado) { sumulaLiveState = res.estado; renderSumulaConsole(); }
+    const obsFocada = document.activeElement && document.activeElement.id === 'sumula-obs';
+    if (res.ok && res.estado) {
+      sumulaLiveState = res.estado;
+      if (!obsFocada) renderSumulaConsole();
+    }
   } catch (ex) { /* silencioso, tenta de novo no próximo ciclo */ }
 }
 
-function rotDots_(rotacao) {
-  if (!rotacao || !rotacao.length) return '<span style="color:var(--dark-grey);font-size:11px">sem escalação</span>';
-  return rotacao.map((p, i) => `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-      <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;${i === 0 ? 'background:var(--gold,#f4c542);color:#0d1f5c;box-shadow:0 0 0 2px var(--gold,#f4c542)' : 'background:#eef1f6;color:var(--dark-grey)'}">${p.numero || '·'}</div>
-      ${i === 0 ? '<i class="bx bxs-volleyball" style="font-size:12px;color:var(--gold,#c8960c)"></i>' : ''}
-    </div>`).join('');
+// Mini-quadra ao vivo: rotacao vem em ordem [P1(saque),P2,P3,P4,P5,P6].
+// Layout real de quadra: linha da rede = P4,P3,P2 · linha de trás = P5,P6,P1.
+function renderQuadraAoVivo_(rotacao, capitaoNumero) {
+  if (!rotacao || !rotacao.length) return '<div style="text-align:center;color:var(--dark-grey);font-size:11px;padding:20px 0">sem escalação</div>';
+  const porPos = { 1: rotacao[0], 2: rotacao[1], 3: rotacao[2], 4: rotacao[3], 5: rotacao[4], 6: rotacao[5] };
+  const celula = (pos) => {
+    const p = porPos[pos] || {};
+    const ehCapitao = capitaoNumero && p.numero && p.numero.toString() === capitaoNumero.toString();
+    const ehSaque = pos === 1;
+    return `<div style="position:relative;background:${ehSaque ? '#fff8e1' : '#fff'};border:2px solid ${ehSaque ? 'var(--gold,#c8960c)' : '#dcdcdc'};border-radius:8px;padding:6px 2px;text-align:center;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      ${ehCapitao ? '<span style="position:absolute;top:1px;right:3px;font-size:8px;font-weight:800;color:var(--blue)">C</span>' : ''}
+      <div style="font-weight:800;font-size:15px;color:${ehSaque ? '#c8960c' : 'var(--dark)'}">${p.numero || '—'}</div>
+      ${ehSaque ? '<div style="font-size:7px;color:#c8960c;font-weight:700">SAQUE</div>' : `<div style="font-size:7px;color:var(--dark-grey)">P${pos}</div>`}
+    </div>`;
+  };
+  return `
+    <div style="background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:8px;padding:6px">
+      <div style="text-align:center;font-size:7px;font-weight:800;color:#2e7d32;letter-spacing:1px;margin-bottom:4px">◤ REDE ◥</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-bottom:3px">${celula(4)}${celula(3)}${celula(2)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px">${celula(5)}${celula(6)}${celula(1)}</div>
+    </div>`;
 }
 
 function setDots_(historico, idx, setsCasa, setsVisitante) {
@@ -4216,10 +4240,16 @@ function renderSumulaConsole() {
     </div>
 
     <div class="card">
-      <div class="card-title"><i class='bx bxs-volleyball'></i> Ordem de Saque</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <div style="display:flex;justify-content:center;gap:8px">${rotDots_(s.rotacaoCasa)}</div>
-        <div style="display:flex;justify-content:center;gap:8px">${rotDots_(s.rotacaoVisitante)}</div>
+      <div class="card-title"><i class='bx bxs-volleyball'></i> Quadra ao Vivo</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--blue);margin-bottom:4px">${s.equipeCasa}</div>
+          ${renderQuadraAoVivo_(s.rotacaoCasa, s.capitaoCasa)}
+        </div>
+        <div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--orange);margin-bottom:4px">${s.equipeVisitante}</div>
+          ${renderQuadraAoVivo_(s.rotacaoVisitante, s.capitaoVisitante)}
+        </div>
       </div>
     </div>
 
@@ -4261,6 +4291,12 @@ function renderSumulaConsole() {
       <div class="card-title"><i class='bx bx-list-ul'></i> Linha do tempo</div>
       ${timelineItens.length ? timelineItens.sort((a, b) => b.ordem - a.ordem).map(t => t.html).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum evento ainda.</p>'}
     </div>
+
+    <div class="card">
+      <div class="card-title"><i class='bx bx-note'></i> Observações da Súmula</div>
+      <textarea id="sumula-obs" rows="3" class="form-control" placeholder="Protestos, incidentes, ocorrências..." ${finalizada ? 'disabled' : ''} style="resize:vertical">${s.observacoes || ''}</textarea>
+      ${emAndamento ? `<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="sumulaSalvarObs()"><i class='bx bx-save'></i> Salvar Observações</button>` : ''}
+    </div>
   `;
 }
 
@@ -4282,6 +4318,15 @@ async function sumulaTimeout(equipe) {
   try {
     const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'timeout', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
     if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); showToast('⏱ Tempo técnico registrado.'); }
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+async function sumulaSalvarObs() {
+  const texto = document.getElementById('sumula-obs').value;
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'atualizarObservacoes', id: sumulaLiveState.id, observacoes: texto }) }).then(r => r.json());
+    if (res.ok) { sumulaLiveState = res.estado; showToast('✅ Observações salvas.'); }
+    else showToast('❌ ' + (res.erro || 'erro'), 'error');
   } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
 }
 
@@ -4361,12 +4406,12 @@ async function gerarPdfSumula(s) {
     doc.setFont(undefined, 'bold'); doc.text('Resultado: ' + s.setsCasa + ' x ' + s.setsVisitante, 18, y); doc.setFont(undefined, 'normal'); y += 10;
 
     doc.setFont(undefined, 'bold'); doc.text('Escalação — ' + s.equipeCasa, 14, y); doc.setFont(undefined, 'normal'); y += 6;
-    (s.elencoCasa && s.elencoCasa.titulares || []).forEach(p => { if (p.nome) { doc.text((p.numero || '—') + ' - ' + p.nome, 18, y); y += 5; } });
+    (s.elencoCasa && s.elencoCasa.titulares || []).forEach(p => { if (p.nome) { doc.text((p.numero || '—') + ' - ' + p.nome + (s.capitaoCasa && p.numero && p.numero.toString() === s.capitaoCasa.toString() ? '  (C)' : ''), 18, y); y += 5; } });
     if (s.elencoCasa && s.elencoCasa.libero && s.elencoCasa.libero.nome) { doc.text('Líbero: ' + (s.elencoCasa.libero.numero || '—') + ' - ' + s.elencoCasa.libero.nome, 18, y); y += 5; }
     y += 4;
 
     doc.setFont(undefined, 'bold'); doc.text('Escalação — ' + s.equipeVisitante, 14, y); doc.setFont(undefined, 'normal'); y += 6;
-    (s.elencoVisitante && s.elencoVisitante.titulares || []).forEach(p => { if (p.nome) { doc.text((p.numero || '—') + ' - ' + p.nome, 18, y); y += 5; } });
+    (s.elencoVisitante && s.elencoVisitante.titulares || []).forEach(p => { if (p.nome) { doc.text((p.numero || '—') + ' - ' + p.nome + (s.capitaoVisitante && p.numero && p.numero.toString() === s.capitaoVisitante.toString() ? '  (C)' : ''), 18, y); y += 5; } });
     if (s.elencoVisitante && s.elencoVisitante.libero && s.elencoVisitante.libero.nome) { doc.text('Líbero: ' + (s.elencoVisitante.libero.numero || '—') + ' - ' + s.elencoVisitante.libero.nome, 18, y); y += 5; }
     y += 6;
 
@@ -4383,6 +4428,12 @@ async function gerarPdfSumula(s) {
     if ((s.timeouts || []).length) {
       doc.setFont(undefined, 'bold'); doc.text('Tempos Técnicos', 14, y); doc.setFont(undefined, 'normal'); y += 6;
       s.timeouts.forEach(t => { doc.text((t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante) + ' — Set ' + t.set, 18, y); y += 5; });
+      y += 4;
+    }
+    if (s.observacoes) {
+      if (y > 260) { doc.addPage(); y = 18; }
+      doc.setFont(undefined, 'bold'); doc.text('Observações', 14, y); doc.setFont(undefined, 'normal'); y += 6;
+      doc.text(doc.splitTextToSize(s.observacoes, 180), 18, y); y += 10;
     }
 
     doc.setFontSize(8); doc.setTextColor(150);
