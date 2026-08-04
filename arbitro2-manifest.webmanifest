@@ -1,0 +1,16 @@
+{
+  "name": "2º Árbitro · Súmula Supercopa",
+  "short_name": "2º Árbitro",
+  "description": "Console do segundo árbitro para a súmula digital de vôlei da Supercopa AFC",
+  "start_url": "./arbitro2.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1f5c",
+  "theme_color": "#0d1f5c",
+  "icons": [
+    { "src": "https://drdiegopadua.github.io/supercopa-app/pwa-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "https://drdiegopadua.github.io/supercopa-app/pwa-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "https://drdiegopadua.github.io/supercopa-app/pwa-icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
+  ]
+}
