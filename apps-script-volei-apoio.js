@@ -87,7 +87,8 @@ const HEADERS_PARTIDAS = [
   'SetAtual', 'PontosCasa', 'PontosVisitante', 'SetsCasa', 'SetsVisitante',
   'Sacando', 'RotacaoCasa', 'RotacaoVisitante', 'PrimeiroSaqueSet',
   'HistoricoSets', 'Timeouts', 'Cartoes', 'Substituicoes', 'EventosLog',
-  'Status', 'LinkPDF', 'CriadoEm', 'AtualizadoEm'
+  'Status', 'LinkPDF', 'CriadoEm', 'AtualizadoEm',
+  'CapitaoCasa', 'CapitaoVisitante', 'Observacoes'
 ];
 // Índices das colunas (0-based) para referência rápida.
 const PC = {
@@ -97,7 +98,8 @@ const PC = {
   setAtual:10, pontosCasa:11, pontosVisitante:12, setsCasa:13, setsVisitante:14,
   sacando:15, rotacaoCasa:16, rotacaoVisitante:17, primeiroSaqueSet:18,
   historicoSets:19, timeouts:20, cartoes:21, substituicoes:22, eventosLog:23,
-  status:24, linkPdf:25, criadoEm:26, atualizadoEm:27
+  status:24, linkPdf:25, criadoEm:26, atualizadoEm:27,
+  capitaoCasa:28, capitaoVisitante:29, observacoes:30
 };
 
 function criarPlanilhaVolei() {
@@ -284,6 +286,7 @@ function doPost(e) {
     if (acao === 'ponto') return okJson(registrarPonto_(dados));
     if (acao === 'desfazerPonto') return okJson(desfazerPonto_(dados));
     if (acao === 'timeout') return okJson(registrarTimeout_(dados));
+    if (acao === 'atualizarObservacoes') return okJson(atualizarObservacoes_(dados));
     if (acao === 'cartao') return okJson(registrarCartao_(dados));
     if (acao === 'substituicao') return okJson(registrarSubstituicao_(dados));
     if (acao === 'removerEvento') return okJson(removerEvento_(dados));
@@ -482,8 +485,18 @@ function listarInscricoesV_() {
 // ============================================================
 //  SÚMULA DIGITAL
 // ============================================================
+// IDs que começam com "TESTE" são um modo sandbox: usados pra
+// treinar/testar o console de arbitragem sem tocar em nenhuma
+// linha real da planilha de jogos, e ficam de fora das listagens
+// públicas (partidasAoVivo/partidasFinalizadas) — não aparecem
+// no site nem no app.
+function ehJogoTeste_(id) {
+  return /^TESTE/.test((id || '').toString().trim().toUpperCase());
+}
+
 function resolverJogoSumula_(id) {
   id = (id || '').toString().trim().toUpperCase();
+  if (ehJogoTeste_(id)) return { aba: 'TESTE', linha: 0, id: id };
   if (ROW_MAP_GRUPOS[id]) return { aba: ABA_GRUPOS, linha: ROW_MAP_GRUPOS[id], id: id };
   if (ROW_MAP_MATA[id]) return { aba: ABA_MATA, linha: ROW_MAP_MATA[id], id: id };
   return null;
@@ -492,6 +505,10 @@ function resolverJogoSumula_(id) {
 function carregarJogoSumula_(id) {
   const jogo = resolverJogoSumula_(id);
   if (!jogo) return { ok: false, erro: 'Jogo não encontrado: ' + id };
+
+  if (jogo.aba === 'TESTE') {
+    return { ok: true, id: jogo.id, aba: 'TESTE', linha: 0, numero: jogo.id, equipeA: '', equipeB: '', sets: [{ a: '', b: '' }, { a: '', b: '' }, { a: '', b: '' }], sumula: buscarSumula_(id) };
+  }
 
   const shJogo = SpreadsheetApp.openById(JOGOS_SHEET_ID).getSheetByName(jogo.aba);
   const row = shJogo.getRange(jogo.linha, 1, 1, 17).getValues()[0];
@@ -638,7 +655,9 @@ function linhaParaEstado_(row) {
     cartoes: parseJson_(row[PC.cartoes], []),
     substituicoes: parseJson_(row[PC.substituicoes], []),
     status: row[PC.status], linkPdf: row[PC.linkPdf],
-    criadoEm: row[PC.criadoEm], atualizadoEm: row[PC.atualizadoEm]
+    criadoEm: row[PC.criadoEm], atualizadoEm: row[PC.atualizadoEm],
+    capitaoCasa: row[PC.capitaoCasa] || '', capitaoVisitante: row[PC.capitaoVisitante] || '',
+    observacoes: row[PC.observacoes] || ''
   };
 }
 
@@ -682,6 +701,9 @@ function criarPartida_(d) {
   linhaDados[PC.linkPdf] = '';
   linhaDados[PC.criadoEm] = agora;
   linhaDados[PC.atualizadoEm] = agora;
+  linhaDados[PC.capitaoCasa] = d.capitaoCasa || '';
+  linhaDados[PC.capitaoVisitante] = d.capitaoVisitante || '';
+  linhaDados[PC.observacoes] = '';
 
   const existenteInfo = acharLinhaPartida_(sh, jogo.id);
   if (existenteInfo) {
@@ -730,6 +752,9 @@ function salvarLinhaPartida_(sh, linhaNum, estado) {
   linhaDados[PC.linkPdf] = estado.linkPdf || '';
   linhaDados[PC.criadoEm] = estado.criadoEm;
   linhaDados[PC.atualizadoEm] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  linhaDados[PC.capitaoCasa] = estado.capitaoCasa || '';
+  linhaDados[PC.capitaoVisitante] = estado.capitaoVisitante || '';
+  linhaDados[PC.observacoes] = estado.observacoes || '';
   sh.getRange(linhaNum, 1, 1, linhaDados.length).setValues([linhaDados]);
 }
 
@@ -817,6 +842,18 @@ function registrarTimeout_(d) {
   return { ok: true, estado: estado };
 }
 
+function atualizarObservacoes_(d) {
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  const estado = linhaParaEstado_(info.dados);
+  estado.observacoes = (d.observacoes || '').toString();
+  estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
+  salvarLinhaPartida_(sh, info.linha, estado);
+  delete estado._eventosLog;
+  return { ok: true, estado: estado };
+}
+
 function registrarCartao_(d) {
   const sh = getPartidasSheet_();
   const info = acharLinhaPartida_(sh, d.id);
@@ -886,7 +923,7 @@ function testarUrlFetch() {
 
 function empurrarPlacarParaJogos_(estado, isFinal) {
   const jogo = resolverJogoSumula_(estado.id);
-  if (!jogo) return;
+  if (!jogo || jogo.aba === 'TESTE') return;
   const hs = estado.historicoSets || [];
   const numero = /^[A-D]\d$/.test(estado.id) ? estado.id.slice(1) : estado.id;
   let vencedor = '';
@@ -915,7 +952,7 @@ function listarPartidasAoVivo_() {
   const sh = getPartidasSheet_();
   if (sh.getLastRow() < 2) return [];
   const rows = sh.getDataRange().getValues().slice(1);
-  return rows.filter(r => r[PC.status] === 'em_andamento' || r[PC.status] === 'sets_completos').map(r => ({
+  return rows.filter(r => (r[PC.status] === 'em_andamento' || r[PC.status] === 'sets_completos') && !ehJogoTeste_(r[PC.id])).map(r => ({
     id: r[PC.id], equipeCasa: r[PC.equipeCasa], equipeVisitante: r[PC.equipeVisitante],
     setAtual: r[PC.setAtual], pontosCasa: r[PC.pontosCasa], pontosVisitante: r[PC.pontosVisitante],
     setsCasa: r[PC.setsCasa], setsVisitante: r[PC.setsVisitante],
@@ -928,7 +965,7 @@ function listarPartidasFinalizadas_() {
   const sh = getPartidasSheet_();
   if (sh.getLastRow() < 2) return [];
   const rows = sh.getDataRange().getValues().slice(1);
-  return rows.filter(r => r[PC.status] === 'finalizada').map(r => ({
+  return rows.filter(r => r[PC.status] === 'finalizada' && !ehJogoTeste_(r[PC.id])).map(r => ({
     id: r[PC.id], equipeCasa: r[PC.equipeCasa], equipeVisitante: r[PC.equipeVisitante],
     setsCasa: r[PC.setsCasa], setsVisitante: r[PC.setsVisitante],
     historicoSets: parseJson_(r[PC.historicoSets], []),
