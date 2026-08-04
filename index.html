@@ -4457,6 +4457,10 @@ async function gerarPdfSumula(s) {
     }
     function txt(text, x, y, opts) { doc.text(String(text == null ? '' : text), x, y, opts || {}); }
 
+    // Moldura da página, pra dar aquele acabamento de formulário oficial.
+    doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]);
+    doc.rect(MX - 6, 8, MW + 12, 279);
+
     // ── CABEÇALHO ──────────────────────────────────────────
     box(MX, 12, MW, 20, AZUL);
     doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(14);
@@ -4547,20 +4551,27 @@ async function gerarPdfSumula(s) {
     // ── OCORRÊNCIAS (cartões, substituições, tempos) ───────
     const ocorrencias = [];
     (s.cartoes || []).forEach(c => ocorrencias.push(['Set ' + c.set, c.tipo === 'Vermelho' ? 'Cartão Vermelho' : 'Cartão Amarelo', c.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, c.jogador + (c.motivo ? ' — ' + c.motivo : '')]));
-    (s.substituicoes || []).forEach(sub => ocorrencias.push(['Set ' + sub.set, 'Substituição', sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, sub.saiu + ' ➜ ' + sub.entrou]));
+    (s.substituicoes || []).forEach(sub => ocorrencias.push(['Set ' + sub.set, 'Substituição', sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, sub.saiu + ' -> ' + sub.entrou]));
     (s.timeouts || []).forEach(t => ocorrencias.push(['Set ' + t.set, 'Tempo Técnico', t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, '—']));
 
     if (ocorrencias.length) {
-      if (y > 240) { doc.addPage(); y = 18; }
-      const wc = [20, 38, colLarg + 3, MW - 20 - 38 - (colLarg + 3)];
+      if (y > 220) { doc.addPage(); y = 18; }
+      const wc = [16, 32, 46, MW - 16 - 32 - 46];
       const xc = [MX, MX + wc[0], MX + wc[0] + wc[1], MX + wc[0] + wc[1] + wc[2]];
       doc.setFontSize(8); doc.setFont(undefined, 'bold');
       ['SET', 'OCORRÊNCIA', 'EQUIPE', 'DETALHE'].forEach((h, i) => { box(xc[i], y, wc[i], 8, FUNDO); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]); txt(h, xc[i] + 3, y + 5.5); });
       y += 8;
       ocorrencias.forEach(row => {
-        if (y > 275) { doc.addPage(); y = 18; }
-        row.forEach((v, i) => { box(xc[i], y, wc[i], 7); doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20); txt(String(v), xc[i] + 3, y + 5); });
-        y += 7;
+        const linhasDetalhe = doc.splitTextToSize(String(row[3]), wc[3] - 6);
+        const hLinha = Math.max(7, linhasDetalhe.length * 4.2 + 3);
+        if (y + hLinha > 280) { doc.addPage(); y = 18; }
+        row.forEach((v, i) => {
+          box(xc[i], y, wc[i], hLinha);
+          doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
+          if (i === 3) txt(linhasDetalhe, xc[i] + 3, y + 4.8);
+          else txt(String(v), xc[i] + 3, y + hLinha / 2 + 1.5);
+        });
+        y += hLinha;
       });
       y += 8;
     }
@@ -4578,17 +4589,41 @@ async function gerarPdfSumula(s) {
       y += hObs + 8;
     }
 
+    // ── RESULTADO FINAL ──────────────────────────────────────
+    if (y > 250) { doc.addPage(); y = 18; }
+    box(MX, y, MW, 16, [232, 245, 233]);
+    doc.setDrawColor(102, 187, 106); doc.rect(MX, y, MW, 16);
+    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(46, 125, 50);
+    txt('RESULTADO FINAL', MX + MW / 2, y + 6, { align: 'center' });
+    doc.setFontSize(13); doc.setFont(undefined, 'bold');
+    txt((vencedorNome !== '—' ? vencedorNome + ' venceu por ' + Math.max(s.setsCasa, s.setsVisitante) + ' sets a ' + Math.min(s.setsCasa, s.setsVisitante) : 'Resultado indefinido'), MX + MW / 2, y + 12.5, { align: 'center' });
+    y += 24;
+
     // ── ASSINATURAS ─────────────────────────────────────────
-    if (y > 260) { doc.addPage(); y = 18; }
-    y = Math.max(y, 255);
-    const assinaturas = ['Árbitro 1', 'Árbitro 2', 'Apontador(a)'];
-    const wAss = MW / 3;
-    assinaturas.forEach((label, i) => {
-      const x = MX + i * wAss;
-      doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]); doc.line(x + 6, y, x + wAss - 6, y);
-      doc.setFontSize(8); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'normal');
-      txt(label, x + wAss / 2, y + 5, { align: 'center' });
-    });
+    if (y > 250) { doc.addPage(); y = 18; }
+    y = Math.max(y, 248);
+    function nomePorNumero_(elenco, numero) {
+      if (!elenco || !numero) return '';
+      const t = (elenco.titulares || []).find(p => p.numero && p.numero.toString() === numero.toString());
+      return t ? t.nome : '';
+    }
+    const capNomeA = nomePorNumero_(s.elencoCasa, s.capitaoCasa);
+    const capNomeB = nomePorNumero_(s.elencoVisitante, s.capitaoVisitante);
+    function linhaAssinaturas_(itens, yy) {
+      const w = MW / itens.length;
+      itens.forEach((label, i) => {
+        const x = MX + i * w;
+        doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]); doc.line(x + 6, yy, x + w - 6, yy);
+        doc.setFontSize(8); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'normal');
+        txt(label, x + w / 2, yy + 5, { align: 'center' });
+      });
+    }
+    linhaAssinaturas_(['Árbitro 1', 'Árbitro 2', 'Apontador(a)'], y);
+    y += 20;
+    linhaAssinaturas_([
+      'Capitão · ' + s.equipeCasa + (capNomeA ? ' (' + capNomeA + ')' : ''),
+      'Capitão · ' + s.equipeVisitante + (capNomeB ? ' (' + capNomeB + ')' : '')
+    ], y);
 
     doc.setFontSize(7); doc.setTextColor(170);
     txt('Súmula gerada automaticamente pelo Painel Admin da Supercopa AFC · ' + s.id, 105, 292, { align: 'center' });
