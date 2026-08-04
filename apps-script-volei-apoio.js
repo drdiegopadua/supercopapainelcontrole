@@ -287,6 +287,7 @@ function doPost(e) {
     if (acao === 'desfazerPonto') return okJson(desfazerPonto_(dados));
     if (acao === 'timeout') return okJson(registrarTimeout_(dados));
     if (acao === 'atualizarObservacoes') return okJson(atualizarObservacoes_(dados));
+    if (acao === 'excluirPartida') return okJson(excluirPartida_(dados));
     if (acao === 'cartao') return okJson(registrarCartao_(dados));
     if (acao === 'substituicao') return okJson(registrarSubstituicao_(dados));
     if (acao === 'removerEvento') return okJson(removerEvento_(dados));
@@ -840,6 +841,17 @@ function registrarTimeout_(d) {
   salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;
   return { ok: true, estado: estado };
+}
+
+// Apaga uma partida da aba "Partidas" (não mexe na planilha de
+// jogos nem desfaz nenhum placar já publicado lá). Usado pra
+// limpar partidas de teste/engano.
+function excluirPartida_(d) {
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  sh.deleteRow(info.linha);
+  return { ok: true };
 }
 
 function atualizarObservacoes_(d) {
