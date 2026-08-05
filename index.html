@@ -17,10 +17,11 @@
       --lato: 'Lato', sans-serif;
       --light: #FDFCFF;
       --blue: #4F6EF7;
-      --accent2: #8B5CF6;
-      --accent-gradient: linear-gradient(135deg, var(--blue) 0%, var(--accent2) 100%);
-      --gold: #C8960C;
-      --gold2: #F4C542;
+      --accent2: #FF7A1A;
+      --gold: #F5A623;
+      --gold2: #FF7A1A;
+      --accent-gradient: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+      --accent-ink: #241400;
       --light-blue: #EDEEFD;
       --grey: #EEF0FA;
       --dark-grey: #9A9BB5;
@@ -32,27 +33,32 @@
       --light-orange: #FFF3E0;
       --purple: #4A148C;
       --light-purple: #F3E5F5;
+      --stroke: rgba(16,24,40,.08);
       --neu-shadow: 8px 8px 18px rgba(148,155,209,.22), -8px -8px 18px rgba(255,255,255,.85);
     }
 
     html { overflow-x: hidden; }
 
+    /* Painel escuro (navy) — tema padrão do sistema */
     body.dark {
-      --light: #0f0f1f;
-      --grey: #080816;
-      --dark: #F0F0F0;
-      --light-blue: #0d1f3c;
+      --light: #131A44;
+      --grey: #0A0E2A;
+      --dark: #EEF0FB;
+      --dark-grey: #8890C0;
+      --light-blue: #1B2358;
       --light-green: #0d2a0f;
       --light-orange: #2a1800;
       --light-purple: #1e0a2e;
+      --stroke: rgba(255,255,255,.08);
     }
+    body.dark { background: radial-gradient(circle at 12% 6%, rgba(245,166,35,.09), transparent 38%), radial-gradient(circle at 88% 4%, rgba(61,107,255,.10), transparent 42%), var(--grey); }
 
     body { background: var(--grey); overflow-x: hidden; font-family: var(--lato); }
 
     /* ======== SPLASH SCREEN ======== */
     #splash-screen {
       position: fixed; inset: 0; z-index: 10000;
-      background: linear-gradient(135deg, #8B5CF6 0%, #4F6EF7 50%, #1976D2 100%);
+      background: linear-gradient(135deg, #0A0E2A 0%, #131A44 55%, #F5A623 150%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       transition: opacity 0.6s ease, visibility 0.6s ease;
     }
@@ -130,12 +136,12 @@
     #sidebar::-webkit-scrollbar { display: none; }
     #sidebar.hide { width: 76px; }
     body.dark #sidebar { box-shadow: 8px 8px 18px rgba(0,0,0,.35), -6px -6px 14px rgba(255,255,255,.03); }
-    .sidebar-brand { height: 64px; display: flex; align-items: center; padding: 0 14px; background: var(--accent-gradient); color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; overflow: hidden; flex-shrink: 0; border-radius: 26px 26px 0 0; }
+    .sidebar-brand { height: 64px; display: flex; align-items: center; padding: 0 14px; background: var(--accent-gradient); color: var(--accent-ink); font-size: 17px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; overflow: hidden; flex-shrink: 0; border-radius: 26px 26px 0 0; }
     .sidebar-brand i { font-size: 26px; min-width: 36px; margin-right: 10px; }
     #sidebar.hide .sidebar-brand span { display: none; }
     .side-menu { width: 100%; padding: 10px 8px; flex: 1; overflow-y: auto; }
     .side-menu li { height: 46px; margin: 3px 0; border-radius: 14px; padding: 0; }
-    .side-menu li.active a { background: var(--accent-gradient); color: #fff; box-shadow: 0 4px 12px rgba(79,110,247,.35); }
+    .side-menu li.active a { background: var(--accent-gradient); color: var(--accent-ink); box-shadow: 0 4px 12px rgba(245,166,35,.35); }
     .side-menu li a { width: 100%; height: 100%; background: transparent; display: flex; align-items: center; border-radius: 14px; font-size: 14px; color: var(--dark); white-space: nowrap; overflow: hidden; cursor: pointer; transition: .18s ease; }
     #sidebar.hide .side-menu li a { width: 100%; justify-content: center; }
     .side-menu li:not(.active) a:hover { background: var(--grey); color: var(--blue); }
@@ -625,8 +631,8 @@ body.dark .card:hover { box-shadow: 10px 10px 22px rgba(0,0,0,.45), -6px -6px 14
 
 .btn { box-shadow: 0 1px 2px rgba(16,24,40,.05); transition: .18s ease; }
 .btn:active { transform: translateY(1px) scale(.98); }
-.btn-primary { background: var(--accent-gradient); box-shadow: 0 6px 16px rgba(79,110,247,.35); }
-.btn-primary:hover { box-shadow: 0 8px 20px rgba(79,110,247,.45); transform: translateY(-1px); filter: brightness(1.05); }
+.btn-primary { background: var(--accent-gradient); color: var(--accent-ink); box-shadow: 0 6px 16px rgba(245,166,35,.35); }
+.btn-primary:hover { box-shadow: 0 8px 20px rgba(245,166,35,.45); transform: translateY(-1px); filter: brightness(1.05); }
 .btn-success { box-shadow: 0 4px 14px rgba(46,125,50,.28); }
 .btn-success:hover { box-shadow: 0 6px 18px rgba(46,125,50,.38); transform: translateY(-1px); }
 .btn-danger { box-shadow: 0 4px 14px rgba(198,40,40,.28); }
@@ -657,7 +663,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
 <base target="_blank">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
-<body>
+<body class="dark">
 
 <!-- ======== SPLASH SCREEN ======== -->
 <div id="splash-screen">
@@ -727,7 +733,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
       <input type="search" placeholder="Buscar...">
       <button><i class='bx bx-search'></i></button>
     </div>
-    <input type="checkbox" class="checkbox" id="switch-mode" hidden>
+    <input type="checkbox" class="checkbox" id="switch-mode" hidden checked>
     <label class="swith-lm" for="switch-mode">
       <i class="bx bxs-moon"></i>
       <i class="bx bx-sun"></i>
@@ -773,7 +779,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
       </div>
 
       <!-- ═══ HERO ═══ -->
-      <div style="background:linear-gradient(120deg,#8B5CF6 0%,#4F6EF7 42%,#0d47a1 68%,#C8960C 130%);border-radius:20px;padding:26px 26px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(79,110,247,.25);">
+      <div style="background:linear-gradient(120deg,#3D6BFF 0%,#1E3A8A 100%);border-radius:20px;padding:26px 26px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(61,107,255,.3);">
         <div style="position:absolute;right:-30px;top:-30px;font-size:150px;opacity:.10;line-height:1;pointer-events:none;">🏆</div>
         <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:18px;">
           <div>
@@ -788,7 +794,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
       <!-- ═══ KPIs — o que realmente importa no dia a dia do torneio ═══ -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:20px;">
         <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-          <div style="width:56px;height:56px;border-radius:16px;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;box-shadow:0 6px 14px rgba(79,110,247,.3)"><i class='bx bx-group'></i></div>
+          <div style="width:56px;height:56px;border-radius:16px;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--accent-ink);box-shadow:0 6px 14px rgba(245,166,35,.3)"><i class='bx bx-group'></i></div>
           <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-equipes">—</div><div style="font-size:12px;color:var(--dark-grey)">Equipes inscritas</div></div>
         </div>
         <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
