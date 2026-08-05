@@ -4437,6 +4437,14 @@ function renderSumulaConsole() {
         <div style="font-size:40px;font-weight:900;color:var(--dark)">${s.pontosCasa}<span style="color:var(--dark-grey);font-size:20px"> × </span>${s.pontosVisitante}</div>
         <div style="font-size:11px;color:var(--dark-grey)">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
       </div>
+      ${emAndamento && !precisaEscalacaoSet ? `
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px">
+        <button class="btn-ponto-minus" onclick="sumulaPontoMenos('A')" title="Corrigir: -1 ponto ${s.equipeCasa}" style="width:26px;height:26px;background:#fff;color:${corA};border:1.5px solid ${corA};border-radius:8px;font-size:12px;font-weight:900">−1</button>
+        <button class="btn-ponto" onclick="sumulaPonto('A')" style="background:${corA};color:#fff;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:800">+1 · ${s.equipeCasa}</button>
+        <span style="width:1px;height:20px;background:#e5e7eb;margin:0 4px"></span>
+        <button class="btn-ponto" onclick="sumulaPonto('B')" style="background:${corB};color:#fff;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:800">+1 · ${s.equipeVisitante}</button>
+        <button class="btn-ponto-minus" onclick="sumulaPontoMenos('B')" title="Corrigir: -1 ponto ${s.equipeVisitante}" style="width:26px;height:26px;background:#fff;color:${corB};border:1.5px solid ${corB};border-radius:8px;font-size:12px;font-weight:900">−1</button>
+      </div>` : ''}
     </div>
 
     ${precisaEscalacaoSet ? renderEscalacaoSetForm_(s, corA, corB) : `
@@ -4469,20 +4477,6 @@ function renderSumulaConsole() {
         <button class="btn btn-secondary btn-sm" onclick="abrirModalCartao()"><i class='bx bxs-flag-alt'></i> Cartão</button>
         <button class="btn btn-secondary btn-sm" onclick="abrirModalSub()"><i class='bx bx-transfer'></i> Substituição</button>
         <button class="btn btn-secondary btn-sm" onclick="sumulaDesfazer()"><i class='bx bx-undo'></i> Desfazer último evento</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><i class='bx bx-plus-circle'></i> Pontuação</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div style="display:flex;gap:5px;align-items:stretch">
-          <button class="btn-ponto" onclick="sumulaPonto('A')" style="flex:1;background:${corA};color:#fff;border-radius:10px;padding:10px 8px;font-size:13px;font-weight:800;box-shadow:0 3px 8px rgba(21,101,192,.28)">+1 PONTO<br><span style="font-size:10px;font-weight:600;opacity:.85">${s.equipeCasa}</span></button>
-          <button class="btn-ponto-minus" onclick="sumulaPontoMenos('A')" title="Corrigir: -1 ponto ${s.equipeCasa}" style="width:34px;background:#fff;color:${corA};border:2px solid ${corA};border-radius:10px;font-size:15px;font-weight:900">−1</button>
-        </div>
-        <div style="display:flex;gap:5px;align-items:stretch">
-          <button class="btn-ponto-minus" onclick="sumulaPontoMenos('B')" title="Corrigir: -1 ponto ${s.equipeVisitante}" style="width:34px;background:#fff;color:${corB};border:2px solid ${corB};border-radius:10px;font-size:15px;font-weight:900">−1</button>
-          <button class="btn-ponto" onclick="sumulaPonto('B')" style="flex:1;background:${corB};color:#fff;border-radius:10px;padding:10px 8px;font-size:13px;font-weight:800;box-shadow:0 3px 8px rgba(230,126,34,.28)">+1 PONTO<br><span style="font-size:10px;font-weight:600;opacity:.85">${s.equipeVisitante}</span></button>
-        </div>
       </div>
     </div>` : ''}
     `}
