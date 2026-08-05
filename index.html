@@ -640,6 +640,12 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
 .form-control:focus { box-shadow: 0 0 0 3px rgba(21,101,192,.12); }
 
 .jogo-card, .destaque-card { box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+
+/* Botões de pontuação da súmula ao vivo — efeito de clique nítido. */
+.btn-ponto { border: none; cursor: pointer; transition: transform .1s ease, box-shadow .1s ease; }
+.btn-ponto:active { transform: scale(.95); box-shadow: none !important; }
+.btn-ponto-minus { cursor: pointer; transition: transform .1s ease, background .15s ease; }
+.btn-ponto-minus:active { transform: scale(.88); }
 </style>
 <base target="_blank">
 <base target="_blank">
@@ -4375,59 +4381,58 @@ function renderSumulaConsole() {
 
   el.innerHTML = `
     <div class="card" style="padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span style="font-size:11px;font-weight:700;color:${finalizada ? 'var(--dark-grey)' : prontaFinalizar ? 'var(--green)' : 'var(--red)'}">${finalizada ? '🏁 FINALIZADA' : prontaFinalizar ? '✅ PRONTA PRA FINALIZAR' : '🔴 AO VIVO'}</span>
         <span style="font-size:11px;color:var(--dark-grey);font-weight:700">SET ${Math.min(s.setAtual, 3)}</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-        <div style="flex:1;text-align:center">
-          <div style="font-weight:800;font-size:15px;color:${corA}">${s.equipeCasa}</div>
+      <div style="text-align:center">
+        <div style="font-size:40px;font-weight:900;color:var(--dark)">${s.pontosCasa}<span style="color:var(--dark-grey);font-size:20px"> × </span>${s.pontosVisitante}</div>
+        <div style="font-size:11px;color:var(--dark-grey)">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
+      </div>
+    </div>
+
+    <!-- Área de cada equipe: nome, sets ganhos, tempos e a quadra dela logo abaixo -->
+    <div class="card" style="padding:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="border:1.5px solid #eef0f5;border-radius:14px;padding:12px;text-align:center">
+          <div style="font-weight:800;font-size:14px;color:${corA}">${s.equipeCasa}</div>
           ${setChecks_(s.historicoSets, 'a', corA)}
           ${tempoBadge_(s.timeouts, 'A', s.setAtual, corA)}
+          <div style="margin-top:10px">${renderQuadraAoVivo_(s.rotacaoCasa, capitaoEmQuadra_(s, 'A').numero)}</div>
+          ${emAndamento ? bannerCapitaoFora_(s, 'A', corA) : ''}
         </div>
-        <div style="font-size:38px;font-weight:900;color:var(--dark);flex-shrink:0">${s.pontosCasa}<span style="color:var(--dark-grey);font-size:18px"> × </span>${s.pontosVisitante}</div>
-        <div style="flex:1;text-align:center">
-          <div style="font-weight:800;font-size:15px;color:${corB}">${s.equipeVisitante}</div>
+        <div style="border:1.5px solid #eef0f5;border-radius:14px;padding:12px;text-align:center">
+          <div style="font-weight:800;font-size:14px;color:${corB}">${s.equipeVisitante}</div>
           ${setChecks_(s.historicoSets, 'b', corB)}
           ${tempoBadge_(s.timeouts, 'B', s.setAtual, corB)}
+          <div style="margin-top:10px">${renderQuadraAoVivo_(s.rotacaoVisitante, capitaoEmQuadra_(s, 'B').numero)}</div>
+          ${emAndamento ? bannerCapitaoFora_(s, 'B', corB) : ''}
         </div>
-      </div>
-      <div style="text-align:center;font-size:11px;color:var(--dark-grey);margin:6px 0 12px">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
-      ${emAndamento ? bannerCapitaoFora_(s, 'A', corA) + bannerCapitaoFora_(s, 'B', corB) : ''}
-
-      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;margin-top:12px">
-        <div style="flex:1 1 260px;max-width:340px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div>
-            <div style="text-align:center;font-size:9px;font-weight:700;color:${corA};margin-bottom:3px">${s.equipeCasa}</div>
-            ${renderQuadraAoVivo_(s.rotacaoCasa, capitaoEmQuadra_(s, 'A').numero)}
-          </div>
-          <div>
-            <div style="text-align:center;font-size:9px;font-weight:700;color:${corB};margin-bottom:3px">${s.equipeVisitante}</div>
-            ${renderQuadraAoVivo_(s.rotacaoVisitante, capitaoEmQuadra_(s, 'B').numero)}
-          </div>
-        </div>
-
-        ${emAndamento ? `
-        <div style="flex:1 1 160px;display:flex;flex-direction:column;gap:6px;justify-content:center">
-          <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('A')" style="justify-content:flex-start"><i class='bx bx-time-five' style="color:${corA}"></i> Tempo · ${s.equipeCasa}</button>
-          <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('B')" style="justify-content:flex-start"><i class='bx bx-time-five' style="color:${corB}"></i> Tempo · ${s.equipeVisitante}</button>
-          <button class="btn btn-secondary btn-sm" onclick="abrirModalCartao()" style="justify-content:flex-start"><i class='bx bxs-flag-alt'></i> Cartão</button>
-          <button class="btn btn-secondary btn-sm" onclick="abrirModalSub()" style="justify-content:flex-start"><i class='bx bx-transfer'></i> Substituição</button>
-          <button class="btn btn-secondary btn-sm" onclick="sumulaDesfazer()" style="justify-content:flex-start"><i class='bx bx-undo'></i> Desfazer último evento</button>
-        </div>` : ''}
       </div>
     </div>
 
     ${emAndamento ? `
-    <div class="card" style="padding:12px">
+    <div class="card">
+      <div class="card-title"><i class='bx bx-timer'></i> Ações</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('A')"><i class='bx bx-time-five' style="color:${corA}"></i> Tempo · ${s.equipeCasa}</button>
+        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('B')"><i class='bx bx-time-five' style="color:${corB}"></i> Tempo · ${s.equipeVisitante}</button>
+        <button class="btn btn-secondary btn-sm" onclick="abrirModalCartao()"><i class='bx bxs-flag-alt'></i> Cartão</button>
+        <button class="btn btn-secondary btn-sm" onclick="abrirModalSub()"><i class='bx bx-transfer'></i> Substituição</button>
+        <button class="btn btn-secondary btn-sm" onclick="sumulaDesfazer()"><i class='bx bx-undo'></i> Desfazer último evento</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class='bx bx-plus-circle'></i> Pontuação</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div style="display:flex;gap:6px;align-items:stretch">
-          <button onclick="sumulaPonto('A')" style="flex:1;background:${corA};color:#fff;border:none;border-radius:12px;padding:16px 8px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(21,101,192,.3)">+1 PONTO<br><span style="font-size:11px;font-weight:600;opacity:.85">${s.equipeCasa}</span></button>
-          <button onclick="sumulaPontoMenos('A')" title="Corrigir: -1 ponto ${s.equipeCasa}" style="width:44px;background:#fff;color:${corA};border:2px solid ${corA};border-radius:12px;font-size:20px;font-weight:900">−1</button>
+        <div style="display:flex;gap:5px;align-items:stretch">
+          <button class="btn-ponto" onclick="sumulaPonto('A')" style="flex:1;background:${corA};color:#fff;border-radius:10px;padding:10px 8px;font-size:13px;font-weight:800;box-shadow:0 3px 8px rgba(21,101,192,.28)">+1 PONTO<br><span style="font-size:10px;font-weight:600;opacity:.85">${s.equipeCasa}</span></button>
+          <button class="btn-ponto-minus" onclick="sumulaPontoMenos('A')" title="Corrigir: -1 ponto ${s.equipeCasa}" style="width:34px;background:#fff;color:${corA};border:2px solid ${corA};border-radius:10px;font-size:15px;font-weight:900">−1</button>
         </div>
-        <div style="display:flex;gap:6px;align-items:stretch">
-          <button onclick="sumulaPontoMenos('B')" title="Corrigir: -1 ponto ${s.equipeVisitante}" style="width:44px;background:#fff;color:${corB};border:2px solid ${corB};border-radius:12px;font-size:20px;font-weight:900">−1</button>
-          <button onclick="sumulaPonto('B')" style="flex:1;background:${corB};color:#fff;border:none;border-radius:12px;padding:16px 8px;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(230,126,34,.3)">+1 PONTO<br><span style="font-size:11px;font-weight:600;opacity:.85">${s.equipeVisitante}</span></button>
+        <div style="display:flex;gap:5px;align-items:stretch">
+          <button class="btn-ponto-minus" onclick="sumulaPontoMenos('B')" title="Corrigir: -1 ponto ${s.equipeVisitante}" style="width:34px;background:#fff;color:${corB};border:2px solid ${corB};border-radius:10px;font-size:15px;font-weight:900">−1</button>
+          <button class="btn-ponto" onclick="sumulaPonto('B')" style="flex:1;background:${corB};color:#fff;border-radius:10px;padding:10px 8px;font-size:13px;font-weight:800;box-shadow:0 3px 8px rgba(230,126,34,.28)">+1 PONTO<br><span style="font-size:10px;font-weight:600;opacity:.85">${s.equipeVisitante}</span></button>
         </div>
       </div>
     </div>` : ''}

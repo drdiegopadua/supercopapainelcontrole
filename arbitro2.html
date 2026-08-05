@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>2º Árbitro · Súmula Supercopa</title>
+<title>2º Árbitro · Ordem de Saque · Supercopa</title>
 <meta name="theme-color" content="#0d1f5c">
 <link rel="manifest" href="arbitro2-manifest.webmanifest">
 <link rel="apple-touch-icon" href="https://drdiegopadua.github.io/supercopa-app/apple-touch-icon.png">
@@ -23,30 +23,27 @@ select,input{width:100%;padding:12px;border:1px solid var(--border);border-radiu
 .btn{border:none;border-radius:10px;padding:12px;font-weight:700;font-size:13px;cursor:pointer}
 .btn-primary{background:var(--blue);color:#fff;width:100%}
 .score-row{display:flex;align-items:center;justify-content:center;gap:18px;margin:6px 0}
-.score-big{font-size:42px;font-weight:900}
+.score-big{font-size:36px;font-weight:900}
 .team-name{font-weight:800;font-size:13px;text-align:center}
-.quadras{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px}
-.pos-cell{position:relative;background:#fff;border:2px solid #dcdcdc;border-radius:8px;padding:6px 2px;text-align:center;min-height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.quadras{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.pos-cell{position:relative;background:#fff;border:2px solid #dcdcdc;border-radius:10px;padding:10px 2px;text-align:center;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .pos-cell.saque{background:#fff8e1;border-color:var(--gold)}
-.court{background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:8px;padding:6px}
-.point-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.point-btns button{border:none;border-radius:14px;padding:24px 8px;font-size:16px;font-weight:800;color:#fff}
-.actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.btn-sec{background:#eef1f6;color:var(--dark);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700}
+.pos-cell .num{font-weight:900;font-size:19px}
+.pos-cell.saque .num{color:var(--gold)}
+.pos-cell .cap-badge{position:absolute;top:2px;right:4px;font-size:9px;font-weight:800;color:var(--blue)}
+.court{background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:10px;padding:8px}
 .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;display:none;box-shadow:0 8px 24px rgba(0,0,0,.2);}
 .toast.show{display:block}
 .toast.error{background:var(--red)}
 .list-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;align-items:flex-end}
-.modal-bg.show{display:flex}
-.modal-box{background:#fff;width:100%;border-radius:18px 18px 0 0;padding:20px;max-height:80vh;overflow-y:auto}
+.warn-box{background:#fff3cd;border:1px solid #ffe08a;border-radius:10px;padding:8px 10px;margin-top:8px;font-size:11px;color:#8a6100}
 </style>
 </head>
 <body>
 <header>
   <div class="tag">Supercopa AFC · Vôlei</div>
-  <h1 id="hdrTitle">🏐 Console do 2º Árbitro</h1>
+  <h1 id="hdrTitle">🏐 2º Árbitro — Ordem de Saque</h1>
 </header>
 
 <div class="wrap">
@@ -62,35 +59,13 @@ select,input{width:100%;padding:12px;border:1px solid var(--border);border-radiu
 
 <div class="toast" id="toast"></div>
 
-<div class="modal-bg" id="modalCartao">
-  <div class="modal-box">
-    <h2 style="font-size:15px;font-weight:800;margin-bottom:12px">🏳️ Cartão</h2>
-    <select id="mc-equipe"></select>
-    <input id="mc-jogador" placeholder="Jogador(a)">
-    <select id="mc-tipo"><option value="Amarelo">🟨 Amarelo</option><option value="Vermelho">🟥 Vermelho</option></select>
-    <input id="mc-motivo" placeholder="Motivo (opcional)">
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn-sec" style="flex:1" onclick="fecharModal('modalCartao')">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1" onclick="salvarCartao()">Salvar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="modalSub">
-  <div class="modal-box">
-    <h2 style="font-size:15px;font-weight:800;margin-bottom:12px">🔄 Substituição</h2>
-    <select id="ms-equipe"></select>
-    <input id="ms-saiu" placeholder="Saiu">
-    <input id="ms-entrou" placeholder="Entrou">
-    <input id="ms-numero" placeholder="Número de quem entra (opcional)">
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn-sec" style="flex:1" onclick="fecharModal('modalSub')">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1" onclick="salvarSub()">Salvar</button>
-    </div>
-  </div>
-</div>
-
 <script>
+// O 2º árbitro, na regra oficial, é quem confere a ordem de saque e
+// a posição dos jogadores em quadra (erro de rotação) — não opera o
+// placar. Por isso essa tela é só leitura: mostra a quadra ao vivo
+// de cada equipe (com quem está sacando e quem é o capitão em
+// quadra) e atualiza sozinha a cada 4s. Marcar ponto/cartão/tempo
+// continua sendo só no painel principal.
 const SUMULA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGHciyvcdSDszUOyz1pgdCG8nE8ySGwdKUNgjWybc6GrDJAb6_q-3zI9IWkpU9QL0UfQ/exec";
 
 let estado = null;
@@ -138,16 +113,25 @@ async function poll(){
   } catch(e){}
 }
 
-function quadraHtml(rotacao){
+function capitaoEmQuadra(s, lado){
+  const capOficial = lado === 'A' ? s.capitaoCasa : s.capitaoVisitante;
+  const capQuadra = (lado === 'A' ? s.capitaoQuadraCasa : s.capitaoQuadraVisitante) || capOficial;
+  const rotacao = lado === 'A' ? s.rotacaoCasa : s.rotacaoVisitante;
+  const emQuadra = (rotacao||[]).some(p => p.numero && capQuadra && p.numero.toString() === capQuadra.toString());
+  return { numero: capQuadra, emQuadra: emQuadra };
+}
+
+function quadraHtml(rotacao, capitaoNumero){
   if (!rotacao || !rotacao.length) return '<div style="text-align:center;color:var(--grey);font-size:11px;padding:16px 0">sem escalação</div>';
   const por = {1:rotacao[0],2:rotacao[1],3:rotacao[2],4:rotacao[3],5:rotacao[4],6:rotacao[5]};
   const cel = (pos) => {
     const p = por[pos] || {};
     const saque = pos === 1;
-    return `<div class="pos-cell ${saque?'saque':''}"><div style="font-weight:800;font-size:14px;${saque?'color:var(--gold)':''}">${p.numero||'—'}</div><div style="font-size:6px;color:${saque?'var(--gold)':'var(--grey)'}">${saque?'SAQUE':'P'+pos}</div></div>`;
+    const ehCap = capitaoNumero && p.numero && p.numero.toString() === capitaoNumero.toString();
+    return `<div class="pos-cell ${saque?'saque':''}">${ehCap?'<span class="cap-badge">C</span>':''}<div class="num" ${saque?'style="color:var(--gold)"':''}>${p.numero||'—'}</div><div style="font-size:7px;color:${saque?'var(--gold)':'var(--grey)'};font-weight:700">${saque?'SAQUE':'P'+pos}</div></div>`;
   };
-  return `<div class="court"><div style="text-align:center;font-size:6px;font-weight:800;color:#2e7d32;margin-bottom:4px">◤ REDE ◥</div>
-    <div class="pos-grid" style="margin-bottom:3px">${cel(4)}${cel(3)}${cel(2)}</div>
+  return `<div class="court"><div style="text-align:center;font-size:7px;font-weight:800;color:#2e7d32;margin-bottom:5px">◤ REDE ◥</div>
+    <div class="pos-grid" style="margin-bottom:5px">${cel(4)}${cel(3)}${cel(2)}</div>
     <div class="pos-grid">${cel(5)}${cel(6)}${cel(1)}</div></div>`;
 }
 
@@ -167,109 +151,54 @@ function setDotsHtml(historico){
 function render(){
   const s = estado;
   const el = document.getElementById('consoleWrap');
-  const emAndamento = s.status === 'em_andamento';
-  const prontaFinalizar = s.status === 'sets_completos';
   const finalizada = s.status === 'finalizada';
+  const prontaFinalizar = s.status === 'sets_completos';
+
+  const capA = capitaoEmQuadra(s, 'A');
+  const capB = capitaoEmQuadra(s, 'B');
 
   const eventos = [];
   (s.timeouts||[]).forEach((t,i)=>eventos.push({o:900+i, h:`<div class="list-item"><i class='bx bx-time-five' style="color:var(--orange)"></i><span style="flex:1">Tempo · ${t.equipe==='A'?s.equipeCasa:s.equipeVisitante} · Set ${t.set}</span></div>`}));
   (s.cartoes||[]).forEach((c,i)=>eventos.push({o:800+i, h:`<div class="list-item">${c.tipo==='Vermelho'?'🟥':'🟨'}<span style="flex:1">${c.jogador} · Set ${c.set}</span></div>`}));
-  (s.substituicoes||[]).forEach((sub,i)=>eventos.push({o:700+i, h:`<div class="list-item"><i class='bx bx-transfer' style="color:var(--blue)"></i><span style="flex:1">${sub.equipe==='A'?s.equipeCasa:s.equipeVisitante} · ${sub.saiu} ➜ ${sub.entrou}</span></div>`}));
+  (s.substituicoes||[]).forEach((sub,i)=>eventos.push({o:700+i, h:`<div class="list-item"><i class='bx bx-transfer' style="color:var(--blue)"></i><span style="flex:1">${sub.equipe==='A'?s.equipeCasa:s.equipeVisitante} · ${sub.saiu} → ${sub.entrou}</span></div>`}));
 
   el.innerHTML = `
     <div class="card" style="text-align:center">
       <div style="font-size:10px;color:var(--grey)">${finalizada?'🏁 FINALIZADA':prontaFinalizar?'✅ PRONTA PRA FINALIZAR':'🔴 AO VIVO'} · SET ${Math.min(s.setAtual,3)}</div>
       <div class="score-row">
         <div style="flex:1"><div class="team-name">${s.equipeCasa}</div>${setDotsHtml(s.historicoSets)}</div>
-        <div class="score-big">${s.pontosCasa}<span style="color:var(--grey);font-size:20px"> × </span>${s.pontosVisitante}</div>
+        <div class="score-big">${s.pontosCasa}<span style="color:var(--grey);font-size:18px"> × </span>${s.pontosVisitante}</div>
         <div style="flex:1"><div class="team-name">${s.equipeVisitante}</div>${setDotsHtml(s.historicoSets)}</div>
       </div>
       <div style="font-size:12px;color:var(--grey)">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
     </div>
 
     <div class="card">
-      <h2><i class='bx bxs-volleyball'></i> Quadra ao Vivo</h2>
+      <h2><i class='bx bxs-volleyball'></i> Ordem de Saque</h2>
       <div class="quadras">
-        <div><div style="text-align:center;font-size:10px;font-weight:700;color:var(--blue);margin-bottom:4px">${s.equipeCasa}</div>${quadraHtml(s.rotacaoCasa)}</div>
-        <div><div style="text-align:center;font-size:10px;font-weight:700;color:var(--orange);margin-bottom:4px">${s.equipeVisitante}</div>${quadraHtml(s.rotacaoVisitante)}</div>
+        <div><div style="text-align:center;font-size:11px;font-weight:700;color:var(--blue);margin-bottom:5px">${s.equipeCasa}</div>${quadraHtml(s.rotacaoCasa, capA.numero)}</div>
+        <div><div style="text-align:center;font-size:11px;font-weight:700;color:var(--orange);margin-bottom:5px">${s.equipeVisitante}</div>${quadraHtml(s.rotacaoVisitante, capB.numero)}</div>
       </div>
+      ${!capA.emQuadra ? `<div class="warn-box"><i class='bx bx-error'></i> ${s.equipeCasa} está sem capitão marcado em quadra — avise a mesa.</div>` : ''}
+      ${!capB.emQuadra ? `<div class="warn-box"><i class='bx bx-error'></i> ${s.equipeVisitante} está sem capitão marcado em quadra — avise a mesa.</div>` : ''}
     </div>
 
-    ${emAndamento ? `
     <div class="card">
-      <div class="point-btns">
-        <button style="background:var(--blue)" onclick="ponto('A')">+1 PONTO<br><span style="font-size:10px;font-weight:600;opacity:.85">${s.equipeCasa}</span></button>
-        <button style="background:var(--orange)" onclick="ponto('B')">+1 PONTO<br><span style="font-size:10px;font-weight:600;opacity:.85">${s.equipeVisitante}</span></button>
-      </div>
-      <button class="btn-sec" style="width:100%;margin-top:10px" onclick="desfazer()"><i class='bx bx-undo'></i> Desfazer último ponto</button>
-      <div class="actions-grid">
-        <button class="btn-sec" onclick="timeout('A')">⏱ Tempo · Casa</button>
-        <button class="btn-sec" onclick="timeout('B')">⏱ Tempo · Visitante</button>
-        <button class="btn-sec" onclick="abrirModalCartao()">🏳️ Cartão</button>
-        <button class="btn-sec" onclick="abrirModalSub()">🔄 Substituição</button>
-      </div>
-    </div>` : ''}
-
-    ${prontaFinalizar ? `<div class="card" style="text-align:center;background:#e8f5e9"><p style="font-size:12px;color:var(--green);font-weight:700">Partida decidida — finalize pelo painel principal pra gerar o PDF.</p></div>` : ''}
-    ${finalizada ? `<div class="card" style="text-align:center"><p style="font-size:12px;color:var(--green);font-weight:700"><i class='bx bx-check-circle'></i> Súmula finalizada.</p></div>` : ''}
-
-    <div class="card">
-      <h2><i class='bx bx-list-ul'></i> Linha do tempo</h2>
-      ${eventos.length ? eventos.sort((a,b)=>b.o-a.o).map(e=>e.h).join('') : '<p style="color:var(--grey);font-size:12px">Nenhum evento ainda.</p>'}
+      <h2><i class='bx bx-list-ul'></i> Últimos eventos</h2>
+      ${eventos.length ? eventos.sort((a,b)=>b.o-a.o).slice(0,8).map(e=>e.h).join('') : '<p style="color:var(--grey);font-size:12px">Nenhum evento ainda.</p>'}
     </div>
+
+    <button class="btn" style="width:100%;background:#eef1f6;color:var(--dark)" onclick="sair()"><i class='bx bx-left-arrow-alt'></i> Trocar de partida</button>
   `;
 }
 
-async function ponto(equipe){
-  try{
-    const res = await fetch(SUMULA_SCRIPT_URL, {method:'POST', body: JSON.stringify({acao:'ponto', id:estado.id, equipe:equipe})}).then(r=>r.json());
-    if (res.ok){ estado = res.estado; render(); } else showToast(res.erro||'erro', 'error');
-  } catch(e){ showToast('Erro de conexão.', 'error'); }
-}
-async function desfazer(){
-  try{
-    const res = await fetch(SUMULA_SCRIPT_URL, {method:'POST', body: JSON.stringify({acao:'desfazerPonto', id:estado.id})}).then(r=>r.json());
-    if (res.ok){ estado = res.estado; render(); } else showToast(res.erro||'erro', 'error');
-  } catch(e){ showToast('Erro de conexão.', 'error'); }
-}
-async function timeout(equipe){
-  try{
-    const res = await fetch(SUMULA_SCRIPT_URL, {method:'POST', body: JSON.stringify({acao:'timeout', id:estado.id, equipe:equipe})}).then(r=>r.json());
-    if (res.ok){ estado = res.estado; render(); showToast('⏱ Tempo registrado.'); }
-  } catch(e){ showToast('Erro de conexão.', 'error'); }
-}
-
-function abrirModal(id){ document.getElementById(id).classList.add('show'); }
-function fecharModal(id){ document.getElementById(id).classList.remove('show'); }
-
-function abrirModalCartao(){
-  document.getElementById('mc-equipe').innerHTML = `<option value="A">${estado.equipeCasa}</option><option value="B">${estado.equipeVisitante}</option>`;
-  document.getElementById('mc-jogador').value = '';
-  document.getElementById('mc-motivo').value = '';
-  abrirModal('modalCartao');
-}
-async function salvarCartao(){
-  const jogador = document.getElementById('mc-jogador').value.trim();
-  if (!jogador){ showToast('Informe o jogador.', 'error'); return; }
-  const payload = {acao:'cartao', id:estado.id, equipe:document.getElementById('mc-equipe').value, jogador:jogador, tipo:document.getElementById('mc-tipo').value, motivo:document.getElementById('mc-motivo').value.trim()};
-  const res = await fetch(SUMULA_SCRIPT_URL, {method:'POST', body: JSON.stringify(payload)}).then(r=>r.json());
-  if (res.ok){ estado = res.estado; render(); fecharModal('modalCartao'); } else showToast(res.erro||'erro', 'error');
-}
-
-function abrirModalSub(){
-  document.getElementById('ms-equipe').innerHTML = `<option value="A">${estado.equipeCasa}</option><option value="B">${estado.equipeVisitante}</option>`;
-  document.getElementById('ms-saiu').value = '';
-  document.getElementById('ms-entrou').value = '';
-  document.getElementById('ms-numero').value = '';
-  abrirModal('modalSub');
-}
-async function salvarSub(){
-  const saiu = document.getElementById('ms-saiu').value.trim();
-  const entrou = document.getElementById('ms-entrou').value.trim();
-  if (!saiu || !entrou){ showToast('Informe quem saiu e quem entrou.', 'error'); return; }
-  const payload = {acao:'substituicao', id:estado.id, equipe:document.getElementById('ms-equipe').value, saiu:saiu, entrou:entrou, numeroEntrou:document.getElementById('ms-numero').value.trim()};
-  const res = await fetch(SUMULA_SCRIPT_URL, {method:'POST', body: JSON.stringify(payload)}).then(r=>r.json());
-  if (res.ok){ estado = res.estado; render(); fecharModal('modalSub'); } else showToast(res.erro||'erro', 'error');
+function sair(){
+  if (pollTimer) clearInterval(pollTimer);
+  estado = null;
+  document.getElementById('consoleWrap').style.display = 'none';
+  document.getElementById('pickerCard').style.display = '';
+  document.getElementById('hdrTitle').textContent = '🏐 2º Árbitro — Ordem de Saque';
+  carregarListaJogos();
 }
 
 // Se veio com ?jogo=ID na URL, entra direto.
