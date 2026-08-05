@@ -227,6 +227,18 @@ function configurarPartidas() {
   Logger.log('Aba "Partidas" configurada em: ' + ss.getUrl());
 }
 
+// Serializa as ações que leem+alteram+gravam a mesma linha da aba
+// Partidas. Sem isso, dois clientes (painel + app do 2º árbitro,
+// ou o poll de 4s e um clique) podem ler o mesmo estado ao mesmo
+// tempo e um write "atropelar" o outro — placar errado, evento
+// sumindo, ou a planilha travando na escrita concorrente (o que
+// pode aparecer no navegador como "Failed to fetch").
+function comLock_(fn) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try { return fn(); } finally { lock.releaseLock(); }
+}
+
 // ── doPost ──────────────────────────────────────────────────
 function doPost(e) {
   try {
@@ -284,20 +296,21 @@ function doPost(e) {
     if (acao === 'cadastrarAtletaApp') return okJson(cadastrarAtletaApp_(dados));
     if (acao === 'removerAtletaApp') return okJson(removerAtletaApp_(dados));
 
-    // CONSOLE DE ARBITRAGEM AO VIVO
-    if (acao === 'criarPartida') return okJson(criarPartida_(dados));
-    if (acao === 'ponto') return okJson(registrarPonto_(dados));
-    if (acao === 'desfazerPonto') return okJson(desfazerPonto_(dados));
-    if (acao === 'pontoMenos') return okJson(pontoMenos_(dados));
-    if (acao === 'definirCapitaoQuadra') return okJson(definirCapitaoQuadra_(dados));
-    if (acao === 'definirEscalacaoSet') return okJson(definirEscalacaoSet_(dados));
-    if (acao === 'timeout') return okJson(registrarTimeout_(dados));
-    if (acao === 'atualizarObservacoes') return okJson(atualizarObservacoes_(dados));
-    if (acao === 'excluirPartida') return okJson(excluirPartida_(dados));
-    if (acao === 'cartao') return okJson(registrarCartao_(dados));
-    if (acao === 'substituicao') return okJson(registrarSubstituicao_(dados));
-    if (acao === 'removerEvento') return okJson(removerEvento_(dados));
-    if (acao === 'finalizarPartida') return okJson(finalizarPartida_(dados));
+    // CONSOLE DE ARBITRAGEM AO VIVO (com lock — várias fontes podem
+    // escrever na mesma partida ao mesmo tempo: painel, 2º árbitro, poll)
+    if (acao === 'criarPartida') return okJson(comLock_(() => criarPartida_(dados)));
+    if (acao === 'ponto') return okJson(comLock_(() => registrarPonto_(dados)));
+    if (acao === 'desfazerPonto') return okJson(comLock_(() => desfazerPonto_(dados)));
+    if (acao === 'pontoMenos') return okJson(comLock_(() => pontoMenos_(dados)));
+    if (acao === 'definirCapitaoQuadra') return okJson(comLock_(() => definirCapitaoQuadra_(dados)));
+    if (acao === 'definirEscalacaoSet') return okJson(comLock_(() => definirEscalacaoSet_(dados)));
+    if (acao === 'timeout') return okJson(comLock_(() => registrarTimeout_(dados)));
+    if (acao === 'atualizarObservacoes') return okJson(comLock_(() => atualizarObservacoes_(dados)));
+    if (acao === 'excluirPartida') return okJson(comLock_(() => excluirPartida_(dados)));
+    if (acao === 'cartao') return okJson(comLock_(() => registrarCartao_(dados)));
+    if (acao === 'substituicao') return okJson(comLock_(() => registrarSubstituicao_(dados)));
+    if (acao === 'removerEvento') return okJson(comLock_(() => removerEvento_(dados)));
+    if (acao === 'finalizarPartida') return okJson(comLock_(() => finalizarPartida_(dados)));
     if (acao === 'uploadPdfSumula') return okJson(uploadPdfSumula_(dados));
 
     return okJson({ ok: false, erro: 'ação inválida: ' + acao });
