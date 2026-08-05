@@ -89,7 +89,7 @@ const HEADERS_PARTIDAS = [
   'HistoricoSets', 'Timeouts', 'Cartoes', 'Substituicoes', 'EventosLog',
   'Status', 'LinkPDF', 'CriadoEm', 'AtualizadoEm',
   'CapitaoCasa', 'CapitaoVisitante', 'Observacoes',
-  'HistoricoPontos', 'CapitaoQuadraCasa', 'CapitaoQuadraVisitante'
+  'HistoricoPontos', 'CapitaoQuadraCasa', 'CapitaoQuadraVisitante', 'RotacaoConfirmadaSet'
 ];
 // Índices das colunas (0-based) para referência rápida.
 const PC = {
@@ -101,7 +101,8 @@ const PC = {
   historicoSets:19, timeouts:20, cartoes:21, substituicoes:22, eventosLog:23,
   status:24, linkPdf:25, criadoEm:26, atualizadoEm:27,
   capitaoCasa:28, capitaoVisitante:29, observacoes:30,
-  historicoPontos:31, capitaoQuadraCasa:32, capitaoQuadraVisitante:33
+  historicoPontos:31, capitaoQuadraCasa:32, capitaoQuadraVisitante:33,
+  rotacaoConfirmadaSet:34
 };
 
 function criarPlanilhaVolei() {
@@ -289,6 +290,7 @@ function doPost(e) {
     if (acao === 'desfazerPonto') return okJson(desfazerPonto_(dados));
     if (acao === 'pontoMenos') return okJson(pontoMenos_(dados));
     if (acao === 'definirCapitaoQuadra') return okJson(definirCapitaoQuadra_(dados));
+    if (acao === 'definirEscalacaoSet') return okJson(definirEscalacaoSet_(dados));
     if (acao === 'timeout') return okJson(registrarTimeout_(dados));
     if (acao === 'atualizarObservacoes') return okJson(atualizarObservacoes_(dados));
     if (acao === 'excluirPartida') return okJson(excluirPartida_(dados));
@@ -665,7 +667,8 @@ function linhaParaEstado_(row) {
     observacoes: row[PC.observacoes] || '',
     historicoPontos: parseJson_(row[PC.historicoPontos], []),
     capitaoQuadraCasa: row[PC.capitaoQuadraCasa] || row[PC.capitaoCasa] || '',
-    capitaoQuadraVisitante: row[PC.capitaoQuadraVisitante] || row[PC.capitaoVisitante] || ''
+    capitaoQuadraVisitante: row[PC.capitaoQuadraVisitante] || row[PC.capitaoVisitante] || '',
+    rotacaoConfirmadaSet: row[PC.rotacaoConfirmadaSet] || 1
   };
 }
 
@@ -715,6 +718,7 @@ function criarPartida_(d) {
   linhaDados[PC.historicoPontos] = JSON.stringify([]);
   linhaDados[PC.capitaoQuadraCasa] = d.capitaoCasa || '';
   linhaDados[PC.capitaoQuadraVisitante] = d.capitaoVisitante || '';
+  linhaDados[PC.rotacaoConfirmadaSet] = 1;
 
   const existenteInfo = acharLinhaPartida_(sh, jogo.id);
   if (existenteInfo) {
@@ -769,6 +773,7 @@ function salvarLinhaPartida_(sh, linhaNum, estado) {
   linhaDados[PC.historicoPontos] = JSON.stringify(estado.historicoPontos || []);
   linhaDados[PC.capitaoQuadraCasa] = estado.capitaoQuadraCasa || '';
   linhaDados[PC.capitaoQuadraVisitante] = estado.capitaoQuadraVisitante || '';
+  linhaDados[PC.rotacaoConfirmadaSet] = estado.rotacaoConfirmadaSet || 1;
   sh.getRange(linhaNum, 1, 1, linhaDados.length).setValues([linhaDados]);
 }
 
@@ -823,6 +828,7 @@ function registrarPonto_(d) {
   if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
   const estado = linhaParaEstado_(info.dados);
   if (estado.status !== 'em_andamento') return { ok: false, erro: 'Partida não está em andamento.' };
+  if ((estado.rotacaoConfirmadaSet || 1) < estado.setAtual) return { ok: false, erro: 'Confirme a escalação (ordem de saque) do set ' + estado.setAtual + ' antes de pontuar.' };
   const equipe = d.equipe === 'B' ? 'B' : 'A';
 
   // snapshot para permitir desfazer
@@ -883,6 +889,32 @@ function definirCapitaoQuadra_(d) {
   const estado = linhaParaEstado_(info.dados);
   if (d.equipe === 'B') estado.capitaoQuadraVisitante = d.numero || '';
   else estado.capitaoQuadraCasa = d.numero || '';
+  estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
+  salvarLinhaPartida_(sh, info.linha, estado);
+  delete estado._eventosLog;
+  return { ok: true, estado: estado };
+}
+
+// A cada set novo o técnico pode escalar a quadra numa ordem
+// diferente (regra do vôlei) — isso registra a escalação enviada
+// pra esse set e libera a pontuação (registrarPonto_ bloqueia até
+// aqui ser chamado).
+function definirEscalacaoSet_(d) {
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  const estado = linhaParaEstado_(info.dados);
+  if (estado.status !== 'em_andamento') return { ok: false, erro: 'Partida não está em andamento.' };
+  const rotA = (d.rotacaoCasa || []).slice(0, 6);
+  const rotB = (d.rotacaoVisitante || []).slice(0, 6);
+  if (rotA.filter(p => p && p.nome).length < 6 || rotB.filter(p => p && p.nome).length < 6) {
+    return { ok: false, erro: 'Preencha as 6 posições de quadra das duas equipes.' };
+  }
+  estado.rotacaoCasa = rotA;
+  estado.rotacaoVisitante = rotB;
+  estado.rotacaoConfirmadaSet = estado.setAtual;
+  if (d.capitaoQuadraCasa) estado.capitaoQuadraCasa = d.capitaoQuadraCasa;
+  if (d.capitaoQuadraVisitante) estado.capitaoQuadraVisitante = d.capitaoQuadraVisitante;
   estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
   salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;
