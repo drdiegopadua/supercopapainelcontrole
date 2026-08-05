@@ -659,14 +659,14 @@ function acharLinhaPartida_(sh, id) {
 }
 
 function linhaParaEstado_(row) {
-  return {
+  const estado = {
     id: row[PC.id], aba: row[PC.aba], linha: row[PC.linha],
     equipeCasa: row[PC.equipeCasa], equipeVisitante: row[PC.equipeVisitante],
     elencoCasa: parseJson_(row[PC.elencoCasa], { titulares: [], libero: null }),
     elencoVisitante: parseJson_(row[PC.elencoVisitante], { titulares: [], libero: null }),
     arbitro1: row[PC.arbitro1], arbitro2: row[PC.arbitro2], apontador: row[PC.apontador],
-    setAtual: row[PC.setAtual], pontosCasa: row[PC.pontosCasa], pontosVisitante: row[PC.pontosVisitante],
-    setsCasa: row[PC.setsCasa], setsVisitante: row[PC.setsVisitante],
+    setAtual: Number(row[PC.setAtual]) || 1, pontosCasa: Number(row[PC.pontosCasa]) || 0, pontosVisitante: Number(row[PC.pontosVisitante]) || 0,
+    setsCasa: Number(row[PC.setsCasa]) || 0, setsVisitante: Number(row[PC.setsVisitante]) || 0,
     sacando: row[PC.sacando],
     rotacaoCasa: parseJson_(row[PC.rotacaoCasa], []), rotacaoVisitante: parseJson_(row[PC.rotacaoVisitante], []),
     primeiroSaqueSet: row[PC.primeiroSaqueSet],
@@ -681,8 +681,17 @@ function linhaParaEstado_(row) {
     historicoPontos: parseJson_(row[PC.historicoPontos], []),
     capitaoQuadraCasa: row[PC.capitaoQuadraCasa] || row[PC.capitaoCasa] || '',
     capitaoQuadraVisitante: row[PC.capitaoQuadraVisitante] || row[PC.capitaoVisitante] || '',
-    rotacaoConfirmadaSet: row[PC.rotacaoConfirmadaSet] || 1
+    rotacaoConfirmadaSet: Number(row[PC.rotacaoConfirmadaSet]) || 1
   };
+  // Rede de segurança: se por qualquer motivo (concorrência, cota do
+  // Google, etc.) a linha ficou com 2 sets pra um lado mas o status
+  // não foi atualizado pra "sets_completos", corrige na leitura —
+  // evita o sintoma de pedir escalação de um set que nunca deveria
+  // ter começado numa partida já decidida.
+  if (estado.status === 'em_andamento' && (estado.setsCasa >= 2 || estado.setsVisitante >= 2)) {
+    estado.status = 'sets_completos';
+  }
+  return estado;
 }
 
 function criarPartida_(d) {
