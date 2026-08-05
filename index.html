@@ -125,32 +125,30 @@
     .login-footer p { font-size: 12px; color: var(--dark-grey); }
     .login-footer strong { color: var(--blue); }
 
-    /* ── SIDEBAR ── */
-    #sidebar { position: fixed; top: 0; left: 0; width: 230px; height: 100%; background: var(--light); z-index: 2000; font-family: var(--lato); transition: .3s ease; overflow-x: hidden; scrollbar-width: none; display: flex; flex-direction: column; }
+    /* ── SIDEBAR (painel flutuante, estilo soft-UI) ── */
+    #sidebar { position: fixed; top: 16px; left: 16px; width: 230px; height: calc(100% - 32px); background: var(--light); border-radius: 26px; box-shadow: var(--neu-shadow); z-index: 2000; font-family: var(--lato); transition: .3s ease; overflow-x: hidden; scrollbar-width: none; display: flex; flex-direction: column; }
     #sidebar::-webkit-scrollbar { display: none; }
-    #sidebar.hide { width: 60px; }
-    .sidebar-brand { height: 64px; display: flex; align-items: center; padding: 0 12px; background: linear-gradient(135deg, var(--blue) 0%, #8B5CF6 100%); color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; overflow: hidden; flex-shrink: 0; }
+    #sidebar.hide { width: 76px; }
+    body.dark #sidebar { box-shadow: 8px 8px 18px rgba(0,0,0,.35), -6px -6px 14px rgba(255,255,255,.03); }
+    .sidebar-brand { height: 64px; display: flex; align-items: center; padding: 0 14px; background: var(--accent-gradient); color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; overflow: hidden; flex-shrink: 0; border-radius: 26px 26px 0 0; }
     .sidebar-brand i { font-size: 26px; min-width: 36px; margin-right: 10px; }
     #sidebar.hide .sidebar-brand span { display: none; }
-    .side-menu { width: 100%; padding: 8px 0; flex: 1; overflow-y: auto; }
-    .side-menu li { height: 48px; margin: 2px 6px; border-radius: 48px 0 0 48px; padding: 4px; }
-    .side-menu li.active { background: var(--grey); position: relative; }
-    .side-menu li.active::before { content: ''; position: absolute; width: 40px; height: 40px; border-radius: 50%; top: -40px; right: 0; box-shadow: 20px 20px 0 var(--grey); z-index: -1; }
-    .side-menu li.active::after { content: ''; position: absolute; width: 40px; height: 40px; border-radius: 50%; bottom: -40px; right: 0; box-shadow: 20px -20px 0 var(--grey); z-index: -1; }
-    .side-menu li a { width: 100%; height: 100%; background: var(--light); display: flex; align-items: center; border-radius: 48px; font-size: 14px; color: var(--dark); white-space: nowrap; overflow: hidden; cursor: pointer; }
-    .side-menu li.active a { color: var(--blue); }
-    #sidebar.hide .side-menu li a { width: calc(48px - 8px); }
-    .side-menu li a:hover { color: var(--blue); }
+    .side-menu { width: 100%; padding: 10px 8px; flex: 1; overflow-y: auto; }
+    .side-menu li { height: 46px; margin: 3px 0; border-radius: 14px; padding: 0; }
+    .side-menu li.active a { background: var(--accent-gradient); color: #fff; box-shadow: 0 4px 12px rgba(79,110,247,.35); }
+    .side-menu li a { width: 100%; height: 100%; background: transparent; display: flex; align-items: center; border-radius: 14px; font-size: 14px; color: var(--dark); white-space: nowrap; overflow: hidden; cursor: pointer; transition: .18s ease; }
+    #sidebar.hide .side-menu li a { width: 100%; justify-content: center; }
+    .side-menu li:not(.active) a:hover { background: var(--grey); color: var(--blue); }
     .side-menu li a i { min-width: calc(60px - 16px); display: flex; justify-content: center; font-size: 20px; }
     .side-menu li a span { font-size: 14px; }
-    .side-bottom { padding: 8px 6px 16px; border-top: 1px solid var(--grey); flex-shrink: 0; }
-    .side-bottom a { display: flex; align-items: center; height: 44px; border-radius: 44px; color: var(--dark-grey); font-size: 14px; padding: 0 4px; white-space: nowrap; overflow: hidden; }
-    .side-bottom a:hover { color: var(--blue); }
+    .side-bottom { padding: 8px 8px 14px; border-top: 1px solid var(--grey); flex-shrink: 0; }
+    .side-bottom a { display: flex; align-items: center; height: 44px; border-radius: 14px; color: var(--dark-grey); font-size: 14px; padding: 0 8px; white-space: nowrap; overflow: hidden; transition: .18s ease; }
+    .side-bottom a:hover { color: var(--blue); background: var(--grey); }
     .side-bottom a i { min-width: 36px; display: flex; justify-content: center; font-size: 20px; }
 
     /* ── CONTENT ── */
-    #content { position: relative; width: calc(100% - 230px); left: 230px; transition: .3s ease; min-height: 100vh; }
-    #sidebar.hide ~ #content { width: calc(100% - 60px); left: 60px; }
+    #content { position: relative; width: calc(100% - 262px); left: 262px; transition: .3s ease; min-height: 100vh; }
+    #sidebar.hide ~ #content { width: calc(100% - 108px); left: 108px; }
 
     /* ── NAV ── */
     #content nav { height: 56px; background: var(--light); padding: 0 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; left: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
@@ -787,27 +785,27 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
         </div>
       </div>
 
-      <!-- ═══ KPIs ═══ -->
+      <!-- ═══ KPIs — o que realmente importa no dia a dia do torneio ═══ -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:20px;">
         <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-blue);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--blue);"><i class='bx bxs-trophy'></i></div>
+          <div style="width:56px;height:56px;border-radius:16px;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;box-shadow:0 6px 14px rgba(79,110,247,.3)"><i class='bx bx-group'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-equipes">—</div><div style="font-size:12px;color:var(--dark-grey)">Equipes inscritas</div></div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
+          <div style="width:56px;height:56px;border-radius:16px;background:var(--light-blue);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--blue);"><i class='bx bxs-trophy'></i></div>
           <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-jogos">0</div><div style="font-size:12px;color:var(--dark-grey)">Jogos cadastrados</div></div>
         </div>
-        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--green);"><i class='bx bxs-star'></i></div>
-          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-destaques">0</div><div style="font-size:12px;color:var(--dark-grey)">Destaques definidos</div></div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;border-top:3px solid var(--red)">
+          <div style="width:56px;height:56px;border-radius:16px;background:#FFEBEE;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--red);"><i class='bx bxs-videos'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-aovivo">0</div><div style="font-size:12px;color:var(--dark-grey)">Jogos ao vivo agora</div></div>
         </div>
         <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--orange);"><i class='bx bxs-news'></i></div>
-          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-noticias">0</div><div style="font-size:12px;color:var(--dark-grey)">Notícias publicadas</div></div>
+          <div style="width:56px;height:56px;border-radius:16px;background:var(--light-green);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--green);"><i class='bx bx-check-double'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-encerrados">0</div><div style="font-size:12px;color:var(--dark-grey)">Jogos encerrados</div></div>
         </div>
         <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-          <div style="width:56px;height:56px;border-radius:14px;background:var(--light-purple);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--purple);"><i class='bx bxs-bell'></i></div>
-          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-notifs">0</div><div style="font-size:12px;color:var(--dark-grey)">Notificações enviadas</div></div>
-        </div>
-        <div class="card" style="display:flex;align-items:center;gap:16px;margin:0;">
-          <div style="width:56px;height:56px;border-radius:14px;background:rgba(124,58,237,.12);display:flex;align-items:center;justify-content:center;font-size:26px;color:#7C3AED;"><i class='bx bx-brain'></i></div>
-          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-quiz">0</div><div style="font-size:12px;color:var(--dark-grey)">Participantes no Quiz</div></div>
+          <div style="width:56px;height:56px;border-radius:16px;background:var(--light-orange);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--orange);"><i class='bx bx-calendar-event'></i></div>
+          <div><div style="font-size:23px;font-weight:800;color:var(--dark)" id="stat-diasproximo">—</div><div style="font-size:12px;color:var(--dark-grey)" id="stat-diasproximo-label">Dias pro próximo evento</div></div>
         </div>
       </div>
 
@@ -815,6 +813,21 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
       <div class="card-title" style="margin:0 0 12px 2px;"><i class='bx bx-medal'></i> Modalidades</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin-bottom:22px;" id="dash-sport-cards">
         <div class="empty-state"><i class='bx bx-loader-alt'></i><p>Carregando dados dos esportes...</p></div>
+      </div>
+
+      <!-- ═══ VISÃO GERAL DOS JOGOS ═══ -->
+      <div class="card-title" style="margin:0 0 12px 2px;"><i class='bx bx-pie-chart-alt-2'></i> Visão Geral dos Jogos</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:22px;">
+        <div class="card" style="margin:0;">
+          <div class="card-title"><i class='bx bx-doughnut-chart'></i> Status dos Jogos</div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 10px;">Agendados, ao vivo e encerrados — nas 3 modalidades</p>
+          <div style="position:relative;height:210px;"><canvas id="chartStatusJogos"></canvas></div>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title"><i class='bx bx-bar-chart-alt-2'></i> Jogos por Modalidade</div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 10px;">Comparativo entre Vôlei, Basquete e Handebol</p>
+          <div style="position:relative;height:210px;"><canvas id="chartJogosModalidade"></canvas></div>
+        </div>
       </div>
 
       <!-- ═══ GRÁFICOS ═══ -->
@@ -5331,11 +5344,33 @@ function excluirPush(id) {
 // ════════════════════════════════════════════════════════
 function updateStats() {
   document.getElementById('stat-jogos').textContent = state.jogos.volei.length + state.jogos.basquete.length + state.jogos.handebolMasc.length + state.jogos.handebolFem.length;
-  document.getElementById('stat-destaques').textContent = state.destaques.length;
-  document.getElementById('stat-noticias').textContent = state.noticias.length;
-  document.getElementById('stat-notifs').textContent = state.pushLog.length;
-  const statQuiz = document.getElementById('stat-quiz');
-  if (statQuiz) statQuiz.textContent = state.quiz.length;
+  const todosJogos = [...state.jogos.volei, ...state.jogos.basquete, ...state.jogos.handebolMasc, ...state.jogos.handebolFem];
+  const elAoVivo = document.getElementById('stat-aovivo');
+  if (elAoVivo) elAoVivo.textContent = todosJogos.filter(j => j.status === 'live').length;
+  const elEncerrados = document.getElementById('stat-encerrados');
+  if (elEncerrados) elEncerrados.textContent = todosJogos.filter(j => j.status === 'done').length;
+
+  const agora = new Date();
+  const proximos = DASH_SPORTS.filter(s => s.deadline && s.deadline > agora).sort((a, b) => a.deadline - b.deadline);
+  const elDias = document.getElementById('stat-diasproximo'), elDiasLabel = document.getElementById('stat-diasproximo-label');
+  if (elDias) {
+    if (proximos.length) {
+      elDias.textContent = Math.max(0, Math.ceil((proximos[0].deadline - agora) / 86400000));
+      if (elDiasLabel) elDiasLabel.textContent = 'Dias pro início — ' + proximos[0].label;
+    } else {
+      elDias.textContent = '🏁';
+      if (elDiasLabel) elDiasLabel.textContent = 'Todas as modalidades em curso';
+    }
+  }
+}
+
+async function updateStatEquipesInscritas() {
+  const el = document.getElementById('stat-equipes');
+  if (!el) return;
+  try {
+    const inscricoes = await carregarInscricoesDash_();
+    el.textContent = inscricoes.length;
+  } catch (ex) { el.textContent = '—'; }
 }
 
 const DASH_SPORTS = [
@@ -5406,6 +5441,57 @@ function updateDashSportCards() {
 }
 
 let _chartEngajamento = null, _chartInscricoesPorDia = null, _chartTimesPorEstado = null, _chartTimesPorCidade = null;
+let _chartStatusJogos = null, _chartJogosModalidade = null;
+
+function renderChartStatusJogos() {
+  const canvas = document.getElementById('chartStatusJogos');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const todos = [...state.jogos.volei, ...state.jogos.basquete, ...state.jogos.handebolMasc, ...state.jogos.handebolFem];
+  const aoVivo = todos.filter(j => j.status === 'live').length;
+  const encerrados = todos.filter(j => j.status === 'done').length;
+  const agendados = todos.length - aoVivo - encerrados;
+
+  if (_chartStatusJogos) _chartStatusJogos.destroy();
+  _chartStatusJogos = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Agendados', 'Ao vivo', 'Encerrados'],
+      datasets: [{ data: [agendados, aoVivo, encerrados], backgroundColor: ['#4F6EF7', '#C62828', '#2E7D32'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+  });
+}
+
+function renderChartJogosModalidade() {
+  const canvas = document.getElementById('chartJogosModalidade');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const porModalidade = (jogos) => ({
+    agendados: jogos.filter(j => j.status !== 'live' && j.status !== 'done').length,
+    aoVivo: jogos.filter(j => j.status === 'live').length,
+    encerrados: jogos.filter(j => j.status === 'done').length
+  });
+  const volei = porModalidade(state.jogos.volei);
+  const basquete = porModalidade(state.jogos.basquete);
+  const handebol = porModalidade([...state.jogos.handebolMasc, ...state.jogos.handebolFem]);
+
+  if (_chartJogosModalidade) _chartJogosModalidade.destroy();
+  _chartJogosModalidade = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: ['Vôlei', 'Basquete', 'Handebol'],
+      datasets: [
+        { label: 'Agendados', data: [volei.agendados, basquete.agendados, handebol.agendados], backgroundColor: '#4F6EF7', borderRadius: 6 },
+        { label: 'Ao vivo', data: [volei.aoVivo, basquete.aoVivo, handebol.aoVivo], backgroundColor: '#C62828', borderRadius: 6 },
+        { label: 'Encerrados', data: [volei.encerrados, basquete.encerrados, handebol.encerrados], backgroundColor: '#2E7D32', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
 let _inscricoesDashCache = null;
 
 async function carregarInscricoesDash_() {
@@ -5684,6 +5770,9 @@ async function renderChartAcessosPeriodo() {
 function updateDashboard() {
   updateDashCountdowns();
   updateDashSportCards();
+  updateStatEquipesInscritas();
+  renderChartStatusJogos();
+  renderChartJogosModalidade();
   renderChartInscricoesPorDia();
   renderChartEngajamento();
   renderChartAcessosPeriodo();
