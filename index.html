@@ -15,14 +15,16 @@
     :root {
       --poppins: 'Poppins', sans-serif;
       --lato: 'Lato', sans-serif;
-      --light: #F9F9F9;
-      --blue: #1565C0;
+      --light: #FDFCFF;
+      --blue: #4F6EF7;
+      --accent2: #8B5CF6;
+      --accent-gradient: linear-gradient(135deg, var(--blue) 0%, var(--accent2) 100%);
       --gold: #C8960C;
       --gold2: #F4C542;
-      --light-blue: #E3F0FF;
-      --grey: #EEEEEE;
-      --dark-grey: #AAAAAA;
-      --dark: #1A1A2E;
+      --light-blue: #EDEEFD;
+      --grey: #EEF0FA;
+      --dark-grey: #9A9BB5;
+      --dark: #262A4A;
       --red: #C62828;
       --green: #2E7D32;
       --light-green: #E8F5E9;
@@ -30,6 +32,7 @@
       --light-orange: #FFF3E0;
       --purple: #4A148C;
       --light-purple: #F3E5F5;
+      --neu-shadow: 8px 8px 18px rgba(148,155,209,.22), -8px -8px 18px rgba(255,255,255,.85);
     }
 
     html { overflow-x: hidden; }
@@ -49,7 +52,7 @@
     /* ======== SPLASH SCREEN ======== */
     #splash-screen {
       position: fixed; inset: 0; z-index: 10000;
-      background: linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%);
+      background: linear-gradient(135deg, #8B5CF6 0%, #4F6EF7 50%, #1976D2 100%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       transition: opacity 0.6s ease, visibility 0.6s ease;
     }
@@ -75,7 +78,7 @@
     /* ======== LOGIN SCREEN ======== */
     #login-screen {
       position: fixed; inset: 0; z-index: 9999;
-      background: linear-gradient(135deg, #0D47A1 0%, #1565C0 100%);
+      background: linear-gradient(135deg, #8B5CF6 0%, #4F6EF7 100%);
       display: flex; align-items: center; justify-content: center;
       transition: opacity 0.5s ease, visibility 0.5s ease;
     }
@@ -88,9 +91,9 @@
     @keyframes loginSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     .login-header { text-align: center; margin-bottom: 32px; }
     .login-header .login-icon {
-      width: 70px; height: 70px; background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+      width: 70px; height: 70px; background: linear-gradient(135deg, var(--blue) 0%, #8B5CF6 100%);
       border-radius: 18px; display: flex; align-items: center; justify-content: center;
-      font-size: 36px; color: #fff; margin: 0 auto 16px; box-shadow: 0 8px 20px rgba(21,101,192,0.3);
+      font-size: 36px; color: #fff; margin: 0 auto 16px; box-shadow: 0 8px 20px rgba(79,110,247,0.3);
     }
     .login-header h2 { font-family: var(--poppins); font-size: 24px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
     .login-header p { font-size: 13px; color: var(--dark-grey); }
@@ -106,11 +109,11 @@
     .login-input-wrap .login-input { padding-left: 44px; }
     .login-btn {
       width: 100%; padding: 14px; border: none; border-radius: 12px;
-      background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%);
+      background: linear-gradient(135deg, var(--blue) 0%, #8B5CF6 100%);
       color: #fff; font-family: var(--poppins); font-size: 15px; font-weight: 700;
       cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;
     }
-    .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(21,101,192,0.4); }
+    .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(79,110,247,0.4); }
     .login-error {
       display: none; background: #FFEBEE; color: var(--red); padding: 10px 14px;
       border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 16px;
@@ -126,7 +129,7 @@
     #sidebar { position: fixed; top: 0; left: 0; width: 230px; height: 100%; background: var(--light); z-index: 2000; font-family: var(--lato); transition: .3s ease; overflow-x: hidden; scrollbar-width: none; display: flex; flex-direction: column; }
     #sidebar::-webkit-scrollbar { display: none; }
     #sidebar.hide { width: 60px; }
-    .sidebar-brand { height: 64px; display: flex; align-items: center; padding: 0 12px; background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%); color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; overflow: hidden; flex-shrink: 0; }
+    .sidebar-brand { height: 64px; display: flex; align-items: center; padding: 0 12px; background: linear-gradient(135deg, var(--blue) 0%, #8B5CF6 100%); color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; overflow: hidden; flex-shrink: 0; }
     .sidebar-brand i { font-size: 26px; min-width: 36px; margin-right: 10px; }
     #sidebar.hide .sidebar-brand span { display: none; }
     .side-menu { width: 100%; padding: 8px 0; flex: 1; overflow-y: auto; }
@@ -202,8 +205,8 @@
     /* ── JOGOS TABLE ── */
     .jogos-grid { display: grid; gap: 14px; }
     .jogo-card { background: var(--light); border-radius: 14px; border: 2px solid var(--grey); overflow: hidden; transition: .2s; }
-    .jogo-card:hover { border-color: var(--blue); box-shadow: 0 4px 16px rgba(21,101,192,.1); }
-    .jogo-header { background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%); color: #fff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; letter-spacing: .5px; }
+    .jogo-card:hover { border-color: var(--blue); box-shadow: 0 4px 16px rgba(79,110,247,.1); }
+    .jogo-header { background: linear-gradient(135deg, var(--blue) 0%, #8B5CF6 100%); color: #fff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; letter-spacing: .5px; }
     .jogo-sport-badge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,.2); }
     .jogo-body { padding: 14px 16px; }
     .jogo-equipes { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -230,7 +233,7 @@
     .jogo-footer { padding: 10px 16px; border-top: 1px solid var(--grey); display: flex; gap: 8px; justify-content: flex-end; }
     .btn { padding: 7px 18px; border-radius: 30px; border: none; font-family: var(--poppins); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: .2s; }
     .btn-primary { background: var(--blue); color: #fff; }
-    .btn-primary:hover { background: #0D47A1; }
+    .btn-primary:hover { background: #8B5CF6; }
     .btn-success { background: var(--green); color: #fff; }
     .btn-success:hover { background: #1B5E20; }
     .btn-danger { background: var(--red); color: #fff; }
@@ -246,7 +249,7 @@
 
     /* ── ATLETA DESTAQUE ── */
     .destaques-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-    .destaque-card { background: linear-gradient(135deg, var(--blue) 0%, #0D47A1 100%); border-radius: 16px; padding: 20px; color: #fff; position: relative; overflow: hidden; }
+    .destaque-card { background: linear-gradient(135deg, var(--blue) 0%, #8B5CF6 100%); border-radius: 16px; padding: 20px; color: #fff; position: relative; overflow: hidden; }
     .destaque-card::before { content: '★'; position: absolute; right: 16px; top: 10px; font-size: 60px; opacity: .1; }
     .destaque-jogo { font-size: 11px; font-weight: 700; letter-spacing: .8px; opacity: .7; margin-bottom: 6px; }
     .destaque-nome { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
@@ -339,7 +342,7 @@
     .section-divider { height: 1px; background: var(--grey); margin: 20px 0; }
 
     /* volei/basquete color accent */
-    .sport-volei .jogo-header { background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%); }
+    .sport-volei .jogo-header { background: linear-gradient(135deg, #4F6EF7 0%, #8B5CF6 100%); }
     .sport-basquete .jogo-header { background: linear-gradient(135deg, #E65100 0%, #BF360C 100%); }
     .sport-basquete .set-input:focus, .sport-basquete .quarter-input:focus { border-color: var(--orange); }
     .sport-basquete .total-score { color: var(--orange); }
@@ -597,33 +600,35 @@ body.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.28); }
 
 body {
   background:
-    radial-gradient(circle at 0% 0%, rgba(21,101,192,.05), transparent 45%),
-    radial-gradient(circle at 100% 0%, rgba(200,150,12,.05), transparent 40%),
+    radial-gradient(circle at 0% 0%, rgba(79,110,247,.08), transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(139,92,246,.07), transparent 40%),
     var(--grey);
 }
 
-#content nav { backdrop-filter: blur(8px); background: rgba(249,249,249,.85); }
+#content nav { backdrop-filter: blur(8px); background: rgba(253,252,255,.8); }
 body.dark #content nav { background: rgba(15,15,31,.85); }
 
 .page-header h1 {
-  background: linear-gradient(135deg, var(--dark) 30%, var(--blue));
+  background: var(--accent-gradient);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   letter-spacing: -.3px;
 }
 
+/* Cartões em estilo soft-UI / neumorfismo: sem borda dura, só sombra
+   dupla suave (clara + escura) pra parecer que "emerge" do fundo. */
 .card {
-  box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 12px rgba(16,24,40,.03);
-  border: 1px solid rgba(16,24,40,.04);
-  transition: box-shadow .2s ease, border-color .2s ease;
+  box-shadow: var(--neu-shadow);
+  border: none;
+  transition: box-shadow .2s ease, transform .2s ease;
 }
-.card:hover { box-shadow: 0 4px 20px rgba(16,24,40,.07); border-color: rgba(16,24,40,.06); }
-body.dark .card { border-color: rgba(255,255,255,.05); box-shadow: 0 1px 2px rgba(0,0,0,.3); }
-body.dark .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+.card:hover { box-shadow: 10px 10px 22px rgba(148,155,209,.28), -10px -10px 22px rgba(255,255,255,.9); }
+body.dark .card { box-shadow: 8px 8px 18px rgba(0,0,0,.35), -6px -6px 14px rgba(255,255,255,.03); }
+body.dark .card:hover { box-shadow: 10px 10px 22px rgba(0,0,0,.45), -6px -6px 14px rgba(255,255,255,.04); }
 
 .btn { box-shadow: 0 1px 2px rgba(16,24,40,.05); transition: .18s ease; }
 .btn:active { transform: translateY(1px) scale(.98); }
-.btn-primary { box-shadow: 0 4px 14px rgba(21,101,192,.28); }
-.btn-primary:hover { box-shadow: 0 6px 18px rgba(21,101,192,.38); transform: translateY(-1px); }
+.btn-primary { background: var(--accent-gradient); box-shadow: 0 6px 16px rgba(79,110,247,.35); }
+.btn-primary:hover { box-shadow: 0 8px 20px rgba(79,110,247,.45); transform: translateY(-1px); filter: brightness(1.05); }
 .btn-success { box-shadow: 0 4px 14px rgba(46,125,50,.28); }
 .btn-success:hover { box-shadow: 0 6px 18px rgba(46,125,50,.38); transform: translateY(-1px); }
 .btn-danger { box-shadow: 0 4px 14px rgba(198,40,40,.28); }
@@ -631,13 +636,15 @@ body.dark .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.4); }
 .btn-gold { box-shadow: 0 4px 14px rgba(200,150,12,.28); }
 .btn-gold:hover { box-shadow: 0 6px 18px rgba(200,150,12,.38); transform: translateY(-1px); }
 
-#sidebar { box-shadow: 2px 0 12px rgba(16,24,40,.04); }
+#sidebar { box-shadow: 6px 0 20px rgba(148,155,209,.15); }
 body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
+.sidebar-brand { background: var(--accent-gradient) !important; }
+.side-menu li.active a { color: var(--blue); }
 .side-menu li a { transition: .18s ease; }
 .side-menu li.active a i { transform: scale(1.08); }
 
 .form-control, .form-select, .form-input { transition: border-color .18s ease, background .18s ease, box-shadow .18s ease; }
-.form-control:focus { box-shadow: 0 0 0 3px rgba(21,101,192,.12); }
+.form-control:focus { box-shadow: 0 0 0 3px rgba(79,110,247,.12); }
 
 .jogo-card, .destaque-card { box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 
@@ -743,7 +750,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
     </div>
     <div class="profile-wrap">
       <a href="javascript:void(0)" class="profile" id="profileIcon">
-        <img src="https://placehold.co/60x60/1565C0/fff?text=ADM" alt="Admin">
+        <img src="https://placehold.co/60x60/4F6EF7/fff?text=ADM" alt="Admin">
       </a>
       <div class="profile-dropdown" id="profileMenu">
         <ul>
@@ -768,7 +775,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
       </div>
 
       <!-- ═══ HERO ═══ -->
-      <div style="background:linear-gradient(120deg,#0D47A1 0%,#1565C0 42%,#0d47a1 68%,#C8960C 130%);border-radius:20px;padding:26px 26px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(21,101,192,.25);">
+      <div style="background:linear-gradient(120deg,#8B5CF6 0%,#4F6EF7 42%,#0d47a1 68%,#C8960C 130%);border-radius:20px;padding:26px 26px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(79,110,247,.25);">
         <div style="position:absolute;right:-30px;top:-30px;font-size:150px;opacity:.10;line-height:1;pointer-events:none;">🏆</div>
         <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:18px;">
           <div>
@@ -905,7 +912,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
 
       <!-- ═══ TELAS DA TV ═══ -->
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title" style="color:#1565C0"><i class='bx bx-slideshow'></i> Telas da TV — Rotação</div>
+        <div class="card-title" style="color:#4F6EF7"><i class='bx bx-slideshow'></i> Telas da TV — Rotação</div>
         <p style="font-size:12px;color:var(--dark-grey);margin:0 0 16px;">Selecione quais telas vão rodar na TV. As telas de Campeão ativam automaticamente quando houver resultado.</p>
         <div id="tv-scene-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -934,11 +941,11 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
 
       <!-- ═══ TELAS DA TV — VÔLEI ═══ -->
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title" style="color:#1565C0"><i class='bx bx-tv'></i> Telas da TV — Vôlei</div>
+        <div class="card-title" style="color:#4F6EF7"><i class='bx bx-tv'></i> Telas da TV — Vôlei</div>
         <p style="font-size:12px;color:var(--dark-grey);margin:0 0 16px;">Selecione quais telas vão rodar na TV de vôlei.</p>
         <div id="tvSceneGridVolei" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <button class="btn btn-primary" style="background:#1565C0;border-color:#1565C0;" onclick="salvarCenasTvVolei()"><i class='bx bx-save'></i> Salvar Seleção</button>
+          <button class="btn btn-primary" style="background:#4F6EF7;border-color:#4F6EF7;" onclick="salvarCenasTvVolei()"><i class='bx bx-save'></i> Salvar Seleção</button>
           <button class="btn" style="background:#7C3AED;color:#fff;" onclick="gerarLinkTvVolei()"><i class='bx bx-link-external'></i> Gerar Link TV</button>
           <button class="btn" style="background:rgba(255,255,255,.08);color:var(--text);" onclick="abrirTvVolei()"><i class='bx bx-tv'></i> Abrir TV</button>
         </div>
@@ -1004,7 +1011,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title" style="color:var(--gold)"><i class='bx bxs-trophy'></i> Pódio Final</div>
         <div style="display:flex;gap:6px;margin-bottom:14px;">
-          <button id="podioSportVolei" onclick="setPodioSport('volei')" style="flex:1;padding:8px;border-radius:8px;border:none;background:#1565C0;color:#fff;font-weight:700;font-size:12px;cursor:pointer;">🏐 Vôlei</button>
+          <button id="podioSportVolei" onclick="setPodioSport('volei')" style="flex:1;padding:8px;border-radius:8px;border:none;background:#4F6EF7;color:#fff;font-weight:700;font-size:12px;cursor:pointer;">🏐 Vôlei</button>
           <button id="podioSportBasq" onclick="setPodioSport('basquete')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ccc;background:#f5f5f5;color:#666;font-weight:700;font-size:12px;cursor:pointer;">🏀 Basquete</button>
         </div>
         <div id="podioAutoStatus" style="display:none;font-size:12px;margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(72,187,120,.12);color:#48bb78;border:1px solid rgba(72,187,120,.3);"></div>
@@ -1175,7 +1182,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
             <div class="card-title" style="margin-bottom:0">Melhores do Campeonato — Vôlei</div>
             <div style="font-size:12px;color:var(--dark-grey)">MVP, Melhor Levantador, Melhor Ponteiro e Melhor Líbero. Aparecem na TV e no app.</div>
           </div>
-          <button onclick="loadPremiacaoVolei(true)" style="margin-left:auto;background:#1565C0;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
+          <button onclick="loadPremiacaoVolei(true)" style="margin-left:auto;background:#4F6EF7;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
         </div>
         <div id="premiacao-grid-volei" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;">
           <div class="empty-state" style="grid-column:1/-1"><i class='bx bxs-trophy'></i><p>Configure VOLEI_APOIO_SCRIPT_URL para carregar.</p></div>
@@ -1229,7 +1236,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
             <div class="card-title" style="margin-bottom:0">Atleta da Galera — Vôlei</div>
             <div style="font-size:12px;color:var(--dark-grey)">Top 5 mais votados pelo público</div>
           </div>
-          <button onclick="carregarRankingGaleraVolei()" style="margin-left:auto;background:#1565C0;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
+          <button onclick="carregarRankingGaleraVolei()" style="margin-left:auto;background:#4F6EF7;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">↻ Atualizar</button>
         </div>
         <div id="adminGaleraRankingVolei" style="font-size:13px;color:var(--dark-grey);text-align:center;padding:20px">Clique em Atualizar para carregar</div>
       </div>
@@ -1245,14 +1252,14 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
         <button class="refresh-btn" onclick="loadFeedbackDashboard(true)"><i class='bx bx-refresh'></i> Atualizar</button>
       </div>
 
-      <div class="card" style="margin-bottom:16px;background:linear-gradient(120deg,#0D47A1,#1565C0);color:#fff">
+      <div class="card" style="margin-bottom:16px;background:linear-gradient(120deg,#8B5CF6,#4F6EF7);color:#fff">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div style="font-size:30px">📋</div>
           <div style="flex:1;min-width:220px">
             <div style="font-weight:800;font-size:15px">Link do formulário para enviar às pessoas</div>
             <div style="font-size:12px;opacity:.85;margin-top:2px" id="feedbackFormLinkText">Cole o link do formulário aqui embaixo assim que criar (ou me envie que eu configuro).</div>
           </div>
-          <a id="feedbackFormLinkBtn" href="#" target="_blank" rel="noopener" style="background:#fff;color:#0D47A1;font-weight:800;font-size:12px;padding:10px 16px;border-radius:10px;text-decoration:none;display:none">Abrir Formulário</a>
+          <a id="feedbackFormLinkBtn" href="#" target="_blank" rel="noopener" style="background:#fff;color:#8B5CF6;font-weight:800;font-size:12px;padding:10px 16px;border-radius:10px;text-decoration:none;display:none">Abrir Formulário</a>
         </div>
       </div>
 
@@ -1431,7 +1438,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
       </div>
 
       <!-- Seletor de jogo -->
-      <div class="card" id="sumulaSeletorCard" style="background:linear-gradient(135deg,#0d1f5c,#1565c0);color:#fff">
+      <div class="card" id="sumulaSeletorCard" style="background:linear-gradient(135deg,#0d1f5c,#4F6EF7);color:#fff">
         <div class="card-title" style="color:#fff"><i class='bx bxs-volleyball'></i> Escolher jogo</div>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
           <div class="form-group" style="flex:1;min-width:260px;margin:0">
@@ -1571,7 +1578,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
         <button class="refresh-btn" onclick="loadEdicoesDashboard(true)"><i class='bx bx-refresh'></i> Atualizar</button>
       </div>
 
-      <div class="card" style="margin-bottom:20px;background:linear-gradient(120deg,#0D47A1,#1565C0);color:#fff">
+      <div class="card" style="margin-bottom:20px;background:linear-gradient(120deg,#8B5CF6,#4F6EF7);color:#fff">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div style="font-size:30px">🗂️</div>
           <div>
@@ -1712,7 +1719,7 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
         <!-- Masculino -->
         <div id="classHandMasc">
           <div class="card">
-            <div class="card-title" style="color:#1565C0"><i class='bx bxs-hand-right'></i> Classificação Masculino</div>
+            <div class="card-title" style="color:#4F6EF7"><i class='bx bxs-hand-right'></i> Classificação Masculino</div>
             <div class="hand-classif-wrap">
               <div>
                 <div class="hand-grupo-title">🔵 Grupo A</div>
@@ -2552,7 +2559,7 @@ function _fbAvg(nums) {
 // já que isso não dá pra calcular sozinho a partir da planilha).
 const EDICOES_META = {
   BASQUETE: { emoji: '🏀', titulo: '1ª Edição — Supercopa de Basquete', ano: '2026', duracaoMin: 905, gradiente: 'linear-gradient(120deg,#7a1f1f,#c8960c)' },
-  VOLEI:    { emoji: '🏐', titulo: 'Supercopa de Vôlei', ano: '2026', duracaoMin: null, gradiente: 'linear-gradient(120deg,#0D47A1,#1565C0)' }
+  VOLEI:    { emoji: '🏐', titulo: 'Supercopa de Vôlei', ano: '2026', duracaoMin: null, gradiente: 'linear-gradient(120deg,#8B5CF6,#4F6EF7)' }
 };
 function metaParaEdicao(edicao) {
   if (/basquete/i.test(edicao)) return EDICOES_META.BASQUETE;
@@ -2850,7 +2857,7 @@ async function loadFeedbackDashboard(manual) {
       type: 'bar',
       data: {
         labels: ['Organização','Arbitragem','App','Nota Geral','Recomendaria'],
-        datasets: [{ data: [org, arb, app, notaGeral, _fbAvg(npsVals)].map(n => n !== null ? +n.toFixed(1) : 0), backgroundColor: ['#F4C542','#7C3AED','#1565C0','#22c55e','#f97316'], borderRadius: 8 }]
+        datasets: [{ data: [org, arb, app, notaGeral, _fbAvg(npsVals)].map(n => n !== null ? +n.toFixed(1) : 0), backgroundColor: ['#F4C542','#7C3AED','#4F6EF7','#22c55e','#f97316'], borderRadius: 8 }]
       },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10 } } }
     });
@@ -2862,7 +2869,7 @@ async function loadFeedbackDashboard(manual) {
     if (_chartFbTime) _chartFbTime.destroy();
     _chartFbTime = new Chart(document.getElementById('chartFbTime'), {
       type: 'doughnut',
-      data: { labels: timeLabels, datasets: [{ data: timeData, backgroundColor: ['#1565C0','#F4C542','#7C3AED','#22c55e','#f97316','#ef4444'] }] },
+      data: { labels: timeLabels, datasets: [{ data: timeData, backgroundColor: ['#4F6EF7','#F4C542','#7C3AED','#22c55e','#f97316','#ef4444'] }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
 
@@ -2929,7 +2936,7 @@ async function carregarRankingGaleraVolei() {
     const sorted = (data.ranking || []).slice(0, 5);
 
     const medals = ['🥇','🥈','🥉'];
-    const color = '#1565C0';
+    const color = '#4F6EF7';
     let html = '';
     if (!sorted.length) {
       html = `<div style="text-align:center;padding:12px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#999;">Nenhum voto registrado</div>`;
@@ -3053,7 +3060,7 @@ async function loadClassHandebol(naipe) {
   if (!naipe) { loadClassHandebol('masc'); loadClassHandebol('fem'); return; }
   const sufixo   = naipe === 'fem' ? '-Fem' : '';
   const tbodySufx = naipe === 'fem' ? 'Fem' : 'Masc';
-  const cor      = naipe === 'fem' ? '#C2185B' : '#1565C0';
+  const cor      = naipe === 'fem' ? '#C2185B' : '#4F6EF7';
   try {
     const res  = await fetch(HAND_API(`'Fase de Grupos${sufixo}'!A5:S7`));
     const data = await res.json();
@@ -5332,7 +5339,7 @@ function updateStats() {
 }
 
 const DASH_SPORTS = [
-  { key: 'volei',    label: 'Vôlei',    icon: 'bx-volleyball',    color: '#1565C0', light: 'rgba(21,101,192,.10)',  page: 'volei',    deadline: new Date('2026-11-28T08:00:00') },
+  { key: 'volei',    label: 'Vôlei',    icon: 'bx-volleyball',    color: '#4F6EF7', light: 'rgba(79,110,247,.10)',  page: 'volei',    deadline: new Date('2026-11-28T08:00:00') },
   { key: 'basquete', label: 'Basquete', icon: 'bxs-basketball',   color: '#FF6B00', light: 'rgba(255,107,0,.10)',   page: 'basquete', deadline: new Date('2026-07-25T08:00:00') },
   { key: 'handebol', label: 'Handebol', icon: 'bx-handball',      color: '#1B5E20', light: 'rgba(27,94,32,.10)',    page: 'handebol', deadline: null }
 ];
@@ -5450,7 +5457,7 @@ async function renderChartInscricoesPorDia() {
     data: {
       labels: labels,
       datasets: [
-        { label: 'Novas inscrições', data: dias.map(d => porDia[d]), borderColor: '#1565C0', backgroundColor: 'rgba(21,101,192,.12)', tension: .3, fill: true, pointRadius: 3, yAxisID: 'y' },
+        { label: 'Novas inscrições', data: dias.map(d => porDia[d]), borderColor: '#4F6EF7', backgroundColor: 'rgba(79,110,247,.12)', tension: .3, fill: true, pointRadius: 3, yAxisID: 'y' },
         { label: 'Acumulado', data: acumuladoData, borderColor: '#c8960c', borderDash: [5, 4], tension: .3, pointRadius: 2, yAxisID: 'y' }
       ]
     },
@@ -5476,7 +5483,7 @@ async function renderChartTimesPorEstado() {
   if (_chartTimesPorEstado) _chartTimesPorEstado.destroy();
   _chartTimesPorEstado = new Chart(canvas, {
     type: 'bar',
-    data: { labels: labels, datasets: [{ data: labels.map(l => porEstado[l]), backgroundColor: '#1565C0', borderRadius: 8, maxBarThickness: 46 }] },
+    data: { labels: labels, datasets: [{ data: labels.map(l => porEstado[l]), backgroundColor: '#4F6EF7', borderRadius: 8, maxBarThickness: 46 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
@@ -5500,7 +5507,7 @@ async function renderChartTimesPorCidade() {
   if (_chartTimesPorCidade) _chartTimesPorCidade.destroy();
   _chartTimesPorCidade = new Chart(canvas, {
     type: 'bar',
-    data: { labels: labels, datasets: [{ data: labels.map(l => porCidade[l]), backgroundColor: '#E65100', borderRadius: 8, maxBarThickness: 46 }] },
+    data: { labels: labels, datasets: [{ data: labels.map(l => porCidade[l]), backgroundColor: '#8B5CF6', borderRadius: 8, maxBarThickness: 46 }] },
     options: {
       indexAxis: 'y',
       responsive: true, maintainAspectRatio: false,
@@ -5542,7 +5549,7 @@ async function renderChartEngajamento() {
   const dados = await loadDashEngajamento();
   const cats = [
     { label: 'Acessos ao App', valor: dados.acessos, color: '#00897B', icon: 'bx-user' },
-    { label: 'App Instalado', valor: dados.instalado, color: '#1565C0', icon: 'bx-mobile-alt' },
+    { label: 'App Instalado', valor: dados.instalado, color: '#4F6EF7', icon: 'bx-mobile-alt' },
     { label: 'Notificações Ativas', valor: dados.notif, color: '#4A148C', icon: 'bxs-bell' },
     { label: 'Quiz Respondido', valor: dados.quiz, color: '#7C3AED', icon: 'bx-brain' },
     { label: 'Votos na Galera', valor: dados.galera, color: '#E65100', icon: 'bxs-like' }
@@ -5647,7 +5654,7 @@ async function renderChartAcessosPeriodo() {
     data: {
       labels: labels,
       datasets: [
-        { label: 'App', data: app, borderColor: '#1565C0', backgroundColor: 'rgba(21,101,192,.12)', tension: .3, fill: true, pointRadius: 3 },
+        { label: 'App', data: app, borderColor: '#4F6EF7', backgroundColor: 'rgba(79,110,247,.12)', tension: .3, fill: true, pointRadius: 3 },
         { label: 'Site', data: site, borderColor: '#E65100', backgroundColor: 'rgba(230,81,0,.10)', tension: .3, fill: true, pointRadius: 3 }
       ]
     },
@@ -5664,7 +5671,7 @@ async function renderChartAcessosPeriodo() {
   if (legend) {
     legend.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;background:var(--light);border-radius:10px;padding:8px 10px;">
-        <div style="width:30px;height:30px;border-radius:8px;background:#1565C022;color:#1565C0;display:flex;align-items:center;justify-content:center;font-size:15px;"><i class='bx bx-mobile-alt'></i></div>
+        <div style="width:30px;height:30px;border-radius:8px;background:#4F6EF722;color:#4F6EF7;display:flex;align-items:center;justify-content:center;font-size:15px;"><i class='bx bx-mobile-alt'></i></div>
         <div><div style="font-size:15px;font-weight:800;color:var(--dark);line-height:1;">${totalApp}</div><div style="font-size:9px;color:var(--dark-grey);">Acessos ao App (período)</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;background:var(--light);border-radius:10px;padding:8px 10px;">
@@ -5773,15 +5780,15 @@ function initTvSceneGrid() {
   grid.innerHTML = TV_SCENES_DEF.map(s => {
     const on = saved.includes(s.id);
     return `<div id="tvcard-${s.id}" onclick="toggleTvScene('${s.id}')" style="
-        cursor:pointer;padding:14px 16px;border-radius:14px;border:2px solid ${on?'#1565C0':'#e0e0e0'};
-        background:${on?'rgba(21,101,192,.07)':'#fafafa'};transition:.2s;user-select:none;">
+        cursor:pointer;padding:14px 16px;border-radius:14px;border:2px solid ${on?'#4F6EF7':'#e0e0e0'};
+        background:${on?'rgba(79,110,247,.07)':'#fafafa'};transition:.2s;user-select:none;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
         <span style="font-size:22px;">${s.icon}</span>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px;color:${on?'#1565C0':'#333'}">${s.label}</div>
+          <div style="font-weight:700;font-size:13px;color:${on?'#4F6EF7':'#333'}">${s.label}</div>
         </div>
-        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'#1565C0':'#ccc'};
-            background:${on?'#1565C0':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'#4F6EF7':'#ccc'};
+            background:${on?'#4F6EF7':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           ${on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':''}
         </div>
       </div>
@@ -5811,14 +5818,14 @@ function toggleTvScene(id) {
   const card = document.getElementById('tvcard-' + id);
   if (!card) return;
   const on = scenes.includes(id);
-  card.style.borderColor = on ? '#1565C0' : '#e0e0e0';
-  card.style.background  = on ? 'rgba(21,101,192,.07)' : '#fafafa';
+  card.style.borderColor = on ? '#4F6EF7' : '#e0e0e0';
+  card.style.background  = on ? 'rgba(79,110,247,.07)' : '#fafafa';
   const title = card.querySelector('div > div > div');
-  if (title) title.style.color = on ? '#1565C0' : '#333';
+  if (title) title.style.color = on ? '#4F6EF7' : '#333';
   const circle = card.querySelectorAll('div > div')[1];
   if (circle) {
-    circle.style.borderColor  = on ? '#1565C0' : '#ccc';
-    circle.style.background   = on ? '#1565C0' : 'transparent';
+    circle.style.borderColor  = on ? '#4F6EF7' : '#ccc';
+    circle.style.background   = on ? '#4F6EF7' : 'transparent';
     circle.innerHTML = on ? '<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>' : '';
   }
 }
@@ -5836,7 +5843,7 @@ function gerarLinkTv() {
   box.style.display = '';
   box.innerHTML = `<strong>Link para a TV:</strong><br>${url}<br>
     <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('Link copiado!'))"
-      style="margin-top:8px;padding:6px 14px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">
+      style="margin-top:8px;padding:6px 14px;background:#4F6EF7;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">
       📋 Copiar Link
     </button>`;
 }
@@ -5998,7 +6005,7 @@ let _podioSport = 'volei';
 function setPodioSport(s) {
   _podioSport = s;
   const bv = document.getElementById('podioSportVolei'), bb = document.getElementById('podioSportBasq');
-  if (bv) { bv.style.background = s==='volei'?'#1565C0':'#f5f5f5'; bv.style.color = s==='volei'?'#fff':'#666'; bv.style.border = s==='volei'?'none':'1px solid #ccc'; }
+  if (bv) { bv.style.background = s==='volei'?'#4F6EF7':'#f5f5f5'; bv.style.color = s==='volei'?'#fff':'#666'; bv.style.border = s==='volei'?'none':'1px solid #ccc'; }
   if (bb) { bb.style.background = s==='basquete'?'#C8960C':'#f5f5f5'; bb.style.color = s==='basquete'?'#fff':'#666'; bb.style.border = s==='basquete'?'none':'1px solid #ccc'; }
   // Carrega pódio salvo para esse esporte
   const cfg = state.config || {};
@@ -6209,15 +6216,15 @@ function initTvSceneGridVolei(){
   grid.innerHTML=VOLEI_TV_SCENES_DEF.map(sc=>{
     const on=_tvScenesVolei.has(sc.id);
     return `<div id="tvsv-${sc.id}" onclick="toggleTvSceneVolei('${sc.id}')" style="
-        cursor:pointer;padding:14px 16px;border-radius:14px;border:2px solid ${on?'#1565C0':'#e0e0e0'};
-        background:${on?'rgba(21,101,192,.07)':'#fafafa'};transition:.2s;user-select:none;">
+        cursor:pointer;padding:14px 16px;border-radius:14px;border:2px solid ${on?'#4F6EF7':'#e0e0e0'};
+        background:${on?'rgba(79,110,247,.07)':'#fafafa'};transition:.2s;user-select:none;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
         <span style="font-size:22px;">${sc.icon}</span>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px;color:${on?'#1565C0':'#333'}">${sc.label}</div>
+          <div style="font-weight:700;font-size:13px;color:${on?'#4F6EF7':'#333'}">${sc.label}</div>
         </div>
-        <div id="chkv-${sc.id}" style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'#1565C0':'#ccc'};
-            background:${on?'#1565C0':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div id="chkv-${sc.id}" style="width:22px;height:22px;border-radius:50%;border:2px solid ${on?'#4F6EF7':'#ccc'};
+            background:${on?'#4F6EF7':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           ${on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':''}
         </div>
       </div>
@@ -6231,8 +6238,8 @@ function toggleTvSceneVolei(id){
   const card=document.getElementById('tvsv-'+id);
   const chk=document.getElementById('chkv-'+id);
   const on=_tvScenesVolei.has(id);
-  if(card){card.style.borderColor=on?'#1565C0':'#e0e0e0';card.style.background=on?'rgba(21,101,192,.07)':'#fafafa';const title=card.querySelector('div>div>div');if(title)title.style.color=on?'#1565C0':'#333';}
-  if(chk){chk.style.borderColor=on?'#1565C0':'#ccc';chk.style.background=on?'#1565C0':'transparent';chk.innerHTML=on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':'';}
+  if(card){card.style.borderColor=on?'#4F6EF7':'#e0e0e0';card.style.background=on?'rgba(79,110,247,.07)':'#fafafa';const title=card.querySelector('div>div>div');if(title)title.style.color=on?'#4F6EF7':'#333';}
+  if(chk){chk.style.borderColor=on?'#4F6EF7':'#ccc';chk.style.background=on?'#4F6EF7':'transparent';chk.innerHTML=on?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':'';}
 }
 
 function getTvScenesVolei(){return[..._tvScenesVolei];}
@@ -6250,7 +6257,7 @@ function gerarLinkTvVolei(){
   box.style.display='';
   box.innerHTML=`<strong>Link para a TV Vôlei:</strong><br>${url}<br>
     <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('Link copiado!'))"
-      style="margin-top:8px;padding:6px 14px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">
+      style="margin-top:8px;padding:6px 14px;background:#4F6EF7;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">
       📋 Copiar Link
     </button>`;
 }
