@@ -1469,6 +1469,14 @@ body.dark #sidebar { box-shadow: 2px 0 12px rgba(0,0,0,.3); }
         </div>
       </div>
 
+      <!-- Aviso de offline -->
+      <div class="card" id="sumulaOfflineBanner" style="display:none;background:#fff3cd;border:1px solid #ffe08a;color:#8a6100">
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700">
+          <i class='bx bx-wifi-off' style="font-size:20px"></i>
+          <span>Sem conexão com o servidor — mostrando o último placar salvo neste navegador. Os botões continuam ativos, mas as ações só valem quando a conexão voltar.</span>
+        </div>
+      </div>
+
       <!-- Cadastro de Times e Atletas -->
       <div id="cadastroAtletasCard" style="display:none">
         <div class="card">
@@ -4013,6 +4021,7 @@ function initSumulaLive() {
   document.getElementById('sumulaConsole').style.display = 'none';
   document.getElementById('sumulaConsole').innerHTML = '';
   document.getElementById('cadastroAtletasCard').style.display = 'none';
+  esconderOffline_();
   if (sumulaLivePollTimer) { clearInterval(sumulaLivePollTimer); sumulaLivePollTimer = null; }
 }
 
@@ -4108,11 +4117,37 @@ async function abrirOuCriarPartida() {
       abrirWizard(sumulaId, jogo);
     }
   } catch (ex) {
-    showToast('❌ Erro: ' + ex.message, 'error');
+    // Sem conexão — tenta abrir o último placar salvo localmente pra essa partida.
+    const cache = carregarCacheOffline_(sumulaId);
+    if (cache) {
+      document.getElementById('sumulaSeletorCard').style.display = 'none';
+      iniciarConsoleAoVivo(cache, true);
+      showToast('📡 Sem conexão — mostrando último placar salvo neste navegador.', 'error');
+    } else {
+      showToast('❌ Erro: ' + ex.message, 'error');
+    }
   } finally {
     showLoading(false);
   }
 }
+
+// ── Modo offline básico ──────────────────────────────────────
+// Guarda o último placar recebido com sucesso pra essa partida. Se a
+// conexão cair, a tela continua mostrando o último placar visto em
+// vez de travar/branquear.
+function salvarCacheOffline_(estado) {
+  try { localStorage.setItem('sumula_cache_' + estado.id, JSON.stringify({ estado: estado, salvoEm: Date.now() })); } catch (ex) { /* localStorage indisponível */ }
+}
+function carregarCacheOffline_(id) {
+  try {
+    const raw = localStorage.getItem('sumula_cache_' + id);
+    if (!raw) return null;
+    return JSON.parse(raw).estado;
+  } catch (ex) { return null; }
+}
+function mostrarOffline_() { const b = document.getElementById('sumulaOfflineBanner'); if (b) b.style.display = ''; }
+function esconderOffline_() { const b = document.getElementById('sumulaOfflineBanner'); if (b) b.style.display = 'none'; }
+let _pollFalhasSeguidas = 0;
 
 function abrirWizard(sumulaId, jogo) {
   const ehTeste = /^TESTE/i.test(sumulaId);
@@ -4263,10 +4298,11 @@ async function gerarSumula() {
 
 let sumulaAtletasCasa = [], sumulaAtletasVisitante = [];
 
-function iniciarConsoleAoVivo(estado) {
+function iniciarConsoleAoVivo(estado, offline) {
   sumulaLiveState = estado;
   document.getElementById('sumulaConsole').style.display = '';
   renderSumulaConsole();
+  if (offline) mostrarOffline_(); else { esconderOffline_(); salvarCacheOffline_(estado); }
   if (sumulaLivePollTimer) clearInterval(sumulaLivePollTimer);
   sumulaLivePollTimer = setInterval(pollSumulaLive, 4000);
   carregarAtletasSumulaAtual_();
@@ -4293,9 +4329,14 @@ async function pollSumulaLive() {
     const obsFocada = document.activeElement && document.activeElement.id === 'sumula-obs';
     if (res.ok && res.estado) {
       sumulaLiveState = res.estado;
+      salvarCacheOffline_(sumulaLiveState);
+      if (_pollFalhasSeguidas > 0) { _pollFalhasSeguidas = 0; esconderOffline_(); showToast('📶 Conexão de volta.'); }
       if (!obsFocada) renderSumulaConsole();
     }
-  } catch (ex) { /* silencioso, tenta de novo no próximo ciclo */ }
+  } catch (ex) {
+    _pollFalhasSeguidas++;
+    if (_pollFalhasSeguidas >= 2) mostrarOffline_();
+  }
 }
 
 // Mini-quadra ao vivo: rotacao vem em ordem [P1(saque),P2,P3,P4,P5,P6].
