@@ -6,33 +6,33 @@
   <title>Supercopa AFC — Painel Admin</title>
   <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@400;500;600;700&family=Anton&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Lato:wght@400;700&family=Poppins:wght@400;500;600;700&family=Anton&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     a { text-decoration: none; }
     li { list-style: none; }
 
     :root {
-      --poppins: 'Poppins', sans-serif;
-      --lato: 'Lato', sans-serif;
-      /* Paleta neutra + um único acento (padrão shadcn/ui, Linear,
-         Vercel etc.) — cinza estruturando tudo, azul só onde precisa
-         chamar atenção (ação primária, item ativo, link). Nada de
-         gradiente decorativo espalhado; borda fina no lugar de sombra
-         grande; cantos moderados em vez de blob bem arredondado. */
+      --poppins: 'DM Sans', 'Poppins', sans-serif;
+      --lato: 'DM Sans', 'Lato', sans-serif;
+      /* Referência: next-free.tailwind-admin.com (Tailwind admin
+         escuro) — navy #1C2536, cards levemente mais claros com
+         borda fina #333F55, acento indigo #5D87FF, DM Sans, cantos
+         de 8px (14px nos inputs). Escuro é o padrão; claro é a
+         mesma lógica invertida. */
       --light: #ffffff;
-      --blue: #1565C0;
-      --blue2: #0D47A1;
-      --blue3: #1976D2;
-      --accent2: #1976D2;
+      --blue: #5D87FF;
+      --blue2: #4570E8;
+      --blue3: #7B9EFF;
+      --accent2: #4570E8;
       --gold: #C8960C;
       --gold2: #a87b09;
       --accent-gradient: var(--blue);
       --accent-ink: #ffffff;
-      --light-blue: #EFF6FF;
-      --grey: #FAFAFA;
-      --dark-grey: #71717A;
-      --dark: #18181B;
+      --light-blue: #EEF2FF;
+      --grey: #F6F7FB;
+      --dark-grey: #64748B;
+      --dark: #1C2536;
       --red: #D32F2F;
       --green: #2E7D32;
       --light-green: #ECFDF3;
@@ -40,24 +40,24 @@
       --light-orange: #FFF3E0;
       --purple: #4A148C;
       --light-purple: #F3E5F5;
-      --stroke: #E4E4E7;
+      --stroke: #E5E9F1;
       --neu-shadow: 0 1px 2px rgba(0,0,0,.04);
-      --radius: 10px;
+      --radius: 8px;
     }
 
     html { overflow-x: hidden; }
 
-    /* Modo escuro — mesma lógica neutra, invertida. */
+    /* Modo escuro é o padrão do painel (igual à referência). */
     body.dark {
-      --light: #18181B;
-      --grey: #09090B;
-      --dark: #FAFAFA;
-      --dark-grey: #A1A1AA;
-      --light-blue: #172554;
+      --light: #212B42;
+      --grey: #1C2536;
+      --dark: #FFFFFF;
+      --dark-grey: #7C8FAC;
+      --light-blue: #26314A;
       --light-green: #0d2a0f;
       --light-orange: #2a1800;
       --light-purple: #1e0a2e;
-      --stroke: #27272A;
+      --stroke: #333F55;
     }
 
     body { background: var(--grey); overflow-x: hidden; font-family: var(--lato); }
@@ -65,7 +65,7 @@
     /* ======== SPLASH SCREEN ======== */
     #splash-screen {
       position: fixed; inset: 0; z-index: 10000;
-      background: linear-gradient(135deg, #0D47A1 0%, #1565C0 55%, #1976D2 150%);
+      background: linear-gradient(135deg, #1C2536 0%, #212B42 55%, #4570E8 150%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       transition: opacity 0.6s ease, visibility 0.6s ease;
     }
@@ -91,22 +91,22 @@
     /* ======== LOGIN SCREEN ======== */
     #login-screen {
       position: fixed; inset: 0; z-index: 9999;
-      background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+      background: linear-gradient(135deg, #1C2536 0%, #212B42 100%);
       display: flex; align-items: center; justify-content: center;
       transition: opacity 0.5s ease, visibility 0.5s ease;
     }
     #login-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
     .login-container {
-      background: var(--light); border-radius: 24px; padding: 40px 36px;
+      background: var(--light); border-radius: 16px; padding: 40px 36px;
       width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       animation: loginSlideUp 0.6s ease-out;
     }
     @keyframes loginSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     .login-header { text-align: center; margin-bottom: 32px; }
     .login-header .login-icon {
-      width: 70px; height: 70px; background: linear-gradient(135deg, var(--blue) 0%, #1976D2 100%);
-      border-radius: 18px; display: flex; align-items: center; justify-content: center;
-      font-size: 36px; color: #fff; margin: 0 auto 16px; box-shadow: 0 8px 20px rgba(79,110,247,0.3);
+      width: 70px; height: 70px; background: var(--blue);
+      border-radius: 14px; display: flex; align-items: center; justify-content: center;
+      font-size: 36px; color: #fff; margin: 0 auto 16px; box-shadow: 0 8px 20px rgba(93,135,255,0.3);
     }
     .login-header h2 { font-family: var(--poppins); font-size: 24px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
     .login-header p { font-size: 13px; color: var(--dark-grey); }
@@ -121,8 +121,8 @@
     .login-input-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--dark-grey); }
     .login-input-wrap .login-input { padding-left: 44px; }
     .login-btn {
-      width: 100%; padding: 14px; border: none; border-radius: 12px;
-      background: linear-gradient(135deg, var(--blue) 0%, #1976D2 100%);
+      width: 100%; padding: 14px; border: none; border-radius: 10px;
+      background: var(--blue);
       color: #fff; font-family: var(--poppins); font-size: 15px; font-weight: 700;
       cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;
     }
@@ -275,10 +275,8 @@
     .destaque-equipe { font-size: 13px; opacity: .8; display: flex; align-items: center; gap: 4px; }
     .destaque-form { display: flex; flex-direction: column; gap: 12px; }
     .form-group label { font-size: 12px; color: var(--dark-grey); font-weight: 600; margin-bottom: 4px; display: block; }
-    .form-control { padding: 10px 14px; border: 1.5px solid var(--grey); border-radius: 10px; font-size: 14px; color: var(--dark); background: var(--grey); outline: none; width: 100%; font-family: var(--poppins); transition: .2s; }
+    .form-control { padding: 10px 14px; border: 1px solid var(--stroke); border-radius: 14px; font-size: 14px; color: var(--dark); background: transparent; outline: none; width: 100%; font-family: var(--poppins); transition: .2s; }
     .form-control:focus { border-color: var(--blue); background: var(--light-blue); }
-    body.dark .form-control { background: #1a1a2e; border-color: #333; }
-    body.dark .form-control:focus { background: #0d1f3c; }
 
     /* ── SOCIAL / RANKING ── */
     .ranking-table { width: 100%; border-collapse: collapse; }
@@ -348,9 +346,8 @@
 
     /* dark overrides */
     body.dark .card, body.dark .jogo-card, body.dark .notif-composer, body.dark .notif-log-item, body.dark .noticia-card, body.dark .modal, body.dark #sidebar, body.dark #content nav, body.dark .notif-dropdown, body.dark .profile-dropdown { background: var(--light); }
-    body.dark .side-menu li.active { background: var(--grey); }
     body.dark .ranking-table tr:hover td { background: var(--grey); }
-    body.dark .set-input, body.dark .quarter-input, body.dark .total-row { background: #1a1a2e; border-color: #333; }
+    body.dark .set-input, body.dark .quarter-input, body.dark .total-row { background: var(--grey); border-color: var(--stroke); }
 
     /* empty state */
     .empty-state { text-align: center; padding: 40px; color: var(--dark-grey); }
@@ -625,7 +622,7 @@ body {
 }
 
 #content nav { backdrop-filter: blur(8px); background: rgba(255,255,255,.8); }
-body.dark #content nav { background: rgba(15,15,31,.85); }
+body.dark #content nav { background: rgba(33,43,66,.85); }
 
 .page-header h1 {
   color: var(--dark);
@@ -641,7 +638,7 @@ body.dark #content nav { background: rgba(15,15,31,.85); }
   transition: box-shadow .15s ease, border-color .15s ease;
 }
 .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); border-color: #D4D4D8; }
-body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3f3f46; }
+body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4b68; }
 
 .btn:active { transform: scale(.98); }
 .btn-primary { background: var(--blue); color: #fff; }
@@ -671,7 +668,7 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3f3
 <base target="_blank">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
-<body>
+<body class="dark">
 
 <!-- ======== SPLASH SCREEN ======== -->
 <div id="splash-screen">
@@ -741,7 +738,7 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3f3
       <input type="search" placeholder="Buscar...">
       <button><i class='bx bx-search'></i></button>
     </div>
-    <input type="checkbox" class="checkbox" id="switch-mode" hidden>
+    <input type="checkbox" class="checkbox" id="switch-mode" hidden checked>
     <label class="swith-lm" for="switch-mode">
       <i class="bx bxs-moon"></i>
       <i class="bx bx-sun"></i>
