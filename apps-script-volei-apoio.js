@@ -967,7 +967,10 @@ function registrarTimeout_(d) {
   const info = acharLinhaPartida_(sh, d.id);
   if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
   const estado = linhaParaEstado_(info.dados);
-  estado.timeouts.push({ equipe: d.equipe, set: estado.setAtual, hora: new Date().toLocaleTimeString('pt-BR') });
+  const equipe = d.equipe === 'B' ? 'B' : 'A';
+  const jaPedidos = estado.timeouts.filter(t => t.equipe === equipe && t.set === estado.setAtual).length;
+  if (jaPedidos >= 2) return { ok: false, erro: 'Essa equipe já pediu os 2 tempos técnicos permitidos neste set.' };
+  estado.timeouts.push({ equipe: equipe, set: estado.setAtual, hora: new Date().toLocaleTimeString('pt-BR') });
   estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
   salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;
