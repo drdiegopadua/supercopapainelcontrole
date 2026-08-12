@@ -1386,6 +1386,15 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
         <div id="insc-conheceu-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
       </div>
 
+      <div class="card" style="margin-bottom:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <i class='bx bxl-whatsapp' style="font-size:22px;color:#25D366"></i>
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:12px;font-weight:700;color:var(--dark)">Link de convite do grupo do WhatsApp</div>
+          <div style="font-size:11px;color:var(--dark-grey)">Cole aqui o link (chat.whatsapp.com/...) — fica salvo neste navegador e é usado no botão de WhatsApp de cada equipe.</div>
+        </div>
+        <input class="form-control" id="insc-whats-grupo-link" placeholder="https://chat.whatsapp.com/xxxxxxxx" style="flex:2;min-width:240px;margin:0" oninput="salvarLinkGrupoWhats_(this.value)">
+      </div>
+
       <div id="inscEmptyState" class="card" style="text-align:center;padding:40px;color:var(--dark-grey)">
         <i class='bx bx-id-card' style="font-size:32px"></i>
         <p style="margin-top:8px">Nenhuma inscrição carregada ainda. Configure o INSCRICAO_SCRIPT_URL e clique em Atualizar.</p>
@@ -1459,6 +1468,7 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
         <div id="modal-inscricao-body" style="display:flex;flex-direction:column;gap:10px"></div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="closeModal('modal-inscricao')">Fechar</button>
+          <button class="btn" id="modal-inscricao-btn-whats" style="background:#25D366;color:#fff" onclick="convidarGrupoWhatsapp_(window._modalInscricaoIdx)"><i class='bx bxl-whatsapp'></i> Convidar pro grupo</button>
         </div>
       </div>
     </div>
@@ -2216,7 +2226,7 @@ function navTo(page, el) {
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
   if (page === 'feedback') loadFeedbackDashboard();
-  if (page === 'inscricoes') loadInscricoesDashboard();
+  if (page === 'inscricoes') { carregarLinkGrupoWhats_(); loadInscricoesDashboard(); }
   if (page === 'sumulaLive') initSumulaLive();
   if (page === 'convite') initConvitePage();
   if (page === 'edicoes') loadEdicoesDashboard();
@@ -2805,6 +2815,7 @@ async function loadInscricoesDashboard(manual) {
             <div style="font-size:11px;color:var(--dark-grey);margin-top:2px">${i['Instagram'] ? '📷 ' + i['Instagram'] + ' · ' : ''}${aloj} · Conheceu via: ${i['Como conheceu a Supercopa'] || '—'}</div>
           </div>
           <span class="status-badge status-upcoming">${i['Status'] || 'Pendente'}</span>
+          <button class="btn btn-sm" style="background:#25D366;color:#fff;display:flex;align-items:center;gap:4px" onclick="event.stopPropagation();convidarGrupoWhatsapp_(${realIdx})" title="Convidar para o grupo do WhatsApp"><i class='bx bxl-whatsapp'></i></button>
           <i class='bx bx-chevron-right' style="font-size:20px;color:var(--dark-grey)"></i>
         </div>`;
     }).join('');
@@ -2816,9 +2827,42 @@ async function loadInscricoesDashboard(manual) {
   }
 }
 
+const WHATS_GRUPO_LINK_KEY_ = 'supercopa_whatsapp_grupo_link';
+
+function carregarLinkGrupoWhats_() {
+  const link = localStorage.getItem(WHATS_GRUPO_LINK_KEY_) || '';
+  const input = document.getElementById('insc-whats-grupo-link');
+  if (input) input.value = link;
+  return link;
+}
+
+function salvarLinkGrupoWhats_(valor) {
+  localStorage.setItem(WHATS_GRUPO_LINK_KEY_, (valor || '').trim());
+}
+
+function convidarGrupoWhatsapp_(idx) {
+  const i = (window._inscricoesCache || [])[idx];
+  if (!i) return;
+  const link = (localStorage.getItem(WHATS_GRUPO_LINK_KEY_) || '').trim();
+  if (!link) {
+    showToast('⚠️ Cole o link do grupo do WhatsApp no campo no topo da página primeiro.', 'error');
+    return;
+  }
+  const equipe = i['Nome da Equipe'] || 'sua equipe';
+  const responsavel = i['Nome do Responsável'] || '';
+  const numeroWhats = telefoneParaWhats_(i['Telefone/WhatsApp']);
+  if (!numeroWhats) {
+    showToast('⚠️ Essa equipe não tem telefone cadastrado.', 'error');
+    return;
+  }
+  const mensagem = `🏆 Olá, ${responsavel || 'tudo bem'}! Aqui é da organização da *Supercopa AFC 2026*.\n\nA equipe *${equipe}* está confirmada! Entra no grupo oficial pra ficar por dentro dos avisos, horários de jogo e informações importantes:\n${link}`;
+  window.open('https://wa.me/' + numeroWhats + '?text=' + encodeURIComponent(mensagem), '_blank');
+}
+
 function abrirDetalheInscricao(idx) {
   const i = (window._inscricoesCache || [])[idx];
   if (!i) return;
+  window._modalInscricaoIdx = idx;
   const campo = (label, valor, icone) => `
     <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f0f0f0">
       <i class='bx ${icone}' style="font-size:18px;color:var(--dark-grey);margin-top:1px"></i>
