@@ -817,7 +817,12 @@ function aplicarPontoNoEstado_(estado, equipe) {
   if (equipe === 'A') estado.pontosCasa++; else estado.pontosVisitante++;
   // .concat em vez de .push pra não mutar o array que já foi
   // guardado no snapshot de desfazer (senão o undo desfaria errado).
-  estado.historicoPontos = (estado.historicoPontos || []).concat([{ set: estado.setAtual, equipe: equipe }]);
+  // Guarda hora e placar resultante — usado no PDF pra mostrar o
+  // histórico ponto a ponto de cada set com horário.
+  estado.historicoPontos = (estado.historicoPontos || []).concat([{
+    set: estado.setAtual, equipe: equipe, hora: new Date().toLocaleTimeString('pt-BR'),
+    pontosCasa: estado.pontosCasa, pontosVisitante: estado.pontosVisitante
+  }]);
 
   let setFechado = false;
   const a = estado.pontosCasa, b = estado.pontosVisitante;
@@ -832,6 +837,22 @@ function aplicarPontoNoEstado_(estado, equipe) {
     if (estado.setsCasa >= 2 || estado.setsVisitante >= 2) estado.status = 'sets_completos';
   }
   return setFechado;
+}
+
+// O log de eventos (usado só pra "desfazer último evento") guardava
+// TODOS os snapshots da partida desde o início, sem limite — numa
+// partida de teste reaproveitada por várias sessões isso passou de
+// 50.000 caracteres numa única célula da planilha (limite do Sheets)
+// e toda gravação passou a falhar. O desfazer só usa o último
+// snapshot (rawEventos.pop()), então guardar mais que uns poucos é
+// desperdício puro — por isso o cap aqui.
+var EVENTOS_LOG_MAX_ = 10;
+function empurrarEventoLog_(rawEventos, estado) {
+  rawEventos.push(snapshotEstado_(estado));
+  if (rawEventos.length > EVENTOS_LOG_MAX_) {
+    rawEventos.splice(0, rawEventos.length - EVENTOS_LOG_MAX_);
+  }
+  return rawEventos;
 }
 
 function snapshotEstado_(estado) {
@@ -855,8 +876,7 @@ function registrarPonto_(d) {
 
   // snapshot para permitir desfazer
   const rawEventos = parseJson_(info.dados[PC.eventosLog], []);
-  rawEventos.push(snapshotEstado_(estado));
-  estado._eventosLog = rawEventos;
+  estado._eventosLog = empurrarEventoLog_(rawEventos, estado);
 
   const setFechado = aplicarPontoNoEstado_(estado, equipe);
 
@@ -881,8 +901,7 @@ function pontoMenos_(d) {
   const equipe = d.equipe === 'B' ? 'B' : 'A';
 
   const rawEventos = parseJson_(info.dados[PC.eventosLog], []);
-  rawEventos.push(snapshotEstado_(estado));
-  estado._eventosLog = rawEventos;
+  estado._eventosLog = empurrarEventoLog_(rawEventos, estado);
 
   if (equipe === 'A') estado.pontosCasa = Math.max(0, estado.pontosCasa - 1);
   else estado.pontosVisitante = Math.max(0, estado.pontosVisitante - 1);
@@ -1011,7 +1030,7 @@ function registrarCartao_(d) {
   const rawEventos = parseJson_(info.dados[PC.eventosLog], []);
   let setFechado = false;
   if (d.tipo === 'Vermelho' && estado.status === 'em_andamento') {
-    rawEventos.push(snapshotEstado_(estado));
+    empurrarEventoLog_(rawEventos, estado);
     const equipeAdversaria = d.equipe === 'A' ? 'B' : 'A';
     setFechado = aplicarPontoNoEstado_(estado, equipeAdversaria);
   }

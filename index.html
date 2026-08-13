@@ -4386,6 +4386,11 @@ async function pollSumulaLive() {
   if (_sumulaAcaoEmAndamento) return; // não pisa no update otimista de um clique em andamento
   try {
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaLiveState.id)).then(r => r.json());
+    // A partida pode ter começado a sofrer uma ação otimista (clique
+    // em ponto) enquanto essa requisição de poll estava em voo — se
+    // aplicássemos essa resposta agora, ela pisaria no placar recém
+    // atualizado com um valor desatualizado (o "sobe, desce, sobe nvo").
+    if (_sumulaAcaoEmAndamento) return;
     const obsFocada = document.activeElement && document.activeElement.id === 'sumula-obs';
     if (res.ok && res.estado) {
       sumulaLiveState = res.estado;
@@ -4956,6 +4961,47 @@ async function gerarPdfSumula(s) {
     const yFimA = tabelaEscalacao(MX, s.equipeCasa, s.elencoCasa, s.capitaoCasa);
     const yFimB = tabelaEscalacao(MX + colLarg + 6, s.equipeVisitante, s.elencoVisitante, s.capitaoVisitante);
     y = Math.max(yFimA, yFimB) + 8;
+
+    // ── HISTÓRICO DE PONTOS POR SET (hora + placar de cada ponto) ──
+    const histPontos = s.historicoPontos || [];
+    if (histPontos.length) {
+      // Súmulas geradas antes dessa versão não tinham hora/placar
+      // salvos em cada ponto — reconstrói o placar corrente contando
+      // pra não deixar essas em branco no PDF.
+      let runCasa = 0, runVisit = 0, runSet = histPontos[0].set;
+      const pontosComPlacar = histPontos.map(p => {
+        if (p.set !== runSet) { runCasa = 0; runVisit = 0; runSet = p.set; }
+        if (p.equipe === 'A') runCasa++; else runVisit++;
+        return {
+          set: p.set, equipe: p.equipe, hora: p.hora || '—',
+          pontosCasa: p.pontosCasa != null ? p.pontosCasa : runCasa,
+          pontosVisitante: p.pontosVisitante != null ? p.pontosVisitante : runVisit
+        };
+      });
+      const setsPresentes = [...new Set(pontosComPlacar.map(p => p.set))];
+      setsPresentes.forEach(numSet => {
+        const pontosDoSet = pontosComPlacar.filter(p => p.set === numSet);
+        if (y > 250) { doc.addPage(); y = 18; }
+        doc.setFontSize(8.5); doc.setFont(undefined, 'bold'); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
+        txt('HISTÓRICO DE PONTOS — SET ' + numSet, MX, y); y += 5;
+
+        const porLinha = 4, wCel = MW / porLinha;
+        for (let i = 0; i < pontosDoSet.length; i += porLinha) {
+          if (y > 283) { doc.addPage(); y = 18; }
+          const linha = pontosDoSet.slice(i, i + porLinha);
+          linha.forEach((p, ci) => {
+            const x = MX + ci * wCel;
+            const corA = p.equipe === 'A' ? [225, 235, 253] : [253, 237, 222];
+            box(x, y, wCel, 7, corA);
+            doc.setFontSize(6.8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
+            const nomeCurto = (p.equipe === 'A' ? (s.equipeCasa || 'Casa') : (s.equipeVisitante || 'Visit')).split(' ')[0];
+            txt((i + ci + 1) + '. ' + p.hora.slice(0, 5) + ' ' + nomeCurto + ' ' + p.pontosCasa + '-' + p.pontosVisitante, x + 1.5, y + 4.8);
+          });
+          y += 7;
+        }
+        y += 4;
+      });
+    }
 
     // ── OCORRÊNCIAS (cartões, substituições, tempos) ───────
     const ocorrencias = [];
