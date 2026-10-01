@@ -76,6 +76,14 @@ const LIMITE_COMISSAO = 2;
 const ABA_EQUIPES_PIN = 'EquipesPin';
 const HEADERS_EQUIPES_PIN = ['Equipe', 'PIN', 'Gerado em'];
 
+// ── CONFIRMAÇÃO DE PRESENÇA (equipe aceita o convite/termo) ───
+const ABA_CONFIRMACOES = 'Confirmacoes';
+const HEADERS_CONFIRMACOES = ['Equipe', 'Confirmado em', 'Termo Aceito'];
+
+// Prazo final pra equipe cadastrar/editar atletas pelo app (depois
+// disso só o painel admin consegue editar).
+const PRAZO_CADASTRO_ATLETAS = new Date('2026-11-27T13:00:00');
+
 // ── SÚMULA AO VIVO (console de arbitragem, dentro do painel) ──
 const ABA_PARTIDAS = 'Partidas';
 const PLACAR_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec';
@@ -296,6 +304,9 @@ function doPost(e) {
     if (acao === 'cadastrarAtletaApp') return okJson(cadastrarAtletaApp_(dados));
     if (acao === 'removerAtletaApp') return okJson(removerAtletaApp_(dados));
 
+    // CONFIRMAÇÃO DE PRESENÇA (equipe assina o termo pelo link do convite)
+    if (acao === 'confirmarPresenca') return okJson(confirmarPresenca_(dados));
+
     // CONSOLE DE ARBITRAGEM AO VIVO (com lock — várias fontes podem
     // escrever na mesma partida ao mesmo tempo: painel, 2º árbitro, poll)
     if (acao === 'criarPartida') return okJson(comLock_(() => criarPartida_(dados)));
@@ -337,6 +348,12 @@ function doGet(e) {
     if (action === 'atletasEquipe') return okJson({ ok: true, atletas: listarAtletasEquipe_((e.parameter && e.parameter.equipe) || '') });
     if (action === 'atletasTodos') return okJson({ ok: true, atletas: listarTodosAtletas_() });
     if (action === 'equipesConhecidas') return okJson({ ok: true, equipes: listarEquipesConhecidas_() });
+    // Só as equipes com PIN gerado (de verdade selecionadas/convidadas) — usado
+    // na tela de cadastro de atletas do app, pra não listar as ~40 inscrições.
+    if (action === 'equipesComPin') return okJson({ ok: true, equipes: listarEquipesComPin_() });
+    if (action === 'statusConfirmacao') return okJson(statusConfirmacao_((e.parameter && e.parameter.equipe) || ''));
+    // Só o painel usa isso (área administrativa) — lista quem já confirmou presença.
+    if (action === 'confirmacoes') return okJson({ ok: true, confirmacoes: listarConfirmacoes_() });
     if (action === 'temPinEquipe') return okJson({ ok: true, temPin: !!buscarPinEquipe_((e.parameter && e.parameter.equipe) || '') });
     // Só o painel usa isso (área administrativa) — devolve o PIN de verdade.
     if (action === 'verPinEquipeAdmin') return okJson({ ok: true, pin: buscarPinEquipe_((e.parameter && e.parameter.equipe) || '') });
@@ -1194,11 +1211,23 @@ function getAtletasSheet_() {
   return sh;
 }
 
+// Tipos aceitos: 'Atleta' (até 14 por equipe) e os dois papéis fixos
+// da comissão técnica, 'Técnico' e 'Auxiliar Técnico' (1 de cada,
+// até 2 no total). 'Comissão Técnica' genérico ainda é aceito como
+// entrada pra não quebrar registros antigos, mas vira 'Técnico'.
+function normalizarTipoAtleta_(tipoBruto) {
+  const t = (tipoBruto || '').toString().trim();
+  if (t === 'Técnico' || t === 'Auxiliar Técnico') return t;
+  if (t === 'Comissão Técnica') return 'Técnico';
+  return 'Atleta';
+}
+function ehComissaoTecnica_(tipo) { return tipo === 'Técnico' || tipo === 'Auxiliar Técnico' || tipo === 'Comissão Técnica'; }
+
 function cadastrarAtleta_(d) {
   const equipe = (d.equipe || '').toString().trim();
   const numero = (d.numero || '').toString().trim();
   const nome = (d.nome || '').toString().trim();
-  const tipo = (d.tipo || '').toString().trim() === 'Comissão Técnica' ? 'Comissão Técnica' : 'Atleta';
+  const tipo = normalizarTipoAtleta_(d.tipo);
   if (!equipe || !nome) return { ok: false, erro: 'Equipe e nome são obrigatórios.' };
 
   const sh = getAtletasSheet_();
@@ -1215,14 +1244,18 @@ function cadastrarAtleta_(d) {
     }
   }
 
-  const limite = tipo === 'Comissão Técnica' ? LIMITE_COMISSAO : LIMITE_ATLETAS;
-  const jaTem = rows.slice(1).filter(r =>
-    (r[0] || '').toString().trim().toLowerCase() === equipe.toLowerCase() &&
-    ((r[3] || 'Atleta').toString().trim() === tipo)
-  ).length;
-  if (jaTem >= limite) {
-    const rotulo = tipo === 'Comissão Técnica' ? 'membros da comissão técnica' : 'atletas';
-    return { ok: false, erro: 'Limite de ' + limite + ' ' + rotulo + ' já foi atingido pra essa equipe.' };
+  const ehComissao = ehComissaoTecnica_(tipo);
+  const linhasEquipe = rows.slice(1).filter(r => (r[0] || '').toString().trim().toLowerCase() === equipe.toLowerCase());
+
+  if (ehComissao) {
+    // Não deixa cadastrar dois "Técnico" ou dois "Auxiliar Técnico" na mesma equipe.
+    const jaTemEsseCargo = linhasEquipe.some(r => normalizarTipoAtleta_(r[3]) === tipo);
+    if (jaTemEsseCargo) return { ok: false, erro: 'Essa equipe já tem um(a) ' + tipo + ' cadastrado(a).' };
+    const totalComissao = linhasEquipe.filter(r => ehComissaoTecnica_(normalizarTipoAtleta_(r[3]))).length;
+    if (totalComissao >= LIMITE_COMISSAO) return { ok: false, erro: 'Limite de ' + LIMITE_COMISSAO + ' membros da comissão técnica já foi atingido pra essa equipe.' };
+  } else {
+    const totalAtletas = linhasEquipe.filter(r => normalizarTipoAtleta_(r[3]) === 'Atleta').length;
+    if (totalAtletas >= LIMITE_ATLETAS) return { ok: false, erro: 'Limite de ' + LIMITE_ATLETAS + ' atletas já foi atingido pra essa equipe.' };
   }
 
   const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
@@ -1318,12 +1351,100 @@ function gerarPinEquipe_(d) {
 
 function cadastrarAtletaApp_(d) {
   if (!verificarPin_(d.equipe, d.pin)) return { ok: false, erro: 'PIN incorreto. Confirme o PIN da sua equipe.' };
+  if (new Date() > PRAZO_CADASTRO_ATLETAS) return { ok: false, erro: 'Prazo de cadastro/edição de atletas encerrado em 27/11/2026 às 13h.' };
   return cadastrarAtleta_(d);
 }
 
 function removerAtletaApp_(d) {
   if (!verificarPin_(d.equipe, d.pin)) return { ok: false, erro: 'PIN incorreto. Confirme o PIN da sua equipe.' };
+  if (new Date() > PRAZO_CADASTRO_ATLETAS) return { ok: false, erro: 'Prazo de cadastro/edição de atletas encerrado em 27/11/2026 às 13h.' };
   return removerAtleta_(d);
+}
+
+// ============================================================
+//  EQUIPES COM PIN (só as efetivamente selecionadas/convidadas —
+//  usado no app pra não listar as ~40 inscrições, só quem recebeu
+//  convite de verdade) + escudo de cada uma (vem da aba Inscricoes)
+// ============================================================
+function listarEquipesComPin_() {
+  const sh = getEquipesPinSheet_();
+  if (sh.getLastRow() < 2) return [];
+  const nomes = sh.getDataRange().getValues().slice(1)
+    .map(r => (r[0] || '').toString().trim())
+    .filter(Boolean);
+
+  const escudos = {};
+  try {
+    const shInsc = getSS_().getSheetByName(ABA_INSCRICOES);
+    if (shInsc && shInsc.getLastRow() >= 2) {
+      const rows = shInsc.getDataRange().getValues();
+      const headers = rows[0];
+      const colEquipe = headers.indexOf('Nome da Equipe');
+      const colEscudo = headers.indexOf('Link do Escudo');
+      if (colEquipe >= 0 && colEscudo >= 0) {
+        rows.slice(1).forEach(r => {
+          const n = (r[colEquipe] || '').toString().trim();
+          if (n) escudos[n] = (r[colEscudo] || '').toString().trim();
+        });
+      }
+    }
+  } catch (ex) { /* escudo é opcional, não quebra o fluxo */ }
+
+  return nomes.sort().map(n => ({ equipe: n, escudo: escudos[n] || '' }));
+}
+
+// ============================================================
+//  CONFIRMAÇÃO DE PRESENÇA (equipe assina o termo depois do convite)
+// ============================================================
+function getConfirmacoesSheet_() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ABA_CONFIRMACOES);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_CONFIRMACOES);
+    sh.getRange(1, 1, 1, HEADERS_CONFIRMACOES.length).setValues([HEADERS_CONFIRMACOES]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function confirmarPresenca_(d) {
+  if (!verificarPin_(d.equipe, d.pin)) return { ok: false, erro: 'PIN incorreto. Confirme o PIN da sua equipe.' };
+  const equipe = (d.equipe || '').toString().trim();
+  const sh = getConfirmacoesSheet_();
+  const rows = sh.getDataRange().getValues();
+  const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  for (let i = 1; i < rows.length; i++) {
+    if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe.toLowerCase()) {
+      // Já tinha confirmado antes — só atualiza a data (reenvio do mesmo termo).
+      sh.getRange(i + 1, 2, 1, 2).setValues([[agora, 'Sim']]);
+      return { ok: true, confirmadoEm: agora };
+    }
+  }
+  sh.appendRow([equipe, agora, 'Sim']);
+  return { ok: true, confirmadoEm: agora };
+}
+
+function statusConfirmacao_(equipe) {
+  equipe = (equipe || '').toString().trim().toLowerCase();
+  if (!equipe) return { ok: true, confirmado: false };
+  const sh = getConfirmacoesSheet_();
+  if (sh.getLastRow() < 2) return { ok: true, confirmado: false };
+  const rows = sh.getDataRange().getValues().slice(1);
+  for (let i = 0; i < rows.length; i++) {
+    if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe) {
+      return { ok: true, confirmado: true, confirmadoEm: (rows[i][1] || '').toString() };
+    }
+  }
+  return { ok: true, confirmado: false };
+}
+
+function listarConfirmacoes_() {
+  const sh = getConfirmacoesSheet_();
+  if (sh.getLastRow() < 2) return [];
+  return sh.getDataRange().getValues().slice(1)
+    .map(r => ({ equipe: (r[0] || '').toString(), confirmadoEm: (r[1] || '').toString() }))
+    .filter(c => c.equipe)
+    .sort((a, b) => a.equipe.localeCompare(b.equipe));
 }
 
 function listarEquipesConhecidas_() {

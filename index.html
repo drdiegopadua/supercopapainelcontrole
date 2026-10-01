@@ -1537,6 +1537,15 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
           <a class="btn btn-success" id="cv-btn-whatsapp" href="#" target="_blank" style="width:100%;justify-content:center"><i class='bx bxl-whatsapp'></i> Abrir WhatsApp e Enviar</a>
         </div>
       </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div class="card-title" style="margin-bottom:0"><i class='bx bxs-check-shield'></i> Equipes que confirmaram presença</div>
+          <button class="refresh-btn" style="margin-left:auto" onclick="loadConfirmacoesPresenca(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+        </div>
+        <p style="font-size:11px;color:var(--dark-grey);margin:0 0 14px">Equipes que receberam o convite e assinaram o termo de compromisso na página de convite.</p>
+        <div id="cv-confirmacoes-list"><p style="color:var(--dark-grey);font-size:13px">Clique em Atualizar pra carregar.</p></div>
+      </div>
     </div>
 
     <!-- ─── EDIÇÕES ─── -->
@@ -2078,7 +2087,7 @@ function navTo(page, el) {
   if (page === 'feedback') loadFeedbackDashboard();
   if (page === 'inscricoes') { carregarLinkGrupoWhats_(); loadInscricoesDashboard(); }
   if (page === 'sumulaLive') initSumulaLive();
-  if (page === 'convite') initConvitePage();
+  if (page === 'convite') { initConvitePage(); loadConfirmacoesPresenca(); }
   if (page === 'edicoes') loadEdicoesDashboard();
   return false;
 }
@@ -3432,6 +3441,28 @@ async function initConvitePage() {
     ).join('');
   } catch (ex) {
     sel.innerHTML = '<option value="">Erro ao carregar inscrições</option>';
+  }
+}
+
+async function loadConfirmacoesPresenca(manual) {
+  const el = document.getElementById('cv-confirmacoes-list');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=confirmacoes').then(r => r.json());
+    const confirmacoes = (res && res.confirmacoes) || [];
+    el.innerHTML = confirmacoes.length
+      ? confirmacoes.map(c => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--grey);border-radius:10px;margin-bottom:8px">
+          <i class='bx bxs-check-circle' style="color:var(--green);font-size:18px"></i>
+          <div style="flex:1;font-weight:700;font-size:13px;color:var(--dark)">${c.equipe}</div>
+          <div style="font-size:11px;color:var(--dark-grey)">${c.confirmadoEm || '—'}</div>
+        </div>`).join('')
+      : '<p style="color:var(--dark-grey);font-size:13px">Nenhuma equipe confirmou presença ainda.</p>';
+    if (manual) showToast('✅ Confirmações atualizadas!');
+  } catch (ex) {
+    el.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar confirmações.</p>';
+    if (manual) showToast('❌ Erro ao carregar confirmações.', 'error');
   }
 }
 
