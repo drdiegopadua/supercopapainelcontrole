@@ -1362,16 +1362,20 @@ function removerAtletaApp_(d) {
 }
 
 // ============================================================
-//  EQUIPES COM PIN (só as efetivamente selecionadas/convidadas —
-//  usado no app pra não listar as ~40 inscrições, só quem recebeu
-//  convite de verdade) + escudo de cada uma (vem da aba Inscricoes)
+//  EQUIPES COM PIN E PRESENÇA CONFIRMADA (só quem recebeu o convite
+//  E assinou o termo de presença — usado no app pra não listar nem
+//  as ~40 inscrições nem as que só receberam o PIN mas ainda não
+//  confirmaram) + escudo de cada uma (vem da aba Inscricoes)
 // ============================================================
 function listarEquipesComPin_() {
   const sh = getEquipesPinSheet_();
   if (sh.getLastRow() < 2) return [];
+  const confirmadas = {};
+  listarConfirmacoes_().forEach(c => { confirmadas[c.equipe.toLowerCase()] = true; });
+
   const nomes = sh.getDataRange().getValues().slice(1)
     .map(r => (r[0] || '').toString().trim())
-    .filter(Boolean);
+    .filter(n => n && confirmadas[n.toLowerCase()]);
 
   const escudos = {};
   try {
