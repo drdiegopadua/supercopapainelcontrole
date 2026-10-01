@@ -355,10 +355,6 @@
     .sport-basquete .set-input:focus, .sport-basquete .quarter-input:focus { border-color: var(--orange); }
     .sport-basquete .total-score { color: var(--orange); }
     .sport-basquete .jogo-vs { color: var(--orange); }
-    .sport-handebol .jogo-header { background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%); }
-    .sport-handebol .set-input:focus { border-color: #2E7D32; }
-    .sport-handebol .total-score { color: #2E7D32; }
-    .sport-handebol .jogo-vs { color: #2E7D32; }
     .hand-classif-table { width:100%; border-collapse:collapse; font-size:13px; }
     .hand-classif-table th { background:#1B5E20; color:#fff; padding:8px 10px; text-align:center; }
     .hand-classif-table td { padding:8px 10px; text-align:center; border-bottom:1px solid var(--grey); }
@@ -1662,147 +1658,168 @@ async function gerarPdfSumula(s) {
   try {
     if (typeof window.jspdf === 'undefined') await carregarJsPdf();
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const MX = 14, MW = 182; // margem esquerda e largura útil
-    const AZUL = [13, 31, 92], CINZA = [90, 98, 115], LINHA = [190, 195, 205], FUNDO = [238, 242, 250];
+    // Formato paisagem A4 — o formato real das súmulas oficiais de
+    // vôlei (CBV/FIVB), bem mais largo que alto, pra caber o marcador
+    // de pontos lado a lado das duas equipes.
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const MX = 8, MW = 281; // margem e largura útil (A4 paisagem = 297x210mm)
+    const AZUL = [13, 31, 92], LARANJA = [180, 83, 9], CINZA = [90, 98, 115], LINHA = [190, 195, 205], FUNDO = [238, 242, 250];
 
     function box(x, y, w, h, fill) {
       if (fill) { doc.setFillColor(fill[0], fill[1], fill[2]); doc.rect(x, y, w, h, 'F'); }
       doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]); doc.rect(x, y, w, h);
     }
     function txt(text, x, y, opts) { doc.text(String(text == null ? '' : text), x, y, opts || {}); }
+    function novaPagina_() { doc.addPage('a4', 'l'); }
 
-    // Moldura da página, pra dar aquele acabamento de formulário oficial.
-    doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]);
-    doc.rect(MX - 6, 8, MW + 12, 279);
+    // Reconstrói hora/placar de cada ponto (súmulas antigas não
+    // guardavam isso em historicoPontos — sem essas colunas, some
+    // apenas a hora, o placar é recontado).
+    const histBruto = s.historicoPontos || [];
+    let runCasa = 0, runVisit = 0, runSet = histBruto[0] ? histBruto[0].set : 1;
+    const pontosComPlacar = histBruto.map(p => {
+      if (p.set !== runSet) { runCasa = 0; runVisit = 0; runSet = p.set; }
+      if (p.equipe === 'A') runCasa++; else runVisit++;
+      return {
+        set: p.set, equipe: p.equipe, hora: p.hora || '',
+        pontosCasa: p.pontosCasa != null ? p.pontosCasa : runCasa,
+        pontosVisitante: p.pontosVisitante != null ? p.pontosVisitante : runVisit
+      };
+    });
+
+    // Marcador de pontos no modelo oficial da súmula impressa: 48
+    // caixinhas numeradas em 4 colunas de 12 (1-12 / 13-24 / 25-36 /
+    // 37-48) — a caixa é "preenchida" conforme a equipe atinge aquele
+    // número de pontos, igual à súmula de papel onde se risca o
+    // número na sequência. Cada caixa preenchida também mostra a hora
+    // daquele ponto (um plus sobre a súmula de papel).
+    function desenharGradeOficial_(x0, y0, w, pontosArr, cor) {
+      const nRows = 12, nCols = 4, wCol = w / nCols, hRow = 4.15;
+      for (let col = 0; col < nCols; col++) {
+        for (let row = 0; row < nRows; row++) {
+          const num = col * nRows + row + 1;
+          const px = x0 + col * wCol, py = y0 + row * hRow;
+          const p = pontosArr[num - 1];
+          if (p) {
+            box(px, py, wCol, hRow, cor);
+            doc.setFont(undefined, 'bold'); doc.setFontSize(6); doc.setTextColor(255, 255, 255);
+            txt(num, px + 1.2, py + 2.9);
+            doc.setFont(undefined, 'normal'); doc.setFontSize(3.7);
+            txt(p.hora ? p.hora.slice(0, 5) : '', px + wCol - 1.2, py + 2.9, { align: 'right' });
+          } else {
+            box(px, py, wCol, hRow);
+            doc.setFont(undefined, 'normal'); doc.setFontSize(6); doc.setTextColor(190, 190, 190);
+            txt(num, px + 1.2, py + 2.9);
+          }
+        }
+      }
+      return y0 + nRows * hRow;
+    }
 
     // ── CABEÇALHO ──────────────────────────────────────────
-    box(MX, 12, MW, 20, AZUL);
-    doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(14);
-    txt('SUPERCOPA AFC 2026 — SÚMULA OFICIAL DE VOLEIBOL', MX + MW / 2, 20, { align: 'center' });
-    doc.setFontSize(9); doc.setFont(undefined, 'normal');
-    txt('Afonso Cláudio · ES', MX + MW / 2, 27, { align: 'center' });
+    box(MX, 8, MW, 11, AZUL);
+    doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(12.5);
+    txt('SUPERCOPA AFC 2026 — SÚMULA OFICIAL DE VOLEIBOL', MX + MW / 2, 15.3, { align: 'center' });
 
-    let y = 38;
-    doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
-    const colW = MW / 3;
-    [['JOGO', s.id], ['ÁRBITRO 1', s.arbitro1 || '—'], ['ÁRBITRO 2', s.arbitro2 || '—']].forEach((c, i) => {
-      box(MX + i * colW, y, colW, 14);
-      doc.setFontSize(7); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'bold');
-      txt(c[0], MX + i * colW + 3, y + 5);
-      doc.setFontSize(10); doc.setTextColor(20, 20, 20); doc.setFont(undefined, 'normal');
-      txt(c[1], MX + i * colW + 3, y + 11);
+    let y = 22.5;
+    const infoCols = [
+      ['JOGO', s.id], ['LOCAL', 'Afonso Cláudio · ES'], ['DATA/HORA', s.atualizadoEm || '—'],
+      ['ÁRBITRO 1', s.arbitro1 || '—'], ['ÁRBITRO 2', s.arbitro2 || '—'], ['APONTADOR(A)', s.apontador || '—']
+    ];
+    const wInfo = MW / infoCols.length;
+    infoCols.forEach((c, i) => {
+      box(MX + i * wInfo, y, wInfo, 11);
+      doc.setFontSize(6.3); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'bold');
+      txt(c[0], MX + i * wInfo + 2, y + 4.2);
+      doc.setFontSize(8); doc.setTextColor(20, 20, 20); doc.setFont(undefined, 'normal');
+      txt(c[1], MX + i * wInfo + 2, y + 8.7);
     });
-    y += 14;
-    [['APONTADOR(A)', s.apontador || '—'], ['DATA/HORA', s.atualizadoEm || '—']].forEach((c, i) => {
-      const w = MW / 2;
-      box(MX + i * w, y, w, 14);
-      doc.setFontSize(7); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'bold');
-      txt(c[0], MX + i * w + 3, y + 5);
-      doc.setFontSize(10); doc.setTextColor(20, 20, 20); doc.setFont(undefined, 'normal');
-      txt(c[1], MX + i * w + 3, y + 11);
-    });
-    y += 22;
+    y += 11;
 
-    // ── PLACAR POR SET ─────────────────────────────────────
+    // Faixa com o placar geral (sets ganhos) de cada equipe.
     const hs = s.historicoSets || [];
-    const nCols = 6; // Equipe, Set1, Set2, Set3, Sets, Vencedor
-    const wEquipe = 58, wSet = 20, wSets = 20, wVenc = MW - wEquipe - wSet * 3 - wSets;
-    const xs = [MX, MX + wEquipe, MX + wEquipe + wSet, MX + wEquipe + wSet * 2, MX + wEquipe + wSet * 3, MX + wEquipe + wSet * 3 + wSets];
-    const ws = [wEquipe, wSet, wSet, wSet, wSets, wVenc];
-    const headers = ['EQUIPE', 'SET 1', 'SET 2', 'SET 3', 'SETS', 'RESULTADO'];
-    doc.setFontSize(8); doc.setFont(undefined, 'bold');
-    headers.forEach((h, i) => { box(xs[i], y, ws[i], 9, FUNDO); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]); txt(h, xs[i] + ws[i] / 2, y + 6, { align: 'center' }); });
-    y += 9;
-    const vencedorNome = s.setsCasa > s.setsVisitante ? s.equipeCasa : (s.setsVisitante > s.setsCasa ? s.equipeVisitante : '—');
-    [{ nome: s.equipeCasa, sets: s.setsCasa, key: 'a' }, { nome: s.equipeVisitante, sets: s.setsVisitante, key: 'b' }].forEach((eq, ri) => {
-      const linhaVals = [eq.nome, hs[0] ? hs[0][eq.key] : '', hs[1] ? hs[1][eq.key] : '', hs[2] ? hs[2][eq.key] : '', eq.sets, ri === 0 ? vencedorNome : ''];
-      linhaVals.forEach((v, i) => {
-        box(xs[i], y, ws[i], 10);
-        doc.setFontSize(i === 0 ? 9 : 11); doc.setFont(undefined, i === 0 ? 'bold' : 'bold'); doc.setTextColor(20, 20, 20);
-        txt(v, i === 0 ? xs[i] + 3 : xs[i] + ws[i] / 2, y + 7, i === 0 ? {} : { align: 'center' });
-      });
-      y += 10;
-    });
-    y += 8;
+    const wTime = MW / 2;
+    box(MX, y, wTime, 10, AZUL);
+    doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(10.5);
+    txt((s.equipeCasa || 'EQUIPE A').toUpperCase() + '   —   ' + (s.setsCasa || 0) + ' set(s)', MX + wTime / 2, y + 6.8, { align: 'center' });
+    box(MX + wTime, y, wTime, 10, LARANJA);
+    txt((s.setsVisitante || 0) + ' set(s)   —   ' + (s.equipeVisitante || 'EQUIPE B').toUpperCase(), MX + wTime + wTime / 2, y + 6.8, { align: 'center' });
+    y += 14;
+
+    // ── PAINÉIS DE SET (marcador de pontos oficial, 2 por linha) ──
+    const gap = 4, panelW = (MW - gap) / 2;
+    function painelSet(x0, y0, w, numSet) {
+      const pontosDoSet = pontosComPlacar.filter(p => p.set === numSet);
+      const pontosA = pontosDoSet.filter(p => p.equipe === 'A');
+      const pontosB = pontosDoSet.filter(p => p.equipe === 'B');
+      const horaIni = pontosDoSet[0] ? pontosDoSet[0].hora.slice(0, 5) : '—';
+      const horaFim = pontosDoSet.length ? pontosDoSet[pontosDoSet.length - 1].hora.slice(0, 5) : '—';
+      const fechado = hs[numSet - 1];
+
+      box(x0, y0, w, 6.5, FUNDO);
+      doc.setFont(undefined, 'bold'); doc.setFontSize(7.5); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
+      txt('SET ' + numSet, x0 + 2.5, y0 + 4.6);
+      doc.setFont(undefined, 'normal'); doc.setFontSize(6.2); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]);
+      txt('Início ' + horaIni + '   Término ' + horaFim + (fechado ? ('   Resultado ' + fechado.a + '-' + fechado.b) : ''), x0 + w - 2.5, y0 + 4.6, { align: 'right' });
+      let yy = y0 + 8;
+
+      const wGrid = (w - 4) / 2;
+      doc.setFont(undefined, 'bold'); doc.setFontSize(6.3);
+      doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]); txt((s.equipeCasa || 'Equipe A').toUpperCase(), x0, yy);
+      doc.setTextColor(LARANJA[0], LARANJA[1], LARANJA[2]); txt((s.equipeVisitante || 'Equipe B').toUpperCase(), x0 + wGrid + 4, yy);
+      yy += 2;
+
+      desenharGradeOficial_(x0, yy, wGrid, pontosA, AZUL);
+      desenharGradeOficial_(x0 + wGrid + 4, yy, wGrid, pontosB, LARANJA);
+      return yy + 12 * 4.15 + 2;
+    }
+
+    let yRow = painelSet(MX, y, panelW, 1);
+    painelSet(MX + panelW + gap, y, panelW, 2);
+    y = yRow + 3;
+    const setsFechados = hs.length;
+    if (s.setAtual >= 3 || setsFechados >= 2) {
+      y = painelSet(MX, y, MW, 3) + 3;
+    }
+    y += 3;
 
     // ── ESCALAÇÃO (duas colunas lado a lado) ───────────────
+    if (y > 150) { novaPagina_(); y = 12; }
     const colLarg = (MW - 6) / 2;
     function tabelaEscalacao(x, nomeEquipe, elenco, capitaoNum) {
       let yy = y;
-      box(x, yy, colLarg, 8, AZUL);
-      doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont(undefined, 'bold');
-      txt(nomeEquipe.toUpperCase(), x + colLarg / 2, yy + 5.5, { align: 'center' });
-      yy += 8;
-      const wNum = 14, wNome = colLarg - wNum - 16, wPos = 16;
-      box(x, yy, wNum, 7, FUNDO); box(x + wNum, yy, wNome, 7, FUNDO); box(x + wNum + wNome, yy, wPos, 7, FUNDO);
-      doc.setFontSize(7); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
-      txt('Nº', x + wNum / 2, yy + 5, { align: 'center' }); txt('ATLETA', x + wNum + 3, yy + 5); txt('FUNÇÃO', x + wNum + wNome + wPos / 2, yy + 5, { align: 'center' });
+      box(x, yy, colLarg, 7, AZUL);
+      doc.setTextColor(255, 255, 255); doc.setFontSize(8.5); doc.setFont(undefined, 'bold');
+      txt(nomeEquipe.toUpperCase(), x + colLarg / 2, yy + 5, { align: 'center' });
       yy += 7;
+      const wNum = 14, wNome = colLarg - wNum - 20, wPos = 20;
+      box(x, yy, wNum, 6.5, FUNDO); box(x + wNum, yy, wNome, 6.5, FUNDO); box(x + wNum + wNome, yy, wPos, 6.5, FUNDO);
+      doc.setFontSize(6.8); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
+      txt('Nº', x + wNum / 2, yy + 4.6, { align: 'center' }); txt('ATLETA', x + wNum + 3, yy + 4.6); txt('FUNÇÃO', x + wNum + wNome + wPos / 2, yy + 4.6, { align: 'center' });
+      yy += 6.5;
       const titulares = (elenco && elenco.titulares || []).filter(p => p.nome);
       titulares.forEach(p => {
         const ehCap = capitaoNum && p.numero && p.numero.toString() === capitaoNum.toString();
-        box(x, yy, wNum, 6.5); box(x + wNum, yy, wNome, 6.5); box(x + wNum + wNome, yy, wPos, 6.5);
-        doc.setFontSize(8.5); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
-        txt(p.numero || '—', x + wNum / 2, yy + 4.7, { align: 'center' });
-        txt(p.nome, x + wNum + 2, yy + 4.7);
-        if (ehCap) { doc.setFont(undefined, 'bold'); txt('CAP', x + wNum + wNome + wPos / 2, yy + 4.7, { align: 'center' }); }
-        yy += 6.5;
+        box(x, yy, wNum, 6); box(x + wNum, yy, wNome, 6); box(x + wNum + wNome, yy, wPos, 6);
+        doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
+        txt(p.numero || '—', x + wNum / 2, yy + 4.3, { align: 'center' });
+        txt(p.nome, x + wNum + 2, yy + 4.3);
+        if (ehCap) { doc.setFont(undefined, 'bold'); txt('CAPITÃO', x + wNum + wNome + wPos / 2, yy + 4.3, { align: 'center' }); }
+        yy += 6;
       });
       if (elenco && elenco.libero && elenco.libero.nome) {
-        box(x, yy, wNum, 6.5, [255, 249, 230]); box(x + wNum, yy, wNome, 6.5, [255, 249, 230]); box(x + wNum + wNome, yy, wPos, 6.5, [255, 249, 230]);
-        doc.setFontSize(8.5); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
-        txt(elenco.libero.numero || '—', x + wNum / 2, yy + 4.7, { align: 'center' });
-        txt(elenco.libero.nome, x + wNum + 2, yy + 4.7);
-        doc.setFont(undefined, 'bold'); txt('LÍB', x + wNum + wNome + wPos / 2, yy + 4.7, { align: 'center' });
-        yy += 6.5;
+        box(x, yy, wNum, 6, [255, 249, 230]); box(x + wNum, yy, wNome, 6, [255, 249, 230]); box(x + wNum + wNome, yy, wPos, 6, [255, 249, 230]);
+        doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
+        txt(elenco.libero.numero || '—', x + wNum / 2, yy + 4.3, { align: 'center' });
+        txt(elenco.libero.nome, x + wNum + 2, yy + 4.3);
+        doc.setFont(undefined, 'bold'); txt('LÍBERO', x + wNum + wNome + wPos / 2, yy + 4.3, { align: 'center' });
+        yy += 6;
       }
       return yy;
     }
     const yFimA = tabelaEscalacao(MX, s.equipeCasa, s.elencoCasa, s.capitaoCasa);
     const yFimB = tabelaEscalacao(MX + colLarg + 6, s.equipeVisitante, s.elencoVisitante, s.capitaoVisitante);
-    y = Math.max(yFimA, yFimB) + 8;
-
-    // ── HISTÓRICO DE PONTOS POR SET (hora + placar de cada ponto) ──
-    const histPontos = s.historicoPontos || [];
-    if (histPontos.length) {
-      // Súmulas geradas antes dessa versão não tinham hora/placar
-      // salvos em cada ponto — reconstrói o placar corrente contando
-      // pra não deixar essas em branco no PDF.
-      let runCasa = 0, runVisit = 0, runSet = histPontos[0].set;
-      const pontosComPlacar = histPontos.map(p => {
-        if (p.set !== runSet) { runCasa = 0; runVisit = 0; runSet = p.set; }
-        if (p.equipe === 'A') runCasa++; else runVisit++;
-        return {
-          set: p.set, equipe: p.equipe, hora: p.hora || '—',
-          pontosCasa: p.pontosCasa != null ? p.pontosCasa : runCasa,
-          pontosVisitante: p.pontosVisitante != null ? p.pontosVisitante : runVisit
-        };
-      });
-      const setsPresentes = [...new Set(pontosComPlacar.map(p => p.set))];
-      setsPresentes.forEach(numSet => {
-        const pontosDoSet = pontosComPlacar.filter(p => p.set === numSet);
-        if (y > 250) { doc.addPage(); y = 18; }
-        doc.setFontSize(8.5); doc.setFont(undefined, 'bold'); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
-        txt('HISTÓRICO DE PONTOS — SET ' + numSet, MX, y); y += 5;
-
-        const porLinha = 4, wCel = MW / porLinha;
-        for (let i = 0; i < pontosDoSet.length; i += porLinha) {
-          if (y > 283) { doc.addPage(); y = 18; }
-          const linha = pontosDoSet.slice(i, i + porLinha);
-          linha.forEach((p, ci) => {
-            const x = MX + ci * wCel;
-            const corA = p.equipe === 'A' ? [225, 235, 253] : [253, 237, 222];
-            box(x, y, wCel, 7, corA);
-            doc.setFontSize(6.8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
-            const nomeCurto = (p.equipe === 'A' ? (s.equipeCasa || 'Casa') : (s.equipeVisitante || 'Visit')).split(' ')[0];
-            txt((i + ci + 1) + '. ' + p.hora.slice(0, 5) + ' ' + nomeCurto + ' ' + p.pontosCasa + '-' + p.pontosVisitante, x + 1.5, y + 4.8);
-          });
-          y += 7;
-        }
-        y += 4;
-      });
-    }
+    y = Math.max(yFimA, yFimB) + 5;
 
     // ── OCORRÊNCIAS (cartões, substituições, tempos) ───────
     const ocorrencias = [];
@@ -1811,53 +1828,54 @@ async function gerarPdfSumula(s) {
     (s.timeouts || []).forEach(t => ocorrencias.push(['Set ' + t.set, 'Tempo Técnico', t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante, 'Pedido às ' + (t.hora || '—')]));
 
     if (ocorrencias.length) {
-      if (y > 220) { doc.addPage(); y = 18; }
-      const wc = [16, 32, 46, MW - 16 - 32 - 46];
+      if (y > 155) { novaPagina_(); y = 12; }
+      const wc = [22, 44, 60, MW - 22 - 44 - 60];
       const xc = [MX, MX + wc[0], MX + wc[0] + wc[1], MX + wc[0] + wc[1] + wc[2]];
-      doc.setFontSize(8); doc.setFont(undefined, 'bold');
-      ['SET', 'OCORRÊNCIA', 'EQUIPE', 'DETALHE'].forEach((h, i) => { box(xc[i], y, wc[i], 8, FUNDO); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]); txt(h, xc[i] + 3, y + 5.5); });
-      y += 8;
+      doc.setFontSize(7.5); doc.setFont(undefined, 'bold');
+      ['SET', 'OCORRÊNCIA', 'EQUIPE', 'DETALHE'].forEach((h, i) => { box(xc[i], y, wc[i], 7, FUNDO); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]); txt(h, xc[i] + 3, y + 5); });
+      y += 7;
       ocorrencias.forEach(row => {
         const linhasDetalhe = doc.splitTextToSize(String(row[3]), wc[3] - 6);
-        const hLinha = Math.max(7, linhasDetalhe.length * 4.2 + 3);
-        if (y + hLinha > 280) { doc.addPage(); y = 18; }
+        const hLinha = Math.max(6.5, linhasDetalhe.length * 4 + 2.5);
+        if (y + hLinha > 195) { novaPagina_(); y = 12; }
         row.forEach((v, i) => {
           box(xc[i], y, wc[i], hLinha);
-          doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
-          if (i === 3) txt(linhasDetalhe, xc[i] + 3, y + 4.8);
-          else txt(String(v), xc[i] + 3, y + hLinha / 2 + 1.5);
+          doc.setFontSize(7.5); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
+          if (i === 3) txt(linhasDetalhe, xc[i] + 3, y + 4.4);
+          else txt(String(v), xc[i] + 3, y + hLinha / 2 + 1.3);
         });
         y += hLinha;
       });
-      y += 8;
+      y += 5;
     }
 
     // ── OBSERVAÇÕES ─────────────────────────────────────────
     if (s.observacoes) {
-      if (y > 255) { doc.addPage(); y = 18; }
-      doc.setFontSize(8); doc.setFont(undefined, 'bold'); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
-      txt('OBSERVAÇÕES', MX, y); y += 5;
+      if (y > 175) { novaPagina_(); y = 12; }
+      doc.setFontSize(7.5); doc.setFont(undefined, 'bold'); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
+      txt('OBSERVAÇÕES', MX, y); y += 4.5;
       const linhasObs = doc.splitTextToSize(s.observacoes, MW - 6);
-      const hObs = Math.max(14, linhasObs.length * 5 + 4);
+      const hObs = Math.max(11, linhasObs.length * 4.5 + 3);
       box(MX, y, MW, hObs);
-      doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
-      txt(linhasObs, MX + 3, y + 6);
-      y += hObs + 8;
+      doc.setFontSize(8.5); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
+      txt(linhasObs, MX + 3, y + 5.5);
+      y += hObs + 5;
     }
 
     // ── RESULTADO FINAL ──────────────────────────────────────
-    if (y > 250) { doc.addPage(); y = 18; }
-    box(MX, y, MW, 16, [232, 245, 233]);
-    doc.setDrawColor(102, 187, 106); doc.rect(MX, y, MW, 16);
-    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(46, 125, 50);
-    txt('RESULTADO FINAL', MX + MW / 2, y + 6, { align: 'center' });
-    doc.setFontSize(13); doc.setFont(undefined, 'bold');
-    txt((vencedorNome !== '—' ? vencedorNome + ' venceu por ' + Math.max(s.setsCasa, s.setsVisitante) + ' sets a ' + Math.min(s.setsCasa, s.setsVisitante) : 'Resultado indefinido'), MX + MW / 2, y + 12.5, { align: 'center' });
-    y += 24;
+    if (y > 180) { novaPagina_(); y = 12; }
+    const vencedorNome = s.setsCasa > s.setsVisitante ? s.equipeCasa : (s.setsVisitante > s.setsCasa ? s.equipeVisitante : '—');
+    box(MX, y, MW, 12, [232, 245, 233]);
+    doc.setDrawColor(102, 187, 106); doc.rect(MX, y, MW, 12);
+    doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(46, 125, 50);
+    txt('RESULTADO FINAL', MX + MW / 2, y + 5, { align: 'center' });
+    doc.setFontSize(11); doc.setFont(undefined, 'bold');
+    txt((vencedorNome !== '—' ? vencedorNome + ' venceu por ' + Math.max(s.setsCasa, s.setsVisitante) + ' sets a ' + Math.min(s.setsCasa, s.setsVisitante) : 'Resultado indefinido'), MX + MW / 2, y + 9.5, { align: 'center' });
+    y += 17;
 
     // ── ASSINATURAS ─────────────────────────────────────────
-    if (y > 250) { doc.addPage(); y = 18; }
-    y = Math.max(y, 248);
+    if (y > 188) { novaPagina_(); y = 12; }
+    y = Math.max(y, 190);
     function nomePorNumero_(elenco, numero) {
       if (!elenco || !numero) return '';
       const t = (elenco.titulares || []).find(p => p.numero && p.numero.toString() === numero.toString());
@@ -1869,20 +1887,19 @@ async function gerarPdfSumula(s) {
       const w = MW / itens.length;
       itens.forEach((label, i) => {
         const x = MX + i * w;
-        doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]); doc.line(x + 6, yy, x + w - 6, yy);
-        doc.setFontSize(8); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'normal');
-        txt(label, x + w / 2, yy + 5, { align: 'center' });
+        doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]); doc.line(x + 8, yy, x + w - 8, yy);
+        doc.setFontSize(7); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'normal');
+        txt(label, x + w / 2, yy + 4.3, { align: 'center' });
       });
     }
-    linhaAssinaturas_(['Árbitro 1', 'Árbitro 2', 'Apontador(a)'], y);
-    y += 20;
     linhaAssinaturas_([
+      'Árbitro 1', 'Árbitro 2', 'Apontador(a)',
       'Capitão · ' + s.equipeCasa + (capNomeA ? ' (' + capNomeA + ')' : ''),
       'Capitão · ' + s.equipeVisitante + (capNomeB ? ' (' + capNomeB + ')' : '')
     ], y);
 
-    doc.setFontSize(7); doc.setTextColor(170);
-    txt('Súmula gerada automaticamente pelo Painel Admin da Supercopa AFC · ' + s.id, 105, 292, { align: 'center' });
+    doc.setFontSize(6.5); doc.setTextColor(170);
+    txt('Súmula gerada automaticamente pelo Painel Admin da Supercopa AFC · ' + s.id, MX + MW / 2, 205, { align: 'center' });
 
     const pdfBase64 = doc.output('datauristring');
     const up = await fetch(SUMULA_SCRIPT_URL, {
