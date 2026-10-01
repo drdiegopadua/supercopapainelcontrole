@@ -749,7 +749,10 @@ body { padding: 18px; max-width: 100vw; }
             <div class="form-group" style="margin:0"><label>Equipe Visitante</label><select class="form-control" id="wz-equipeB" onchange="document.getElementById('wz-saca-b-label').textContent=this.value||'Equipe Visitante'"></select></div>
           </div>
           <div style="padding:16px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px;margin-bottom:8px">
-            <div style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px"><i class='bx bx-shield-quarter'></i> Equipe de arbitragem e mesa</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px"><i class='bx bx-shield-quarter'></i> Equipe de arbitragem e mesa</div>
+              <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 10px;background:transparent;border:1px solid var(--stroke);color:var(--dark-grey)" onclick="limparArbitragemWizard_()">Limpar</button>
+            </div>
             <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
               <div class="form-group" style="margin:0"><label>1º Árbitro</label><input class="form-control" id="wz-arbitro1" placeholder="Nome"></div>
               <div class="form-group" style="margin:0"><label>2º Árbitro (opcional)</label><input class="form-control" id="wz-arbitro2" placeholder="Nome"></div>
@@ -1014,14 +1017,29 @@ async function abrirWizard(sumulaId, jogo) {
   selA.value = sumulaLiveWizardData.equipeA || '';
   selB.value = sumulaLiveWizardData.equipeB || '';
 
-  document.getElementById('wz-arbitro1').value = '';
-  document.getElementById('wz-arbitro2').value = '';
-  document.getElementById('wz-apontador').value = '';
+  try {
+    const arbSalvo = JSON.parse(localStorage.getItem('supercopa_arbitragem') || 'null');
+    document.getElementById('wz-arbitro1').value = (arbSalvo && arbSalvo.arbitro1) || '';
+    document.getElementById('wz-arbitro2').value = (arbSalvo && arbSalvo.arbitro2) || '';
+    document.getElementById('wz-apontador').value = (arbSalvo && arbSalvo.apontador) || '';
+  } catch (e) {
+    document.getElementById('wz-arbitro1').value = '';
+    document.getElementById('wz-arbitro2').value = '';
+    document.getElementById('wz-apontador').value = '';
+  }
   document.getElementById('wz-saca-a-label').textContent = sumulaLiveWizardData.equipeA || 'Equipe Casa';
   document.getElementById('wz-saca-b-label').textContent = sumulaLiveWizardData.equipeB || 'Equipe Visitante';
   document.getElementById('sumulaWizardStep1').style.display = '';
   document.getElementById('sumulaWizardStep2').style.display = 'none';
   document.getElementById('sumulaWizard').style.display = '';
+}
+
+function limparArbitragemWizard_() {
+  document.getElementById('wz-arbitro1').value = '';
+  document.getElementById('wz-arbitro2').value = '';
+  document.getElementById('wz-apontador').value = '';
+  try { localStorage.removeItem('supercopa_arbitragem'); } catch (e) {}
+  document.getElementById('wz-arbitro1').focus();
 }
 
 async function wizardProximo() {
@@ -1034,6 +1052,14 @@ async function wizardProximo() {
   if (!sumulaLiveWizardData.equipeA || !sumulaLiveWizardData.equipeB) { showToast('❌ Preencha as duas equipes.', 'error'); return; }
   if (!sumulaLiveWizardData.arbitro1) { showToast('❌ Informe o 1º árbitro.', 'error'); return; }
   if (!sumulaLiveWizardData.apontador) { showToast('❌ Informe o(a) apontador(a) (mesa).', 'error'); return; }
+
+  try {
+    localStorage.setItem('supercopa_arbitragem', JSON.stringify({
+      arbitro1: sumulaLiveWizardData.arbitro1,
+      arbitro2: sumulaLiveWizardData.arbitro2,
+      apontador: sumulaLiveWizardData.apontador
+    }));
+  } catch (e) {}
 
   showLoading(true);
   const [resA, resB] = await Promise.all([
@@ -1056,34 +1082,116 @@ let wizardAtletasA = [], wizardAtletasB = [];
 
 // Layout de quadra em ordem de rotação: linha da rede (P4,P3,P2)
 // depois linha de trás (P5,P6,P1 — P1 é quem saca).
+// ════════════════════════════════════════════════════════
+// ESCALAÇÃO POR TOQUE — em vez de 8 <select> por equipe (6
+// posições + líbero + capitão), o apontador toca o nome do
+// atleta numa lista; o próprio toque ocupa a próxima posição
+// livre (toque de novo tira). Líbero/capitão são dois toggles
+// pequenos no próprio card. Bem mais rápido no tablet.
+// ════════════════════════════════════════════════════════
+window._escTap = window._escTap || {};
+function escTapGet_(prefixo, lado) { return window._escTap[prefixo + '_' + lado]; }
+function escTapSet_(prefixo, lado, estado) { window._escTap[prefixo + '_' + lado] = estado; }
+
+function escTapInit_(prefixo, lado, atletas, rotacaoAtual, liberoAtual, capitaoAtual) {
+  const posicoes = new Array(6).fill(null);
+  (rotacaoAtual || []).forEach((p, i) => { if (p && p.nome && i < 6) posicoes[i] = { numero: (p.numero || '').toString(), nome: p.nome }; });
+  escTapSet_(prefixo, lado, {
+    atletas: atletas || [],
+    posicoes: posicoes,
+    libero: (liberoAtual && liberoAtual.nome) ? { numero: (liberoAtual.numero || '').toString(), nome: liberoAtual.nome } : null,
+    capitao: capitaoAtual ? capitaoAtual.toString() : null
+  });
+}
+
+function escTapAchaPos_(st, numero) { return st.posicoes.findIndex(p => p && p.numero === numero); }
+
+function escTapTocar_(prefixo, lado, numero, nome) {
+  const st = escTapGet_(prefixo, lado);
+  const idxAtual = escTapAchaPos_(st, numero);
+  if (idxAtual >= 0) { st.posicoes[idxAtual] = null; }
+  else {
+    const livre = st.posicoes.findIndex(p => !p);
+    if (livre === -1) { showToast('As 6 posições já estão preenchidas — toque num jogador em quadra pra tirar antes de trocar.', 'error'); return; }
+    st.posicoes[livre] = { numero: numero, nome: nome };
+  }
+  escTapRenderizar_(prefixo, lado);
+}
+function escTapToggleLibero_(prefixo, lado, numero, nome, ev) {
+  if (ev) ev.stopPropagation();
+  const st = escTapGet_(prefixo, lado);
+  st.libero = (st.libero && st.libero.numero === numero) ? null : { numero: numero, nome: nome };
+  escTapRenderizar_(prefixo, lado);
+}
+function escTapToggleCapitao_(prefixo, lado, numero, ev) {
+  if (ev) ev.stopPropagation();
+  const st = escTapGet_(prefixo, lado);
+  st.capitao = (st.capitao === numero) ? null : numero;
+  escTapRenderizar_(prefixo, lado);
+}
+
+function escTapQuadraHtml_(st) {
+  const por = {}; st.posicoes.forEach((p, i) => { if (p) por[i + 1] = p; });
+  const cel = (pos) => `<div style="background:#fff;border:2px solid ${pos === 1 ? 'var(--gold,#c8960c)' : '#66bb6a'};border-radius:8px;padding:5px 2px;text-align:center;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+    <div style="font-weight:800;font-size:13px;color:${por[pos] ? 'var(--dark)' : '#aab0bb'}">${por[pos] ? (por[pos].numero || '·') : '—'}</div>
+    <div style="font-size:7px;color:${pos === 1 ? 'var(--gold,#c8960c)' : '#2e7d32'};font-weight:700">${pos === 1 ? 'SAQUE' : 'P' + pos}</div>
+  </div>`;
+  return `<div style="background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:10px;padding:8px">
+    <div style="text-align:center;font-size:8px;font-weight:800;color:#2e7d32;letter-spacing:1px;margin-bottom:5px">◤ REDE ◥</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px">${cel(4)}${cel(3)}${cel(2)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px">${cel(5)}${cel(6)}${cel(1)}</div>
+  </div>`;
+}
+
+function escTapListaHtml_(prefixo, lado, st, comLiberoCapitao) {
+  if (!st.atletas.length) return '';
+  return '<div style="display:flex;flex-direction:column;gap:5px;max-height:230px;overflow-y:auto;margin-top:8px">' + st.atletas.map(a => {
+    const numero = (a.numero || '').toString();
+    const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
+    const idxPos = escTapAchaPos_(st, numero);
+    const emQuadra = idxPos >= 0;
+    const ehLibero = comLiberoCapitao && st.libero && st.libero.numero === numero;
+    const ehCapitao = comLiberoCapitao && st.capitao === numero;
+    return `<div onclick="escTapTocar_('${prefixo}','${lado}','${numero}','${nomeEsc}')"
+        style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;background:${emQuadra ? 'var(--light-blue)' : 'var(--grey)'};border:1.5px solid ${emQuadra ? 'var(--blue)' : 'transparent'}">
+      <div style="width:24px;height:24px;border-radius:50%;background:${emQuadra ? 'var(--blue)' : '#cbd5e1'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${emQuadra ? (idxPos + 1) : (numero || '·')}</div>
+      <div style="flex:1;font-size:12px;font-weight:600;color:var(--dark)">${a.nome}${numero ? ' <span style="color:var(--dark-grey);font-weight:400">#' + numero + '</span>' : ''}</div>
+      ${comLiberoCapitao ? `
+      <span onclick="escTapToggleLibero_('${prefixo}','${lado}','${numero}','${nomeEsc}',event)" title="Líbero" style="font-size:15px;opacity:${ehLibero ? 1 : 0.25};cursor:pointer">🟡</span>
+      <span onclick="escTapToggleCapitao_('${prefixo}','${lado}','${numero}',event)" title="Capitão" style="font-size:13px;font-weight:900;color:${ehCapitao ? 'var(--blue)' : '#cbd5e1'};cursor:pointer">🅲</span>` : ''}
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function escTapRenderizar_(prefixo, lado) {
+  const st = escTapGet_(prefixo, lado);
+  const wrap = document.getElementById('esctap-' + prefixo + '-' + lado);
+  if (!wrap) return;
+  const comLC = wrap.dataset.comLiberoCapitao === '1';
+  wrap.innerHTML = escTapQuadraHtml_(st) + escTapListaHtml_(prefixo, lado, st, comLC);
+}
+
+function escTapLer_(prefixo, lado) {
+  const st = escTapGet_(prefixo, lado);
+  return {
+    titulares: st.posicoes.map(p => p ? { numero: p.numero, nome: p.nome } : { numero: '', nome: '' }),
+    libero: st.libero || { numero: '', nome: '' },
+    capitao: st.capitao || ''
+  };
+}
+
 function renderQuadra_(lado, nomeEquipe, atletas) {
-  // Técnico/Auxiliar Técnico não jogam — não podem aparecer como
-  // opção de posição em quadra, líbero ou capitão.
+  // Técnico/Auxiliar Técnico não jogam — não podem aparecer na lista
+  // de posição em quadra, líbero ou capitão.
   const jogadores = atletas.filter(a => (a.tipo || 'Atleta') === 'Atleta');
-  const opcoes = jogadores.map(a => `<option value="${a.numero}|${a.nome.replace(/"/g, '')}">${a.numero ? a.numero + ' · ' : ''}${a.nome}</option>`).join('');
-  const posSelect = (pos) => `
-    <select class="form-control ct-pos" id="wz-pos-${lado}-${pos}" style="text-align:center;font-weight:700;padding:10px 4px">
-      <option value="">P${pos}</option>
-      ${opcoes}
-    </select>`;
+  escTapInit_('wz', lado, jogadores, null, null, null);
+  const st = escTapGet_('wz', lado);
   return `
     <div>
       <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:var(--light-blue);color:var(--blue);text-align:center;margin-bottom:10px">${nomeEquipe}</div>
       ${jogadores.length < 6 ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:10px 12px;border-radius:8px;margin-bottom:10px"><i class='bx bx-error'></i> ${jogadores.length ? 'Só ' + jogadores.length + ' atleta(s) cadastrado(s) — faltam ' + (6 - jogadores.length) + ' pra fechar os 6 titulares.' : 'Nenhum atleta cadastrado.'} <a href="javascript:void(0)" onclick="abrirCadastroAtletas();document.getElementById('ca-equipe-nova').value='${nomeEquipe.replace(/'/g, "\\'")}';carregarListaAtletas();" style="color:#856404;text-decoration:underline">Cadastrar agora</a></div>` : ''}
-      <div style="background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:10px;padding:10px">
-        <div style="text-align:center;font-size:9px;font-weight:800;color:#2e7d32;letter-spacing:1px;margin-bottom:6px">◤ REDE ◥</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">${posSelect(4)}${posSelect(3)}${posSelect(2)}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">${posSelect(5)}${posSelect(6)}${posSelect(1)}</div>
-        <div style="text-align:center;font-size:9px;color:#2e7d32;margin-top:4px">P1 = saque inicial</div>
-      </div>
-      <div style="margin-top:10px">
-        <label style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase">🟡 Líbero</label>
-        <select class="form-control" id="wz-libero-${lado}"><option value="">— nenhum —</option>${opcoes}</select>
-      </div>
-      <div style="margin-top:10px">
-        <label style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase">🅲 Capitão</label>
-        <select class="form-control" id="wz-capitao-${lado}"><option value="">— nenhum —</option>${opcoes}</select>
-      </div>
+      <p style="font-size:10px;color:var(--dark-grey);margin:0 0 6px">Toque num atleta pra escalar na próxima posição livre (toque de novo pra tirar). 🟡 líbero · 🅲 capitão.</p>
+      <div id="esctap-wz-${lado}" data-com-libero-capitao="1">${escTapQuadraHtml_(st)}${escTapListaHtml_('wz', lado, st, true)}</div>
     </div>`;
 }
 
@@ -1099,32 +1207,17 @@ async function gerarSumula() {
     return { numero: val.slice(0, idx), nome: val.slice(idx + 1) };
   };
   const montarElenco = (lado) => {
-    const titulares = [];
-    const usados = new Set();
-    for (let pos = 1; pos <= 6; pos++) {
-      const val = document.getElementById('wz-pos-' + lado + '-' + pos).value;
-      if (val) usados.add(val);
-      titulares.push(parseSel(val));
-    }
-    const semDuplicado = new Set(titulares.filter(t => t.nome).map(t => t.nome)).size === titulares.filter(t => t.nome).length;
-    if (!semDuplicado) throw new Error('Tem jogador(a) repetido(a) em mais de uma posição da equipe ' + (lado === 'A' ? sumulaLiveWizardData.equipeA : sumulaLiveWizardData.equipeB) + '.');
-    const libero = parseSel(document.getElementById('wz-libero-' + lado).value);
+    const lida = escTapLer_('wz', lado);
     const pool = lado === 'A' ? wizardAtletasA : wizardAtletasB;
     const tecnico = pool.find(a => a.tipo === 'Técnico') || null;
     const auxiliarTecnico = pool.find(a => a.tipo === 'Auxiliar Técnico') || null;
-    return { titulares: titulares, libero: libero, tecnico: tecnico, auxiliarTecnico: auxiliarTecnico };
+    return { titulares: lida.titulares, libero: lida.libero, capitao: lida.capitao, tecnico: tecnico, auxiliarTecnico: auxiliarTecnico };
   };
 
-  let elencoCasa, elencoVisitante;
-  try {
-    elencoCasa = montarElenco('A');
-    elencoVisitante = montarElenco('B');
-  } catch (ex) {
-    showToast('❌ ' + ex.message, 'error');
-    return;
-  }
+  const elencoCasa = montarElenco('A');
+  const elencoVisitante = montarElenco('B');
   if (elencoCasa.titulares.filter(t => t.nome).length < 6 || elencoVisitante.titulares.filter(t => t.nome).length < 6) {
-    showToast('❌ Preencha as 6 posições de quadra das duas equipes (nome e número) antes de gerar a súmula.', 'error');
+    showToast('❌ Toque pra escalar as 6 posições de quadra das duas equipes antes de gerar a súmula.', 'error');
     return;
   }
 
@@ -1139,8 +1232,8 @@ async function gerarSumula() {
     sacaPrimeiro: sumulaLiveWizardData.sacaPrimeiro,
     elencoCasa: elencoCasa,
     elencoVisitante: elencoVisitante,
-    capitaoCasa: (document.getElementById('wz-capitao-A').value || '').split('|')[0] || '',
-    capitaoVisitante: (document.getElementById('wz-capitao-B').value || '').split('|')[0] || ''
+    capitaoCasa: elencoCasa.capitao,
+    capitaoVisitante: elencoVisitante.capitao
   };
 
   showLoading(true);
@@ -1327,27 +1420,18 @@ function historicoPontosSetAtual_(s, corA, corB) {
 // diferente — por isso, ao fechar um set, a pontuação fica bloqueada
 // (ver registrarPonto_ no backend) até essa escalação ser enviada.
 function renderEscalacaoSetForm_(s, corA, corB) {
-  const posSelect = (lado, pos, atletas, atual) => {
-    const opcoes = (atletas || []).map(a => `<option value="${a.numero}|${(a.nome || '').replace(/"/g, '')}" ${atual && atual.numero && atual.numero.toString() === a.numero.toString() ? 'selected' : ''}>${a.numero ? a.numero + ' · ' : ''}${a.nome}</option>`).join('');
-    return `<select class="form-control es-pos" id="es-pos-${lado}-${pos}" style="text-align:center;font-weight:700;padding:8px 4px;font-size:12px"><option value="">P${pos}</option>${opcoes}</select>`;
-  };
   const bloco = (lado, nomeEquipe, cor, atletas, rotacaoAtual) => {
-    const porPos = {};
-    (rotacaoAtual || []).forEach((p, i) => porPos[i + 1] = p);
+    escTapInit_('es', lado, atletas, rotacaoAtual, null, null);
+    const st = escTapGet_('es', lado);
     return `<div>
       <div style="text-align:center;font-weight:800;font-size:12px;color:${cor};margin-bottom:6px">${nomeEquipe}</div>
-      <div style="background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:10px;padding:8px">
-        <div style="text-align:center;font-size:8px;font-weight:800;color:#2e7d32;margin-bottom:5px">◤ REDE ◥</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px">${posSelect(lado, 4, atletas, porPos[4])}${posSelect(lado, 3, atletas, porPos[3])}${posSelect(lado, 2, atletas, porPos[2])}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px">${posSelect(lado, 5, atletas, porPos[5])}${posSelect(lado, 6, atletas, porPos[6])}${posSelect(lado, 1, atletas, porPos[1])}</div>
-        <div style="text-align:center;font-size:8px;color:#2e7d32;margin-top:4px">P1 = saque</div>
-      </div>
+      <div id="esctap-es-${lado}" data-com-libero-capitao="0">${escTapQuadraHtml_(st)}${escTapListaHtml_('es', lado, st, false)}</div>
     </div>`;
   };
   return `
     <div class="card" style="border:2px solid var(--gold)">
       <div class="card-title"><i class='bx bx-refresh'></i> Nova escalação — Set ${Math.min(s.setAtual, 3)}</div>
-      <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 12px">No vôlei, cada set pode começar com uma ordem de saque diferente. Confirme (ou ajuste) a posição de cada equipe antes de pontuar — os campos já vêm com a última rotação como sugestão.</p>
+      <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 12px">No vôlei, cada set pode começar com uma ordem de saque diferente. Toque nos atletas pra confirmar (ou ajustar) a posição de cada equipe antes de pontuar — já vem com a última rotação marcada.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         ${bloco('A', s.equipeCasa, corA, sumulaAtletasCasa, s.rotacaoCasa)}
         ${bloco('B', s.equipeVisitante, corB, sumulaAtletasVisitante, s.rotacaoVisitante)}
@@ -1359,10 +1443,9 @@ function renderEscalacaoSetForm_(s, corA, corB) {
 }
 
 async function confirmarEscalacaoSet() {
-  const parseSel = (val) => { if (!val) return null; const idx = val.indexOf('|'); return { numero: val.slice(0, idx), nome: val.slice(idx + 1) }; };
-  const montar = (lado) => { const arr = []; for (let pos = 1; pos <= 6; pos++) arr.push(parseSel(document.getElementById('es-pos-' + lado + '-' + pos).value)); return arr; };
-  const rotA = montar('A'), rotB = montar('B');
-  if (rotA.filter(Boolean).length < 6 || rotB.filter(Boolean).length < 6) { showToast('❌ Preencha as 6 posições das duas equipes.', 'error'); return; }
+  const rotA = escTapLer_('es', 'A').titulares.map(t => t.nome ? t : null);
+  const rotB = escTapLer_('es', 'B').titulares.map(t => t.nome ? t : null);
+  if (rotA.filter(Boolean).length < 6 || rotB.filter(Boolean).length < 6) { showToast('❌ Toque pra escalar as 6 posições das duas equipes.', 'error'); return; }
   try {
     const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'definirEscalacaoSet', id: sumulaLiveState.id, rotacaoCasa: rotA, rotacaoVisitante: rotB }) }).then(r => r.json());
     if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); showToast('✅ Escalação do set confirmada.'); }
@@ -1429,13 +1512,13 @@ function renderSumulaConsole() {
     ${emAndamento ? `
     <div class="card">
       <div class="card-title"><i class='bx bx-timer'></i> Ações</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
-        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('A')" ${tempoUsados_(s.timeouts, 'A', s.setAtual) >= 2 ? 'disabled title="Já usou os 2 tempos deste set"' : ''}><i class='bx bx-time-five' style="color:${corA}"></i> Tempo · ${s.equipeCasa} (${tempoUsados_(s.timeouts, 'A', s.setAtual)}/2)</button>
-        <button class="btn btn-secondary btn-sm" onclick="sumulaTimeout('B')" ${tempoUsados_(s.timeouts, 'B', s.setAtual) >= 2 ? 'disabled title="Já usou os 2 tempos deste set"' : ''}><i class='bx bx-time-five' style="color:${corB}"></i> Tempo · ${s.equipeVisitante} (${tempoUsados_(s.timeouts, 'B', s.setAtual)}/2)</button>
-        <button class="btn btn-secondary btn-sm" onclick="abrirModalCartao()"><i class='bx bxs-flag-alt'></i> Cartão</button>
-        <button class="btn btn-secondary btn-sm" onclick="abrirModalSub()"><i class='bx bx-transfer'></i> Substituição</button>
-        <button class="btn btn-secondary btn-sm" onclick="sumulaDesfazer()"><i class='bx bx-undo'></i> Desfazer último evento</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-secondary" onclick="sumulaTimeout('A')" ${tempoUsados_(s.timeouts, 'A', s.setAtual) >= 2 ? 'disabled title="Já usou os 2 tempos deste set"' : ''} style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bx-time-five' style="color:${corA};font-size:20px"></i><span style="font-size:11px;font-weight:700;text-align:center">Tempo · ${s.equipeCasa}<br>(${tempoUsados_(s.timeouts, 'A', s.setAtual)}/2)</span></button>
+        <button class="btn btn-secondary" onclick="sumulaTimeout('B')" ${tempoUsados_(s.timeouts, 'B', s.setAtual) >= 2 ? 'disabled title="Já usou os 2 tempos deste set"' : ''} style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bx-time-five' style="color:${corB};font-size:20px"></i><span style="font-size:11px;font-weight:700;text-align:center">Tempo · ${s.equipeVisitante}<br>(${tempoUsados_(s.timeouts, 'B', s.setAtual)}/2)</span></button>
+        <button class="btn btn-secondary" onclick="abrirModalCartao()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bxs-flag-alt' style="font-size:20px"></i><span style="font-size:11px;font-weight:700">Cartão</span></button>
+        <button class="btn btn-secondary" onclick="abrirModalSub()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bx-transfer' style="font-size:20px"></i><span style="font-size:11px;font-weight:700">Substituição</span></button>
       </div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px" onclick="sumulaDesfazer()"><i class='bx bx-undo'></i> Desfazer último evento</button>
     </div>` : ''}
     `}
 
@@ -1457,17 +1540,30 @@ function renderSumulaConsole() {
       <button class="btn btn-secondary" style="margin-left:8px" onclick="initSumulaLive()"><i class='bx bx-left-arrow-alt'></i> Voltar</button>
     </div>` : ''}
 
-    <div class="card">
-      <div class="card-title"><i class='bx bx-list-ul'></i> Linha do tempo</div>
-      ${timelineItens.length ? timelineItens.sort((a, b) => b.ordem - a.ordem).map(t => t.html).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum evento ainda.</p>'}
+    <div class="card" style="padding:0;overflow:hidden">
+      <div onclick="sumulaToggleAccordion_('acc-timeline')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:16px" class="card-title"><span><i class='bx bx-list-ul'></i> Linha do tempo ${timelineItens.length ? `<span style="font-size:11px;font-weight:700;color:var(--dark-grey)">(${timelineItens.length})</span>` : ''}</span><i class='bx bx-chevron-down' id="acc-timeline-icon"></i></div>
+      <div id="acc-timeline" style="display:none;padding:0 16px 16px">
+        ${timelineItens.length ? timelineItens.sort((a, b) => b.ordem - a.ordem).map(t => t.html).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum evento ainda.</p>'}
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-title"><i class='bx bx-note'></i> Observações da Súmula</div>
-      <textarea id="sumula-obs" rows="3" class="form-control" placeholder="Protestos, incidentes, ocorrências..." ${finalizada ? 'disabled' : ''} style="resize:vertical">${s.observacoes || ''}</textarea>
-      ${emAndamento ? `<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="sumulaSalvarObs()"><i class='bx bx-save'></i> Salvar Observações</button>` : ''}
+    <div class="card" style="padding:0;overflow:hidden">
+      <div onclick="sumulaToggleAccordion_('acc-obs')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:16px" class="card-title"><span><i class='bx bx-note'></i> Observações da Súmula</span><i class='bx bx-chevron-down' id="acc-obs-icon"></i></div>
+      <div id="acc-obs" style="display:none;padding:0 16px 16px">
+        <textarea id="sumula-obs" rows="3" class="form-control" placeholder="Protestos, incidentes, ocorrências..." ${finalizada ? 'disabled' : ''} style="resize:vertical">${s.observacoes || ''}</textarea>
+        ${emAndamento ? `<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="sumulaSalvarObs()"><i class='bx bx-save'></i> Salvar Observações</button>` : ''}
+      </div>
     </div>
   `;
+}
+
+function sumulaToggleAccordion_(id) {
+  const el = document.getElementById(id);
+  const icon = document.getElementById(id + '-icon');
+  if (!el) return;
+  const aberto = el.style.display !== 'none';
+  el.style.display = aberto ? 'none' : '';
+  if (icon) icon.className = aberto ? 'bx bx-chevron-down' : 'bx bx-chevron-up';
 }
 
 let _sumulaAcaoEmAndamento = false;
