@@ -1456,8 +1456,8 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
             <div class="card-title" style="margin:0"><i class='bx bx-list-ol'></i> Dados da Partida</div>
           </div>
           <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-            <div class="form-group" style="margin:0"><label>Equipe Casa</label><input class="form-control" id="wz-equipeA"></div>
-            <div class="form-group" style="margin:0"><label>Equipe Visitante</label><input class="form-control" id="wz-equipeB"></div>
+            <div class="form-group" style="margin:0"><label>Equipe Casa</label><select class="form-control" id="wz-equipeA" onchange="document.getElementById('wz-saca-a-label').textContent=this.value||'Equipe Casa'"></select></div>
+            <div class="form-group" style="margin:0"><label>Equipe Visitante</label><select class="form-control" id="wz-equipeB" onchange="document.getElementById('wz-saca-b-label').textContent=this.value||'Equipe Visitante'"></select></div>
           </div>
           <div style="padding:16px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px;margin-bottom:8px">
             <div style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px"><i class='bx bx-shield-quarter'></i> Equipe de arbitragem e mesa</div>
@@ -3664,7 +3664,7 @@ function mostrarOffline_() { const b = document.getElementById('sumulaOfflineBan
 function esconderOffline_() { const b = document.getElementById('sumulaOfflineBanner'); if (b) b.style.display = 'none'; }
 let _pollFalhasSeguidas = 0;
 
-function abrirWizard(sumulaId, jogo) {
+async function abrirWizard(sumulaId, jogo) {
   const ehTeste = /^TESTE/i.test(sumulaId);
   sumulaLiveWizardData = {
     sumulaId: sumulaId,
@@ -3672,8 +3672,31 @@ function abrirWizard(sumulaId, jogo) {
     equipeB: jogo ? jogo.equipeB : (ehTeste ? 'EQUIPE TESTE B' : '')
   };
   document.getElementById('sumulaSeletorCard').style.display = 'none';
-  document.getElementById('wz-equipeA').value = sumulaLiveWizardData.equipeA;
-  document.getElementById('wz-equipeB').value = sumulaLiveWizardData.equipeB;
+
+  // Lista de equipes vem das equipes de verdade confirmadas pra
+  // disputar a Supercopa (mesma lista do cadastro de atletas) — em
+  // vez de digitar o nome na mão, o apontador só escolhe.
+  const selA = document.getElementById('wz-equipeA');
+  const selB = document.getElementById('wz-equipeB');
+  selA.innerHTML = selB.innerHTML = '<option value="">Carregando...</option>';
+  let equipes = [];
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=equipesComPin').then(r => r.json());
+    equipes = ((res && res.equipes) || []).map(e => e.equipe);
+  } catch (ex) { /* segue com a lista vazia + fallback abaixo */ }
+  // Modo teste (ou um jogo cujo nome não está na lista por algum
+  // motivo) ainda precisa funcionar — garante que o valor atual
+  // sempre aparece como opção.
+  [sumulaLiveWizardData.equipeA, sumulaLiveWizardData.equipeB].forEach(nome => {
+    if (nome && !equipes.includes(nome)) equipes.push(nome);
+  });
+  equipes.sort();
+  const optsHtml = '<option value="">— selecione —</option>' + equipes.map(e => `<option value="${e}">${e}</option>`).join('');
+  selA.innerHTML = optsHtml;
+  selB.innerHTML = optsHtml;
+  selA.value = sumulaLiveWizardData.equipeA || '';
+  selB.value = sumulaLiveWizardData.equipeB || '';
+
   document.getElementById('wz-arbitro1').value = '';
   document.getElementById('wz-arbitro2').value = '';
   document.getElementById('wz-apontador').value = '';
@@ -3767,7 +3790,13 @@ async function gerarSumula() {
     const semDuplicado = new Set(titulares.filter(t => t.nome).map(t => t.nome)).size === titulares.filter(t => t.nome).length;
     if (!semDuplicado) throw new Error('Tem jogador(a) repetido(a) em mais de uma posição da equipe ' + (lado === 'A' ? sumulaLiveWizardData.equipeA : sumulaLiveWizardData.equipeB) + '.');
     const libero = parseSel(document.getElementById('wz-libero-' + lado).value);
-    return { titulares: titulares, libero: libero };
+    // Técnico e Auxiliar Técnico vêm do cadastro de atletas da equipe
+    // (já carregado em wizardAtletasA/B) — guardados na súmula pra
+    // poder preencher a COMISSÃO TÉCNICA no PDF final.
+    const pool = lado === 'A' ? wizardAtletasA : wizardAtletasB;
+    const tecnico = pool.find(a => a.tipo === 'Técnico') || null;
+    const auxiliarTecnico = pool.find(a => a.tipo === 'Auxiliar Técnico') || null;
+    return { titulares: titulares, libero: libero, tecnico: tecnico, auxiliarTecnico: auxiliarTecnico };
   };
 
   let elencoCasa, elencoVisitante;
@@ -4404,15 +4433,37 @@ async function gerarPdfSumula(s) {
     txt((s.setsVisitante || 0) + ' set(s)   —   ' + (s.equipeVisitante || 'EQUIPE B').toUpperCase(), MX + wTime + wTime / 2, y + 6.8, { align: 'center' });
     y += 14;
 
+    // Ordem de saque (posições I a VI) com o número de quem estava em
+    // cada posição quando a escalação do set foi confirmada — a
+    // posição I é sempre quem saca primeiro naquele set.
+    const ROMANOS_ = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+    function desenharOrdemSaque_(x0, y0, w, rotacao, cor) {
+      const n = 6, wCel = w / n, h = 7.5;
+      for (let i = 0; i < n; i++) {
+        const px = x0 + i * wCel;
+        const ehSaque = i === 0;
+        box(px, y0, wCel, h, ehSaque ? cor : FUNDO);
+        doc.setFont(undefined, 'bold'); doc.setFontSize(5);
+        doc.setTextColor(ehSaque ? 255 : CINZA[0], ehSaque ? 255 : CINZA[1], ehSaque ? 255 : CINZA[2]);
+        txt(ROMANOS_[i], px + wCel / 2, y0 + 2.6, { align: 'center' });
+        const p = (rotacao || [])[i];
+        doc.setFont(undefined, 'bold'); doc.setFontSize(7);
+        doc.setTextColor(ehSaque ? 255 : 20, ehSaque ? 255 : 20, ehSaque ? 255 : 20);
+        txt(p && p.numero ? p.numero : '—', px + wCel / 2, y0 + 6.3, { align: 'center' });
+      }
+      return y0 + h;
+    }
+
     // ── PAINÉIS DE SET (marcador de pontos oficial, 2 por linha) ──
     const gap = 4, panelW = (MW - gap) / 2;
     function painelSet(x0, y0, w, numSet) {
       const pontosDoSet = pontosComPlacar.filter(p => p.set === numSet);
       const pontosA = pontosDoSet.filter(p => p.equipe === 'A');
       const pontosB = pontosDoSet.filter(p => p.equipe === 'B');
-      const horaIni = pontosDoSet[0] ? pontosDoSet[0].hora.slice(0, 5) : '—';
+      const horaIni = (s.horariosSets && s.horariosSets[numSet]) ? s.horariosSets[numSet].slice(-8, -3) : (pontosDoSet[0] ? pontosDoSet[0].hora.slice(0, 5) : '—');
       const horaFim = pontosDoSet.length ? pontosDoSet[pontosDoSet.length - 1].hora.slice(0, 5) : '—';
       const fechado = hs[numSet - 1];
+      const escSet = (s.escalacoesPorSet && s.escalacoesPorSet[numSet]) || {};
 
       box(x0, y0, w, 6.5, FUNDO);
       doc.setFont(undefined, 'bold'); doc.setFontSize(7.5); doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]);
@@ -4425,11 +4476,32 @@ async function gerarPdfSumula(s) {
       doc.setFont(undefined, 'bold'); doc.setFontSize(6.3);
       doc.setTextColor(AZUL[0], AZUL[1], AZUL[2]); txt((s.equipeCasa || 'Equipe A').toUpperCase(), x0, yy);
       doc.setTextColor(LARANJA[0], LARANJA[1], LARANJA[2]); txt((s.equipeVisitante || 'Equipe B').toUpperCase(), x0 + wGrid + 4, yy);
-      yy += 2;
+      yy += 1.5;
+
+      // ORDEM DE SAQUE / JOGADORES INICIANTES (posições I-VI)
+      doc.setFont(undefined, 'normal'); doc.setFontSize(4.3); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]);
+      txt('ORDEM DE SAQUE', x0, yy + 2.6);
+      txt('ORDEM DE SAQUE', x0 + wGrid + 4, yy + 2.6);
+      yy += 1;
+      const yyAposOrdem = Math.max(
+        desenharOrdemSaque_(x0, yy, wGrid, escSet.rotacaoCasa, AZUL),
+        desenharOrdemSaque_(x0 + wGrid + 4, yy, wGrid, escSet.rotacaoVisitante, LARANJA)
+      );
+      yy = yyAposOrdem + 1.5;
 
       desenharGradeOficial_(x0, yy, wGrid, pontosA, AZUL);
       desenharGradeOficial_(x0 + wGrid + 4, yy, wGrid, pontosB, LARANJA);
-      return yy + 12 * 4.15 + 2;
+      yy += 12 * 4.15 + 1.5;
+
+      // Substituições feitas durante este set.
+      const subsDoSet = (s.substituicoes || []).filter(sub => sub.set === numSet);
+      if (subsDoSet.length) {
+        doc.setFont(undefined, 'bold'); doc.setFontSize(5); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]);
+        const txtSubs = 'SUBSTITUIÇÕES: ' + subsDoSet.map(sub => (sub.equipe === 'A' ? (s.equipeCasa || 'Casa') : (s.equipeVisitante || 'Visit')) + ' ' + sub.saiu + '→' + sub.entrou).join('  ·  ');
+        txt(txtSubs, x0, yy + 3);
+        yy += 5;
+      }
+      return yy;
     }
 
     let yRow = painelSet(MX, y, panelW, 1);
@@ -4473,6 +4545,18 @@ async function gerarPdfSumula(s) {
         doc.setFont(undefined, 'bold'); txt('LÍBERO', x + wNum + wNome + wPos / 2, yy + 4.3, { align: 'center' });
         yy += 6;
       }
+      // COMISSÃO TÉCNICA (Técnico/Auxiliar Técnico) — vem do cadastro
+      // de atletas da equipe, não tem número de quadra.
+      [['tecnico', 'TÉCNICO'], ['auxiliarTecnico', 'AUX. TÉCNICO']].forEach(([campo, rotulo]) => {
+        const pessoa = elenco && elenco[campo];
+        if (!pessoa || !pessoa.nome) return;
+        box(x, yy, wNum, 6, [232, 240, 253]); box(x + wNum, yy, wNome, 6, [232, 240, 253]); box(x + wNum + wNome, yy, wPos, 6, [232, 240, 253]);
+        doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
+        txt('—', x + wNum / 2, yy + 4.3, { align: 'center' });
+        txt(pessoa.nome, x + wNum + 2, yy + 4.3);
+        doc.setFont(undefined, 'bold'); doc.setFontSize(6.3); txt(rotulo, x + wNum + wNome + wPos / 2, yy + 4.3, { align: 'center' });
+        yy += 6;
+      });
       return yy;
     }
     const yFimA = tabelaEscalacao(MX, s.equipeCasa, s.elencoCasa, s.capitaoCasa);
@@ -4532,8 +4616,8 @@ async function gerarPdfSumula(s) {
     y += 17;
 
     // ── ASSINATURAS ─────────────────────────────────────────
-    if (y > 188) { novaPagina_(); y = 12; }
-    y = Math.max(y, 190);
+    if (y > 178) { novaPagina_(); y = 12; }
+    y = Math.max(y, 184);
     function nomePorNumero_(elenco, numero) {
       if (!elenco || !numero) return '';
       const t = (elenco.titulares || []).find(p => p.numero && p.numero.toString() === numero.toString());
@@ -4550,10 +4634,13 @@ async function gerarPdfSumula(s) {
         txt(label, x + w / 2, yy + 4.3, { align: 'center' });
       });
     }
+    linhaAssinaturas_(['Árbitro 1', 'Árbitro 2', 'Apontador(a)'], y);
+    y += 11;
     linhaAssinaturas_([
-      'Árbitro 1', 'Árbitro 2', 'Apontador(a)',
       'Capitão · ' + s.equipeCasa + (capNomeA ? ' (' + capNomeA + ')' : ''),
-      'Capitão · ' + s.equipeVisitante + (capNomeB ? ' (' + capNomeB + ')' : '')
+      'Técnico · ' + s.equipeCasa + ((s.elencoCasa && s.elencoCasa.tecnico && s.elencoCasa.tecnico.nome) ? ' (' + s.elencoCasa.tecnico.nome + ')' : ''),
+      'Capitão · ' + s.equipeVisitante + (capNomeB ? ' (' + capNomeB + ')' : ''),
+      'Técnico · ' + s.equipeVisitante + ((s.elencoVisitante && s.elencoVisitante.tecnico && s.elencoVisitante.tecnico.nome) ? ' (' + s.elencoVisitante.tecnico.nome + ')' : '')
     ], y);
 
     doc.setFontSize(6.5); doc.setTextColor(170);

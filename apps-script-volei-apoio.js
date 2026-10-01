@@ -97,7 +97,8 @@ const HEADERS_PARTIDAS = [
   'HistoricoSets', 'Timeouts', 'Cartoes', 'Substituicoes', 'EventosLog',
   'Status', 'LinkPDF', 'CriadoEm', 'AtualizadoEm',
   'CapitaoCasa', 'CapitaoVisitante', 'Observacoes',
-  'HistoricoPontos', 'CapitaoQuadraCasa', 'CapitaoQuadraVisitante', 'RotacaoConfirmadaSet'
+  'HistoricoPontos', 'CapitaoQuadraCasa', 'CapitaoQuadraVisitante', 'RotacaoConfirmadaSet',
+  'EscalacoesPorSet', 'HorariosSets'
 ];
 // Índices das colunas (0-based) para referência rápida.
 const PC = {
@@ -110,7 +111,14 @@ const PC = {
   status:24, linkPdf:25, criadoEm:26, atualizadoEm:27,
   capitaoCasa:28, capitaoVisitante:29, observacoes:30,
   historicoPontos:31, capitaoQuadraCasa:32, capitaoQuadraVisitante:33,
-  rotacaoConfirmadaSet:34
+  rotacaoConfirmadaSet:34,
+  // escalacoesPorSet guarda, pra cada set (chave "1","2","3"), a
+  // escalação (rotação + capitão de quadra) confirmada naquele set —
+  // sem isso, a súmula final só saberia a escalação do ÚLTIMO set,
+  // já que rotacaoCasa/rotacaoVisitante são sobrescritos a cada set.
+  // horariosSets guarda a hora de início de cada set (pro "HORÁRIO DE
+  // INÍCIO/FIM" oficial da súmula).
+  escalacoesPorSet:35, horariosSets:36
 };
 
 function criarPlanilhaVolei() {
@@ -698,7 +706,9 @@ function linhaParaEstado_(row) {
     historicoPontos: parseJson_(row[PC.historicoPontos], []),
     capitaoQuadraCasa: row[PC.capitaoQuadraCasa] || row[PC.capitaoCasa] || '',
     capitaoQuadraVisitante: row[PC.capitaoQuadraVisitante] || row[PC.capitaoVisitante] || '',
-    rotacaoConfirmadaSet: Number(row[PC.rotacaoConfirmadaSet]) || 1
+    rotacaoConfirmadaSet: Number(row[PC.rotacaoConfirmadaSet]) || 1,
+    escalacoesPorSet: parseJson_(row[PC.escalacoesPorSet], {}),
+    horariosSets: parseJson_(row[PC.horariosSets], {})
   };
   // Rede de segurança: se por qualquer motivo (concorrência, cota do
   // Google, etc.) a linha ficou com 2 sets pra um lado mas o status
@@ -758,6 +768,8 @@ function criarPartida_(d) {
   linhaDados[PC.capitaoQuadraCasa] = d.capitaoCasa || '';
   linhaDados[PC.capitaoQuadraVisitante] = d.capitaoVisitante || '';
   linhaDados[PC.rotacaoConfirmadaSet] = 1;
+  linhaDados[PC.escalacoesPorSet] = JSON.stringify({});
+  linhaDados[PC.horariosSets] = JSON.stringify({ 1: agora });
 
   const existenteInfo = acharLinhaPartida_(sh, jogo.id);
   if (existenteInfo) {
@@ -813,6 +825,8 @@ function salvarLinhaPartida_(sh, linhaNum, estado) {
   linhaDados[PC.capitaoQuadraCasa] = estado.capitaoQuadraCasa || '';
   linhaDados[PC.capitaoQuadraVisitante] = estado.capitaoQuadraVisitante || '';
   linhaDados[PC.rotacaoConfirmadaSet] = estado.rotacaoConfirmadaSet || 1;
+  linhaDados[PC.escalacoesPorSet] = JSON.stringify(estado.escalacoesPorSet || {});
+  linhaDados[PC.horariosSets] = JSON.stringify(estado.horariosSets || {});
   sh.getRange(linhaNum, 1, 1, linhaDados.length).setValues([linhaDados]);
 }
 
@@ -852,6 +866,8 @@ function aplicarPontoNoEstado_(estado, equipe) {
     estado.primeiroSaqueSet = (estado.primeiroSaqueSet === 'A') ? 'B' : 'A';
     estado.sacando = estado.primeiroSaqueSet;
     if (estado.setsCasa >= 2 || estado.setsVisitante >= 2) estado.status = 'sets_completos';
+    estado.horariosSets = estado.horariosSets || {};
+    estado.horariosSets[estado.setAtual] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
   }
   return setFechado;
 }
@@ -973,6 +989,15 @@ function definirEscalacaoSet_(d) {
   estado.rotacaoConfirmadaSet = estado.setAtual;
   if (d.capitaoQuadraCasa) estado.capitaoQuadraCasa = d.capitaoQuadraCasa;
   if (d.capitaoQuadraVisitante) estado.capitaoQuadraVisitante = d.capitaoQuadraVisitante;
+  // Guarda a escalação confirmada DESTE set à parte — rotacaoCasa/
+  // rotacaoVisitante vão ser sobrescritas na escalação do próximo
+  // set, então sem isso a súmula final só saberia a escalação do
+  // último set jogado.
+  estado.escalacoesPorSet = estado.escalacoesPorSet || {};
+  estado.escalacoesPorSet[estado.setAtual] = {
+    rotacaoCasa: rotA, rotacaoVisitante: rotB,
+    capitaoQuadraCasa: estado.capitaoQuadraCasa, capitaoQuadraVisitante: estado.capitaoQuadraVisitante
+  };
   estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
   salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;
