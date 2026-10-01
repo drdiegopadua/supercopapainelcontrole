@@ -3740,8 +3740,10 @@ let wizardAtletasA = [], wizardAtletasB = [];
 // Layout de quadra em ordem de rotação: linha da rede (P4,P3,P2)
 // depois linha de trás (P5,P6,P1 — P1 é quem saca).
 function renderQuadra_(lado, nomeEquipe, atletas) {
-  const opcoes = atletas.map(a => `<option value="${a.numero}|${a.nome.replace(/"/g, '')}">${a.numero ? a.numero + ' · ' : ''}${a.nome}</option>`).join('');
-  const semAtletas = !atletas.length;
+  // Técnico/Auxiliar Técnico não jogam — não podem aparecer como
+  // opção de posição em quadra, líbero ou capitão.
+  const jogadores = atletas.filter(a => (a.tipo || 'Atleta') === 'Atleta');
+  const opcoes = jogadores.map(a => `<option value="${a.numero}|${a.nome.replace(/"/g, '')}">${a.numero ? a.numero + ' · ' : ''}${a.nome}</option>`).join('');
   const posSelect = (pos) => `
     <select class="form-control ct-pos" id="wz-pos-${lado}-${pos}" style="text-align:center;font-weight:700;padding:10px 4px">
       <option value="">P${pos}</option>
@@ -3750,7 +3752,7 @@ function renderQuadra_(lado, nomeEquipe, atletas) {
   return `
     <div>
       <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:var(--light-blue);color:var(--blue);text-align:center;margin-bottom:10px">${nomeEquipe}</div>
-      ${semAtletas ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:10px 12px;border-radius:8px;margin-bottom:10px"><i class='bx bx-error'></i> Nenhum atleta cadastrado. <a href="javascript:void(0)" onclick="abrirCadastroAtletas();document.getElementById('ca-equipe-nova').value='${nomeEquipe.replace(/'/g, "\\'")}';carregarListaAtletas();" style="color:#856404;text-decoration:underline">Cadastrar agora</a></div>` : ''}
+      ${jogadores.length < 6 ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:10px 12px;border-radius:8px;margin-bottom:10px"><i class='bx bx-error'></i> ${jogadores.length ? 'Só ' + jogadores.length + ' atleta(s) cadastrado(s) — faltam ' + (6 - jogadores.length) + ' pra fechar os 6 titulares.' : 'Nenhum atleta cadastrado.'} <a href="javascript:void(0)" onclick="abrirCadastroAtletas();document.getElementById('ca-equipe-nova').value='${nomeEquipe.replace(/'/g, "\\'")}';carregarListaAtletas();" style="color:#856404;text-decoration:underline">Cadastrar agora</a></div>` : ''}
       <div style="background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:10px;padding:10px">
         <div style="text-align:center;font-size:9px;font-weight:800;color:#2e7d32;letter-spacing:1px;margin-bottom:6px">◤ REDE ◥</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">${posSelect(4)}${posSelect(3)}${posSelect(2)}</div>
