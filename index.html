@@ -3549,8 +3549,13 @@ async function abrirCadastroAtletas() {
   const sel = document.getElementById('ca-equipe-select');
   sel.innerHTML = '<option value="">Carregando...</option>';
   try {
-    const res = await fetch(SUMULA_SCRIPT_URL + '?action=equipesConhecidas').then(r => r.json());
-    const equipes = (res && res.equipes) || [];
+    // Mesma fonte da súmula (equipesComPin): só as equipes de verdade
+    // confirmadas. equipesConhecidas misturava nomes vindos da
+    // planilha antiga de jogos (às vezes sem acento) com os nomes da
+    // inscrição, criando duplicatas tipo "ES VOLEI" vazio ao lado de
+    // "ES VÔLEI" com os atletas de verdade.
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=equipesComPin').then(r => r.json());
+    const equipes = ((res && res.equipes) || []).map(e => e.equipe);
     sel.innerHTML = '<option value="">— selecione —</option>' + equipes.map(e => `<option value="${e}">${e}</option>`).join('');
   } catch (ex) {
     sel.innerHTML = '<option value="">— selecione —</option>';
