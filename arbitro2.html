@@ -101,7 +101,7 @@ async function entrarPartida(){
     document.getElementById('hdrTitle').textContent = '🏐 ' + estado.equipeCasa + ' x ' + estado.equipeVisitante;
     render();
     if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(poll, 4000);
+    pollTimer = setInterval(poll, 15000);
   } catch(e){ showToast('Erro de conexão.', 'error'); }
 }
 

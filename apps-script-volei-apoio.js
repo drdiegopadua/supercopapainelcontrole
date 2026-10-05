@@ -332,6 +332,20 @@ function doPost(e) {
     if (acao === 'finalizarPartida') return okJson(comLock_(() => finalizarPartida_(dados)));
     if (acao === 'uploadPdfSumula') return okJson(uploadPdfSumula_(dados));
 
+    // SÚMULA 2.0 — lote de eventos, juízes, assinaturas, cadastro com senha
+    if (acao === 'processarEventosLote') return okJson(comLock_(() => processarEventosLote_(dados)));
+    if (acao === 'cadastrarJuiz') return okJson(cadastrarJuiz_(dados));
+    if (acao === 'removerJuiz') return okJson(removerJuiz_(dados));
+    if (acao === 'salvarAssinatura') return okJson(salvarAssinatura_(dados));
+    if (acao === 'cadastrarAtletaAdmin') {
+      if ((dados.senha || '').toString() !== SENHA_ADMIN_SUMULA) return okJson({ ok: false, erro: 'Senha incorreta.' });
+      return okJson(cadastrarAtleta_(dados));
+    }
+    if (acao === 'removerAtletaAdmin') {
+      if ((dados.senha || '').toString() !== SENHA_ADMIN_SUMULA) return okJson({ ok: false, erro: 'Senha incorreta.' });
+      return okJson(removerAtleta_(dados));
+    }
+
     return okJson({ ok: false, erro: 'ação inválida: ' + acao });
   } catch (ex) {
     return okJson({ ok: false, erro: ex.message });
@@ -369,6 +383,8 @@ function doGet(e) {
       const okPin = verificarPin_((e.parameter && e.parameter.equipe) || '', (e.parameter && e.parameter.pin) || '');
       return okJson({ ok: okPin });
     }
+    if (action === 'listarJuizes') return okJson({ ok: true, juizes: listarJuizes_() });
+    if (action === 'assinaturasEquipe') return okJson({ ok: true, assinaturas: assinaturasEquipe_((e.parameter && e.parameter.equipe) || '') });
     if (action === 'atletasEquipeApp') {
       const eq = (e.parameter && e.parameter.equipe) || '';
       const pin = (e.parameter && e.parameter.pin) || '';
@@ -1521,6 +1537,135 @@ function uploadPdfSumula_(d) {
   const folder = getPdfFolder_();
   const file = folder.createFile(blob);
   return { ok: true, link: file.getUrl(), linkDownload: 'https://drive.google.com/uc?export=download&id=' + file.getId() };
+}
+
+// ============================================================
+//  SÚMULA 2.0 — lote de eventos, juízes e assinaturas
+// ============================================================
+const SENHA_ADMIN_SUMULA = '5912';
+const ABA_JUIZES = 'Juizes';
+const ABA_ASSINATURAS = 'Assinaturas';
+const LIMITE_ASSINATURA_CHARS = 45000;
+
+function abaOuCria_(nome, headers) {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(nome);
+  if (!sh) {
+    sh = ss.insertSheet(nome);
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function agoraStr_() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+}
+
+function assinaturaValida_(s) {
+  s = (s || '').toString();
+  if (s.indexOf('data:image/png;base64,') !== 0) return 'Assinatura inválida.';
+  if (s.length > LIMITE_ASSINATURA_CHARS) return 'Assinatura muito grande — desenhe de forma mais simples.';
+  return '';
+}
+
+// Aplica vários eventos (ponto, tempo, cartão...) numa única chamada,
+// sob um único lock, na ordem em que o painel os registrou. O servidor
+// continua sendo o dono das regras do jogo — só mudou que chega tudo
+// junto a cada ~30s em vez de uma chamada por clique.
+function processarEventosLote_(d) {
+  const eventos = d.eventos || [];
+  const handlers = {
+    ponto: registrarPonto_, pontoMenos: pontoMenos_, timeout: registrarTimeout_,
+    cartao: registrarCartao_, substituicao: registrarSubstituicao_,
+    definirEscalacaoSet: definirEscalacaoSet_, definirCapitaoQuadra: definirCapitaoQuadra_,
+    atualizarObservacoes: atualizarObservacoes_, removerEvento: removerEvento_
+  };
+  // loteId garante que um reenvio (resposta perdida) não aplique os
+  // mesmos pontos duas vezes.
+  const cache = CacheService.getScriptCache();
+  const chaveLote = d.loteId ? ('lote_' + d.id + '_' + d.loteId) : '';
+  if (chaveLote && cache.get(chaveLote)) {
+    const atualDup = carregarPartida_(d.id);
+    return atualDup.ok ? { ok: true, estado: atualDup.estado, erros: [], processados: 0, duplicado: true } : atualDup;
+  }
+  const erros = [];
+  let ultimo = null;
+  eventos.forEach((ev, i) => {
+    const fn = handlers[ev.tipo];
+    if (!fn) { erros.push({ indice: i, erro: 'tipo inválido: ' + ev.tipo }); return; }
+    const dados = Object.assign({}, ev.dados || {}, { id: d.id });
+    const res = fn(dados);
+    if (res && res.ok) ultimo = res.estado;
+    else erros.push({ indice: i, tipo: ev.tipo, erro: (res && res.erro) || 'erro' });
+  });
+  if (chaveLote) cache.put(chaveLote, '1', 21600);
+  if (!ultimo) {
+    const atual = carregarPartida_(d.id);
+    if (!atual.ok) return atual;
+    ultimo = atual.estado;
+  }
+  return { ok: true, estado: ultimo, erros: erros, processados: eventos.length - erros.length };
+}
+
+function listarJuizes_() {
+  const sh = abaOuCria_(ABA_JUIZES, ['Nome', 'Assinatura', 'Criado em']);
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues() : [];
+  return rows.filter(r => r[0]).map(r => ({ nome: r[0].toString(), assinatura: (r[1] || '').toString() }))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+function cadastrarJuiz_(d) {
+  const nome = (d.nome || '').toString().trim();
+  if (!nome) return { ok: false, erro: 'Informe o nome do juiz.' };
+  const erroAss = assinaturaValida_(d.assinatura);
+  if (erroAss) return { ok: false, erro: erroAss };
+  const sh = abaOuCria_(ABA_JUIZES, ['Nome', 'Assinatura', 'Criado em']);
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues() : [];
+  const idx = rows.findIndex(r => r[0].toString().trim().toLowerCase() === nome.toLowerCase());
+  if (idx >= 0) {
+    sh.getRange(idx + 2, 2).setValue(d.assinatura);
+    return { ok: true, atualizado: true };
+  }
+  sh.appendRow([nome, d.assinatura, agoraStr_()]);
+  return { ok: true };
+}
+
+function removerJuiz_(d) {
+  const nome = (d.nome || '').toString().trim().toLowerCase();
+  const sh = abaOuCria_(ABA_JUIZES, ['Nome', 'Assinatura', 'Criado em']);
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues() : [];
+  const idx = rows.findIndex(r => r[0].toString().trim().toLowerCase() === nome);
+  if (idx < 0) return { ok: false, erro: 'Juiz não encontrado.' };
+  sh.deleteRow(idx + 2);
+  return { ok: true };
+}
+
+function assinaturasEquipe_(equipe) {
+  const sh = abaOuCria_(ABA_ASSINATURAS, ['Equipe', 'Papel', 'Assinatura', 'Atualizado em']);
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues() : [];
+  const alvo = (equipe || '').toString().trim().toLowerCase();
+  const out = {};
+  rows.forEach(r => {
+    if (r[0].toString().trim().toLowerCase() === alvo) out[r[1].toString()] = (r[2] || '').toString();
+  });
+  return out;
+}
+
+// App da equipe: exige o PIN da equipe (mesmo padrão do cadastro de atletas).
+function salvarAssinatura_(d) {
+  const equipe = (d.equipe || '').toString().trim();
+  const papel = d.papel === 'capitao' ? 'capitao' : (d.papel === 'tecnico' ? 'tecnico' : '');
+  if (!equipe || !papel) return { ok: false, erro: 'Equipe e papel são obrigatórios.' };
+  if (!verificarPin_(equipe, d.pin)) return { ok: false, erro: 'PIN incorreto.' };
+  const erroAss = assinaturaValida_(d.assinatura);
+  if (erroAss) return { ok: false, erro: erroAss };
+  const sh = abaOuCria_(ABA_ASSINATURAS, ['Equipe', 'Papel', 'Assinatura', 'Atualizado em']);
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues() : [];
+  const idx = rows.findIndex(r => r[0].toString().trim().toLowerCase() === equipe.toLowerCase() && r[1] === papel);
+  if (idx >= 0) sh.getRange(idx + 2, 3, 1, 2).setValues([[d.assinatura, agoraStr_()]]);
+  else sh.appendRow([equipe, papel, d.assinatura, agoraStr_()]);
+  return { ok: true };
 }
 
 // ============================================================

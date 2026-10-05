@@ -1410,6 +1410,8 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
           </div>
           <button class="btn" style="background:#fff;color:var(--blue)" onclick="abrirOuCriarPartida()"><i class='bx bx-play-circle'></i> Abrir Súmula</button>
           <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="abrirCadastroAtletas()"><i class='bx bx-group'></i> Times e Atletas</button>
+          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="abrirArbitragem()"><i class='bx bx-shield-quarter'></i> Cadastrar Arbitragem</button>
+          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="window.open('arbitro2.html','_blank')"><i class='bx bx-show'></i> Árbitro 2</button>
         </div>
       </div>
 
@@ -1448,48 +1450,106 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
         </div>
       </div>
 
-      <!-- Wizard de criação -->
+      <!-- Cadastro de Arbitragem -->
+      <div id="arbitragemCard" style="display:none">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eef0f5">
+            <div class="card-title" style="margin:0"><i class='bx bx-shield-quarter'></i> Cadastro de Arbitragem</div>
+            <button class="btn btn-secondary btn-sm" onclick="fecharArbitragem()"><i class='bx bx-left-arrow-alt'></i> Voltar</button>
+          </div>
+          <div style="padding:16px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px;margin-bottom:16px">
+            <div class="form-group"><label>Nome do juiz / apontador</label><input class="form-control" id="arb-nome" placeholder="Nome completo"></div>
+            <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Assinatura (desenhe com o dedo ou mouse)</label>
+            <canvas id="arb-canvas" width="480" height="160" style="width:100%;max-width:480px;aspect-ratio:3/1;background:#fff;border:1.5px dashed #9aa0ab;border-radius:10px;touch-action:none;display:block"></canvas>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" onclick="arbLimpar()"><i class='bx bx-eraser'></i> Limpar assinatura</button>
+              <button class="btn btn-primary" onclick="arbSalvar()"><i class='bx bx-save'></i> Salvar juiz</button>
+            </div>
+          </div>
+          <div id="arb-lista"></div>
+        </div>
+      </div>
+
+      <!-- Wizard de criação: 0 elenco → 1 arbitragem → 2 partida -->
       <div id="sumulaWizard" style="display:none">
-        <div class="card" id="sumulaWizardStep1">
+        <div class="card" id="sumulaWizardStep0">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
             <span style="width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">1</span>
-            <div class="card-title" style="margin:0"><i class='bx bx-list-ol'></i> Dados da Partida</div>
+            <div class="card-title" style="margin:0"><i class='bx bx-group'></i> Confirmar Equipes e Elenco</div>
           </div>
-          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-            <div class="form-group" style="margin:0"><label>Equipe Casa</label><select class="form-control" id="wz-equipeA" onchange="document.getElementById('wz-saca-a-label').textContent=this.value||'Equipe Casa'"></select></div>
-            <div class="form-group" style="margin:0"><label>Equipe Visitante</label><select class="form-control" id="wz-equipeB" onchange="document.getElementById('wz-saca-b-label').textContent=this.value||'Equipe Visitante'"></select></div>
+          <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <div class="form-group" style="margin:0 0 10px"><label>Equipe Casa</label><select class="form-control" id="wz-equipeA" onchange="wizardCarregarElencos_()"></select></div>
+              <div id="wz-elenco-A"></div>
+              <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="wizardAbrirAdd_('A')"><i class='bx bx-user-plus'></i> Adicionar atleta</button>
+            </div>
+            <div>
+              <div class="form-group" style="margin:0 0 10px"><label>Equipe Visitante</label><select class="form-control" id="wz-equipeB" onchange="wizardCarregarElencos_()"></select></div>
+              <div id="wz-elenco-B"></div>
+              <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="wizardAbrirAdd_('B')"><i class='bx bx-user-plus'></i> Adicionar atleta</button>
+            </div>
           </div>
-          <div style="padding:16px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px;margin-bottom:8px">
+          <div id="wz-add-panel" style="display:none;margin-top:16px;padding:16px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px">
+            <div id="wz-add-titulo" style="font-weight:800;font-size:13px;margin-bottom:10px">Adicionar atleta</div>
+            <div id="wz-add-senha-box" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-group" style="margin:0;flex:1;min-width:160px"><label>Senha de liberação</label><input class="form-control" id="wz-add-senha" type="password" inputmode="numeric" placeholder="Senha" onkeydown="if(event.key==='Enter')wizardAddSenhaOk_()"></div>
+              <button class="btn btn-primary" onclick="wizardAddSenhaOk_()">OK</button>
+              <button class="btn btn-secondary" onclick="wizardFecharAdd_()">Cancelar</button>
+            </div>
+            <div id="wz-add-form-box" style="display:none">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+                <div class="form-group" style="width:90px;margin:0"><label>Número</label><input class="form-control" id="wz-add-numero" placeholder="Nº"></div>
+                <div class="form-group" style="flex:1;min-width:160px;margin:0"><label>Nome</label><input class="form-control" id="wz-add-nome" placeholder="Nome completo"></div>
+                <div class="form-group" style="width:170px;margin:0"><label>Tipo</label><select class="form-control" id="wz-add-tipo"><option value="Atleta">Atleta</option><option value="Técnico">Técnico</option><option value="Auxiliar Técnico">Auxiliar Técnico</option></select></div>
+                <button class="btn btn-primary" onclick="wizardAddSalvar_()"><i class='bx bx-save'></i> Salvar</button>
+                <button class="btn btn-secondary" onclick="wizardFecharAdd_()">Fechar</button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eef0f5;display:flex;justify-content:space-between">
+            <button class="btn btn-secondary" onclick="initSumulaLive()"><i class='bx bx-x'></i> Cancelar</button>
+            <button class="btn btn-primary" onclick="wizardStep0Ok()">OK <i class='bx bx-chevron-right'></i></button>
+          </div>
+        </div>
+
+        <div class="card" id="sumulaWizardStep1" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            <span style="width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">2</span>
+            <div class="card-title" style="margin:0"><i class='bx bx-shield-quarter'></i> Arbitragem e Mesa</div>
+          </div>
+          <div id="wz-juizes-vazio" style="display:none;background:#fff3cd;color:#856404;font-size:12px;padding:10px 12px;border-radius:8px;margin-bottom:12px"><i class='bx bx-error'></i> Nenhum juiz cadastrado ainda. Use "Cadastrar Arbitragem" na tela inicial da súmula (ou digite o nome em "Digitar outro nome").</div>
+          <div style="padding:16px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
               <div style="font-size:11px;font-weight:700;color:var(--dark-grey);text-transform:uppercase;letter-spacing:.5px"><i class='bx bx-shield-quarter'></i> Equipe de arbitragem e mesa</div>
               <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 10px;background:transparent;border:1px solid var(--stroke);color:var(--dark-grey)" onclick="limparArbitragemWizard_()">Limpar</button>
             </div>
             <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-              <div class="form-group" style="margin:0"><label>1º Árbitro</label><input class="form-control" id="wz-arbitro1" placeholder="Nome"></div>
-              <div class="form-group" style="margin:0"><label>2º Árbitro (opcional)</label><input class="form-control" id="wz-arbitro2" placeholder="Nome"></div>
+              <div class="form-group" style="margin:0"><label>1º Árbitro</label><select class="form-control" id="wz-arbitro1" onchange="wizardJuizOutro_(this)"></select></div>
+              <div class="form-group" style="margin:0"><label>2º Árbitro (opcional)</label><select class="form-control" id="wz-arbitro2" onchange="wizardJuizOutro_(this)"></select></div>
             </div>
-            <div class="field-group-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div class="form-group" style="margin:0"><label>Apontador(a) / Mesa</label><input class="form-control" id="wz-apontador" placeholder="Nome"></div>
-              <div class="form-group" style="margin:0">
-                <label>Quem saca primeiro?</label>
-                <select class="form-control" id="wz-saca-primeiro"><option value="A" id="wz-saca-a-label">Equipe Casa</option><option value="B" id="wz-saca-b-label">Equipe Visitante</option></select>
-              </div>
-            </div>
+            <div class="form-group" style="margin:0"><label>Apontador(a) / Mesa</label><select class="form-control" id="wz-apontador" onchange="wizardJuizOutro_(this)"></select></div>
           </div>
-          <div style="text-align:right;margin-top:14px">
-            <button class="btn btn-primary" onclick="wizardProximo()">Próximo <i class='bx bx-chevron-right'></i></button>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eef0f5;display:flex;justify-content:space-between">
+            <button class="btn btn-secondary" onclick="wizardVoltarPara(0)"><i class='bx bx-chevron-left'></i> Voltar</button>
+            <button class="btn btn-primary" onclick="wizardStep1Ok()">OK <i class='bx bx-chevron-right'></i></button>
           </div>
         </div>
 
         <div class="card" id="sumulaWizardStep2" style="display:none">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-            <span style="width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">2</span>
-            <div class="card-title" style="margin:0"><i class='bx bx-group'></i> Escalação Titular</div>
+            <span style="width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">3</span>
+            <div class="card-title" style="margin:0"><i class='bx bxs-volleyball'></i> Partida: posições, capitão e saque</div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="wz-escalacao-grid"></div>
+          <div style="margin-top:16px;padding:14px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px;max-width:360px">
+            <div class="form-group" style="margin:0">
+              <label>Quem saca primeiro?</label>
+              <select class="form-control" id="wz-saca-primeiro"><option value="A" id="wz-saca-a-label">Equipe Casa</option><option value="B" id="wz-saca-b-label">Equipe Visitante</option></select>
+            </div>
+          </div>
           <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eef0f5;display:flex;justify-content:space-between">
-            <button class="btn btn-secondary" onclick="wizardVoltar()"><i class='bx bx-chevron-left'></i> Voltar</button>
-            <button class="btn btn-success" onclick="gerarSumula()"><i class='bx bxs-file-plus'></i> Gerar Súmula</button>
+            <button class="btn btn-secondary" onclick="wizardVoltarPara(1)"><i class='bx bx-chevron-left'></i> Voltar</button>
+            <button class="btn btn-success" onclick="gerarSumula()"><i class='bx bxs-file-plus'></i> Iniciar Partida</button>
           </div>
         </div>
       </div>
@@ -3539,6 +3599,8 @@ function initSumulaLive() {
   document.getElementById('sumulaConsole').style.display = 'none';
   document.getElementById('sumulaConsole').innerHTML = '';
   document.getElementById('cadastroAtletasCard').style.display = 'none';
+  document.getElementById('arbitragemCard').style.display = 'none';
+  if (sumulaFila.length) flushFilaSumula_();
   esconderOffline_();
   if (sumulaLivePollTimer) { clearInterval(sumulaLivePollTimer); sumulaLivePollTimer = null; }
 }
@@ -3635,7 +3697,7 @@ async function abrirOuCriarPartida() {
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaId)).then(r => r.json());
     if (res.ok && res.estado) {
       document.getElementById('sumulaSeletorCard').style.display = 'none';
-      iniciarConsoleAoVivo(res.estado);
+      iniciarConsoleAoVivo(sumulaRestaurarFila_(res.estado));
     } else {
       abrirWizard(sumulaId, jogo);
     }
@@ -3644,7 +3706,7 @@ async function abrirOuCriarPartida() {
     const cache = carregarCacheOffline_(sumulaId);
     if (cache) {
       document.getElementById('sumulaSeletorCard').style.display = 'none';
-      iniciarConsoleAoVivo(cache, true);
+      iniciarConsoleAoVivo(sumulaRestaurarFila_(cache), true);
       showToast('📡 Sem conexão — mostrando último placar salvo neste navegador.', 'error');
     } else {
       showToast('❌ Erro: ' + ex.message, 'error');
@@ -3672,6 +3734,15 @@ function mostrarOffline_() { const b = document.getElementById('sumulaOfflineBan
 function esconderOffline_() { const b = document.getElementById('sumulaOfflineBanner'); if (b) b.style.display = 'none'; }
 let _pollFalhasSeguidas = 0;
 
+function escHtmlS_(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const WZ_SENHA_ADMIN = '5912';
+let wizardJuizes = [];
+let _wzAddLado = null;
+let _wzSenha = '';
+
 async function abrirWizard(sumulaId, jogo) {
   const ehTeste = /^TESTE/i.test(sumulaId);
   sumulaLiveWizardData = {
@@ -3681,9 +3752,6 @@ async function abrirWizard(sumulaId, jogo) {
   };
   document.getElementById('sumulaSeletorCard').style.display = 'none';
 
-  // Lista de equipes vem das equipes de verdade confirmadas pra
-  // disputar a Supercopa (mesma lista do cadastro de atletas) — em
-  // vez de digitar o nome na mão, o apontador só escolhe.
   const selA = document.getElementById('wz-equipeA');
   const selB = document.getElementById('wz-equipeB');
   selA.innerHTML = selB.innerHTML = '<option value="">Carregando...</option>';
@@ -3692,55 +3760,160 @@ async function abrirWizard(sumulaId, jogo) {
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=equipesComPin').then(r => r.json());
     equipes = ((res && res.equipes) || []).map(e => e.equipe);
   } catch (ex) { /* segue com a lista vazia + fallback abaixo */ }
-  // Modo teste (ou um jogo cujo nome não está na lista por algum
-  // motivo) ainda precisa funcionar — garante que o valor atual
-  // sempre aparece como opção.
   [sumulaLiveWizardData.equipeA, sumulaLiveWizardData.equipeB].forEach(nome => {
     if (nome && !equipes.includes(nome)) equipes.push(nome);
   });
   equipes.sort();
-  const optsHtml = '<option value="">— selecione —</option>' + equipes.map(e => `<option value="${e}">${e}</option>`).join('');
+  const optsHtml = '<option value="">— selecione —</option>' + equipes.map(e => `<option value="${escHtmlS_(e)}">${escHtmlS_(e)}</option>`).join('');
   selA.innerHTML = optsHtml;
   selB.innerHTML = optsHtml;
   selA.value = sumulaLiveWizardData.equipeA || '';
   selB.value = sumulaLiveWizardData.equipeB || '';
 
-  try {
-    const arbSalvo = JSON.parse(localStorage.getItem('supercopa_arbitragem') || 'null');
-    document.getElementById('wz-arbitro1').value = (arbSalvo && arbSalvo.arbitro1) || '';
-    document.getElementById('wz-arbitro2').value = (arbSalvo && arbSalvo.arbitro2) || '';
-    document.getElementById('wz-apontador').value = (arbSalvo && arbSalvo.apontador) || '';
-  } catch (e) {
-    document.getElementById('wz-arbitro1').value = '';
-    document.getElementById('wz-arbitro2').value = '';
-    document.getElementById('wz-apontador').value = '';
-  }
-  document.getElementById('wz-saca-a-label').textContent = sumulaLiveWizardData.equipeA || 'Equipe Casa';
-  document.getElementById('wz-saca-b-label').textContent = sumulaLiveWizardData.equipeB || 'Equipe Visitante';
-  document.getElementById('sumulaWizardStep1').style.display = '';
-  document.getElementById('sumulaWizardStep2').style.display = 'none';
+  wizardFecharAdd_();
+  wizardMostrarPasso_(0);
   document.getElementById('sumulaWizard').style.display = '';
+  await wizardCarregarElencos_();
+}
+
+function wizardMostrarPasso_(n) {
+  [0, 1, 2].forEach(i => { document.getElementById('sumulaWizardStep' + i).style.display = (i === n) ? '' : 'none'; });
+}
+function wizardVoltarPara(n) { wizardMostrarPasso_(n); }
+
+function wizardOrdenar_(lista) {
+  return (lista || []).slice().sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
+}
+
+async function wizardCarregarElencos_() {
+  const eqA = document.getElementById('wz-equipeA').value.trim();
+  const eqB = document.getElementById('wz-equipeB').value.trim();
+  const boxA = document.getElementById('wz-elenco-A');
+  const boxB = document.getElementById('wz-elenco-B');
+  boxA.innerHTML = boxB.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  const buscar = (eq) => eq
+    ? fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(eq)).then(r => r.json()).then(r => (r && r.atletas) || []).catch(() => null)
+    : Promise.resolve([]);
+  const [a, b] = await Promise.all([buscar(eqA), buscar(eqB)]);
+  wizardAtletasA = wizardOrdenar_(a);
+  wizardAtletasB = wizardOrdenar_(b);
+  boxA.innerHTML = a === null ? '<p style="color:var(--red);font-size:13px">Erro ao carregar atletas.</p>' : wizardElencoHtml_(wizardAtletasA, eqA);
+  boxB.innerHTML = b === null ? '<p style="color:var(--red);font-size:13px">Erro ao carregar atletas.</p>' : wizardElencoHtml_(wizardAtletasB, eqB);
+}
+
+function wizardElencoHtml_(atletas, equipe) {
+  if (!equipe) return '<p style="color:var(--dark-grey);font-size:13px">Selecione a equipe.</p>';
+  const jog = atletas.filter(a => (a.tipo || 'Atleta') === 'Atleta');
+  const com = atletas.filter(a => (a.tipo || 'Atleta') !== 'Atleta');
+  const cab = `<div style="display:flex;gap:10px;margin-bottom:8px;font-size:12px;color:var(--dark-grey)"><span><strong>${jog.length}/14</strong> atletas</span><span><strong>${com.length}/2</strong> comissão técnica</span></div>`;
+  const aviso = jog.length < 6 ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:8px"><i class='bx bx-error'></i> ${jog.length ? 'Só ' + jog.length + ' atleta(s) — precisa de pelo menos 6 pra escalar.' : 'Nenhum atleta cadastrado — cadastre pelo menos 6.'}</div>` : '';
+  const linha = (a) => `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--grey);border-radius:10px;margin-bottom:6px">
+      <div style="width:30px;height:30px;border-radius:50%;background:${(a.tipo || 'Atleta') === 'Atleta' ? 'var(--blue)' : '#c8960c'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">${escHtmlS_(a.numero) || '·'}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtmlS_(a.nome)}</div><div style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.tipo === 'Comissão Técnica' ? 'Técnico' : (a.tipo || 'Atleta'))}</div></div>
+    </div>`;
+  return cab + aviso + jog.map(linha).join('') + com.map(linha).join('');
+}
+
+function wizardAbrirAdd_(lado) {
+  const equipe = document.getElementById(lado === 'A' ? 'wz-equipeA' : 'wz-equipeB').value.trim();
+  if (!equipe) { showToast('Selecione a equipe primeiro.', 'error'); return; }
+  _wzAddLado = lado;
+  _wzSenha = '';
+  document.getElementById('wz-add-titulo').textContent = 'Adicionar atleta — ' + equipe;
+  document.getElementById('wz-add-senha').value = '';
+  document.getElementById('wz-add-senha-box').style.display = '';
+  document.getElementById('wz-add-form-box').style.display = 'none';
+  document.getElementById('wz-add-panel').style.display = '';
+  document.getElementById('wz-add-senha').focus();
+}
+function wizardAddSenhaOk_() {
+  const v = document.getElementById('wz-add-senha').value.trim();
+  if (v !== WZ_SENHA_ADMIN) { showToast('❌ Senha incorreta.', 'error'); return; }
+  _wzSenha = v;
+  document.getElementById('wz-add-senha-box').style.display = 'none';
+  document.getElementById('wz-add-form-box').style.display = '';
+  document.getElementById('wz-add-numero').focus();
+}
+function wizardFecharAdd_() {
+  _wzSenha = '';
+  _wzAddLado = null;
+  const p = document.getElementById('wz-add-panel');
+  if (p) p.style.display = 'none';
+}
+async function wizardAddSalvar_() {
+  if (!_wzSenha || !_wzAddLado) return;
+  const equipe = document.getElementById(_wzAddLado === 'A' ? 'wz-equipeA' : 'wz-equipeB').value.trim();
+  const numero = document.getElementById('wz-add-numero').value.trim();
+  const nome = document.getElementById('wz-add-nome').value.trim();
+  const tipo = document.getElementById('wz-add-tipo').value;
+  if (!nome) { showToast('Informe o nome do atleta.', 'error'); return; }
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'cadastrarAtletaAdmin', senha: _wzSenha, equipe: equipe, numero: numero, nome: nome, tipo: tipo }) }).then(r => r.json());
+    if (res.ok) {
+      document.getElementById('wz-add-numero').value = '';
+      document.getElementById('wz-add-nome').value = '';
+      showToast('✅ Atleta salvo!');
+      await wizardCarregarElencos_();
+    } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+async function wizardStep0Ok() {
+  const eqA = document.getElementById('wz-equipeA').value.trim();
+  const eqB = document.getElementById('wz-equipeB').value.trim();
+  if (!eqA || !eqB) { showToast('❌ Selecione as duas equipes.', 'error'); return; }
+  if (eqA === eqB) { showToast('❌ As duas equipes não podem ser a mesma.', 'error'); return; }
+  const nA = wizardAtletasA.filter(a => (a.tipo || 'Atleta') === 'Atleta').length;
+  const nB = wizardAtletasB.filter(a => (a.tipo || 'Atleta') === 'Atleta').length;
+  if (nA < 6) { showToast('❌ ' + eqA + ' precisa de pelo menos 6 atletas cadastrados.', 'error'); return; }
+  if (nB < 6) { showToast('❌ ' + eqB + ' precisa de pelo menos 6 atletas cadastrados.', 'error'); return; }
+  sumulaLiveWizardData.equipeA = eqA;
+  sumulaLiveWizardData.equipeB = eqB;
+  showLoading(true);
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=listarJuizes').then(r => r.json());
+    wizardJuizes = (res && res.juizes) || [];
+  } catch (ex) { wizardJuizes = []; }
+  showLoading(false);
+  wizardPreencherJuizes_();
+  wizardMostrarPasso_(1);
+}
+
+function wizardPreencherJuizes_() {
+  let memo = {};
+  try { memo = JSON.parse(localStorage.getItem('supercopa_arbitragem') || 'null') || {}; } catch (e) { memo = {}; }
+  const nomes = wizardJuizes.map(j => j.nome);
+  document.getElementById('wz-juizes-vazio').style.display = nomes.length ? 'none' : '';
+  ['arbitro1', 'arbitro2', 'apontador'].forEach(campo => {
+    const sel = document.getElementById('wz-' + campo);
+    const lista = nomes.slice();
+    if (memo[campo] && !lista.includes(memo[campo])) lista.push(memo[campo]);
+    sel.innerHTML = '<option value="">— selecione —</option>' + lista.map(n => `<option value="${escHtmlS_(n)}">${escHtmlS_(n)}</option>`).join('') + '<option value="__outro__">✏️ Digitar outro nome…</option>';
+    sel.value = memo[campo] || '';
+  });
+}
+
+function wizardJuizOutro_(sel) {
+  if (sel.value !== '__outro__') return;
+  const nome = (prompt('Nome completo:') || '').trim();
+  if (!nome) { sel.value = ''; return; }
+  const op = document.createElement('option');
+  op.value = nome; op.textContent = nome;
+  sel.insertBefore(op, sel.lastElementChild);
+  sel.value = nome;
 }
 
 function limparArbitragemWizard_() {
-  document.getElementById('wz-arbitro1').value = '';
-  document.getElementById('wz-arbitro2').value = '';
-  document.getElementById('wz-apontador').value = '';
+  ['wz-arbitro1', 'wz-arbitro2', 'wz-apontador'].forEach(id => { document.getElementById(id).value = ''; });
   try { localStorage.removeItem('supercopa_arbitragem'); } catch (e) {}
-  document.getElementById('wz-arbitro1').focus();
 }
 
-async function wizardProximo() {
-  sumulaLiveWizardData.equipeA = document.getElementById('wz-equipeA').value.trim();
-  sumulaLiveWizardData.equipeB = document.getElementById('wz-equipeB').value.trim();
+function wizardStep1Ok() {
   sumulaLiveWizardData.arbitro1 = document.getElementById('wz-arbitro1').value.trim();
   sumulaLiveWizardData.arbitro2 = document.getElementById('wz-arbitro2').value.trim();
   sumulaLiveWizardData.apontador = document.getElementById('wz-apontador').value.trim();
-  sumulaLiveWizardData.sacaPrimeiro = document.getElementById('wz-saca-primeiro').value;
-  if (!sumulaLiveWizardData.equipeA || !sumulaLiveWizardData.equipeB) { showToast('❌ Preencha as duas equipes.', 'error'); return; }
-  if (!sumulaLiveWizardData.arbitro1) { showToast('❌ Informe o 1º árbitro.', 'error'); return; }
-  if (!sumulaLiveWizardData.apontador) { showToast('❌ Informe o(a) apontador(a) (mesa).', 'error'); return; }
-
+  if (!sumulaLiveWizardData.arbitro1) { showToast('❌ Selecione o 1º árbitro.', 'error'); return; }
+  if (!sumulaLiveWizardData.apontador) { showToast('❌ Selecione o(a) apontador(a) (mesa).', 'error'); return; }
   try {
     localStorage.setItem('supercopa_arbitragem', JSON.stringify({
       arbitro1: sumulaLiveWizardData.arbitro1,
@@ -3748,22 +3921,108 @@ async function wizardProximo() {
       apontador: sumulaLiveWizardData.apontador
     }));
   } catch (e) {}
-
-  showLoading(true);
-  const [resA, resB] = await Promise.all([
-    fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeA)).then(r => r.json()).catch(() => ({ atletas: [] })),
-    fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(sumulaLiveWizardData.equipeB)).then(r => r.json()).catch(() => ({ atletas: [] }))
-  ]);
-  showLoading(false);
-
-  wizardAtletasA = ((resA && resA.atletas) || []).sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
-  wizardAtletasB = ((resB && resB.atletas) || []).sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
-
   const grid = document.getElementById('wz-escalacao-grid');
   grid.innerHTML = renderQuadra_('A', sumulaLiveWizardData.equipeA, wizardAtletasA) + renderQuadra_('B', sumulaLiveWizardData.equipeB, wizardAtletasB);
+  document.getElementById('wz-saca-a-label').textContent = sumulaLiveWizardData.equipeA;
+  document.getElementById('wz-saca-b-label').textContent = sumulaLiveWizardData.equipeB;
+  wizardMostrarPasso_(2);
+}
 
-  document.getElementById('sumulaWizardStep1').style.display = 'none';
-  document.getElementById('sumulaWizardStep2').style.display = '';
+// ── Cadastro de Arbitragem (juiz + assinatura) ──────────────
+function sigPadInit_(canvas) {
+  if (canvas._sigPad) return canvas._sigPad;
+  const ctx = canvas.getContext('2d');
+  ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
+  let desenhando = false, vazio = true, ult = null;
+  const pos = (ev) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) * canvas.width / r.width, y: (ev.clientY - r.top) * canvas.height / r.height };
+  };
+  canvas.addEventListener('pointerdown', (ev) => {
+    ev.preventDefault();
+    try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+    desenhando = true; vazio = false; ult = pos(ev);
+    ctx.beginPath(); ctx.moveTo(ult.x, ult.y); ctx.lineTo(ult.x + 0.01, ult.y); ctx.stroke();
+  });
+  canvas.addEventListener('pointermove', (ev) => {
+    if (!desenhando) return;
+    const p = pos(ev);
+    ctx.beginPath(); ctx.moveTo(ult.x, ult.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    ult = p;
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => canvas.addEventListener(t, () => { desenhando = false; }));
+  canvas._sigPad = {
+    limpar() { ctx.clearRect(0, 0, canvas.width, canvas.height); vazio = true; },
+    vazio() { return vazio; },
+    dataUrl() {
+      const off = document.createElement('canvas');
+      off.width = 320; off.height = 107;
+      off.getContext('2d').drawImage(canvas, 0, 0, off.width, off.height);
+      return off.toDataURL('image/png');
+    }
+  };
+  return canvas._sigPad;
+}
+
+async function abrirArbitragem() {
+  document.getElementById('sumulaSeletorCard').style.display = 'none';
+  document.getElementById('arbitragemCard').style.display = '';
+  sigPadInit_(document.getElementById('arb-canvas')).limpar();
+  document.getElementById('arb-nome').value = '';
+  await arbCarregarLista_();
+}
+function fecharArbitragem() {
+  document.getElementById('arbitragemCard').style.display = 'none';
+  document.getElementById('sumulaSeletorCard').style.display = '';
+}
+function arbLimpar() { sigPadInit_(document.getElementById('arb-canvas')).limpar(); }
+
+async function arbCarregarLista_() {
+  const wrap = document.getElementById('arb-lista');
+  wrap.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=listarJuizes').then(r => r.json());
+    const juizes = (res && res.juizes) || [];
+    wrap.innerHTML = juizes.length ? juizes.map(j => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--grey);border-radius:10px;margin-bottom:8px">
+        <div style="flex:1;font-weight:600;font-size:13px">${escHtmlS_(j.nome)}</div>
+        ${j.assinatura ? `<img src="${escHtmlS_(j.assinatura)}" alt="assinatura" style="height:40px;background:#fff;border:1px solid #e5e7eb;border-radius:6px">` : '<span style="font-size:11px;color:var(--red)">sem assinatura</span>'}
+        <button class="btn btn-secondary btn-sm" data-nome="${escHtmlS_(j.nome)}" onclick="arbRefazer_(this.dataset.nome)">Refazer</button>
+        <button data-nome="${escHtmlS_(j.nome)}" onclick="arbRemover_(this.dataset.nome)" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-trash"></i></button>
+      </div>`).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum juiz cadastrado ainda.</p>';
+  } catch (ex) {
+    wrap.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar juízes.</p>';
+  }
+}
+function arbRefazer_(nome) {
+  document.getElementById('arb-nome').value = nome;
+  sigPadInit_(document.getElementById('arb-canvas')).limpar();
+  document.getElementById('arb-nome').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showToast('Desenhe a nova assinatura e toque em "Salvar juiz".');
+}
+async function arbRemover_(nome) {
+  if (!confirm('Remover ' + nome + '?')) return;
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'removerJuiz', nome: nome }) }).then(r => r.json());
+    if (res.ok) arbCarregarLista_(); else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+async function arbSalvar() {
+  const nome = document.getElementById('arb-nome').value.trim();
+  const pad = sigPadInit_(document.getElementById('arb-canvas'));
+  if (!nome) { showToast('Informe o nome do juiz.', 'error'); return; }
+  if (pad.vazio()) { showToast('Desenhe a assinatura primeiro.', 'error'); return; }
+  showLoading(true);
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'cadastrarJuiz', nome: nome, assinatura: pad.dataUrl() }) }).then(r => r.json());
+    if (res.ok) {
+      showToast('✅ Juiz salvo!');
+      document.getElementById('arb-nome').value = '';
+      pad.limpar();
+      await arbCarregarLista_();
+    } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+  finally { showLoading(false); }
 }
 
 let wizardAtletasA = [], wizardAtletasB = [];
@@ -3786,6 +4045,7 @@ function escTapInit_(prefixo, lado, atletas, rotacaoAtual, liberoAtual, capitaoA
   const posicoes = new Array(6).fill(null);
   (rotacaoAtual || []).forEach((p, i) => { if (p && p.nome && i < 6) posicoes[i] = { numero: (p.numero || '').toString(), nome: p.nome }; });
   escTapSet_(prefixo, lado, {
+    prefixo: prefixo, lado: lado,
     atletas: atletas || [],
     posicoes: posicoes,
     libero: (liberoAtual && liberoAtual.nome) ? { numero: (liberoAtual.numero || '').toString(), nome: liberoAtual.nome } : null,
@@ -3795,36 +4055,128 @@ function escTapInit_(prefixo, lado, atletas, rotacaoAtual, liberoAtual, capitaoA
 
 function escTapAchaPos_(st, numero) { return st.posicoes.findIndex(p => p && p.numero === numero); }
 
+function escTapAjustaCapitao_(st) {
+  if (st.capitao && escTapAchaPos_(st, st.capitao) < 0) st.capitao = null;
+}
+
 function escTapTocar_(prefixo, lado, numero, nome) {
   const st = escTapGet_(prefixo, lado);
   const idxAtual = escTapAchaPos_(st, numero);
   if (idxAtual >= 0) { st.posicoes[idxAtual] = null; }
   else {
     const livre = st.posicoes.findIndex(p => !p);
-    if (livre === -1) { showToast('As 6 posições já estão preenchidas — toque num jogador em quadra pra tirar antes de trocar.', 'error'); return; }
+    if (livre === -1) { showToast('As 6 posições já estão preenchidas — arraste ou toque num jogador em quadra pra tirar antes de trocar.', 'error'); return; }
     st.posicoes[livre] = { numero: numero, nome: nome };
   }
   escTapRenderizar_(prefixo, lado);
 }
-function escTapToggleLibero_(prefixo, lado, numero, nome, ev) {
-  if (ev) ev.stopPropagation();
+function escTapRemoverPos_(prefixo, lado, idx) {
   const st = escTapGet_(prefixo, lado);
-  st.libero = (st.libero && st.libero.numero === numero) ? null : { numero: numero, nome: nome };
+  st.posicoes[idx] = null;
   escTapRenderizar_(prefixo, lado);
 }
-function escTapToggleCapitao_(prefixo, lado, numero, ev) {
-  if (ev) ev.stopPropagation();
+function escTapSoltarEm_(prefixo, lado, numero, nome, origemPos, pos) {
   const st = escTapGet_(prefixo, lado);
-  st.capitao = (st.capitao === numero) ? null : numero;
+  const idxOrigem = (origemPos !== null && origemPos !== undefined) ? origemPos : escTapAchaPos_(st, numero);
+  const jogador = { numero: numero, nome: nome };
+  if (idxOrigem >= 0 && idxOrigem !== pos) {
+    const deslocado = st.posicoes[pos];
+    st.posicoes[pos] = jogador;
+    st.posicoes[idxOrigem] = deslocado || null;
+  } else if (idxOrigem < 0) {
+    st.posicoes[pos] = jogador;
+  }
   escTapRenderizar_(prefixo, lado);
+}
+function escTapToggleLibero_(el, ev) {
+  if (ev) ev.stopPropagation();
+  const d = el.dataset;
+  const st = escTapGet_(d.prefixo, d.lado);
+  st.libero = (st.libero && st.libero.numero === d.numero) ? null : { numero: d.numero, nome: d.nome };
+  escTapRenderizar_(d.prefixo, d.lado);
+}
+function escTapSetCapitao_(el) {
+  const d = el.dataset;
+  const st = escTapGet_(d.prefixo, d.lado);
+  st.capitao = (st.capitao === d.numero) ? null : d.numero;
+  escTapRenderizar_(d.prefixo, d.lado);
+}
+
+// ── Arrastar (Pointer Events: funciona em mouse e touch) ─────
+let _escDrag = null;
+function escTapPD_(ev, el) {
+  if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+  ev.preventDefault();
+  const d = el.dataset;
+  _escDrag = {
+    prefixo: d.prefixo, lado: d.lado, numero: d.numero || '', nome: d.nome || '',
+    origemPos: (d.origem === undefined || d.origem === '') ? null : Number(d.origem),
+    x0: ev.clientX, y0: ev.clientY, moveu: false, ghost: null, alvo: null
+  };
+  document.addEventListener('pointermove', escTapPM_);
+  document.addEventListener('pointerup', escTapPU_);
+  document.addEventListener('pointercancel', escTapPC_);
+}
+function escTapCelulaSob_(x, y, d) {
+  const el = document.elementFromPoint(x, y);
+  const c = el && el.closest ? el.closest('[data-esctap-pos]') : null;
+  return (c && c.dataset.prefixo === d.prefixo && c.dataset.lado === d.lado) ? c : null;
+}
+function escTapPM_(ev) {
+  const d = _escDrag;
+  if (!d) return;
+  if (!d.moveu && Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 6) return;
+  d.moveu = true;
+  if (!d.ghost) {
+    const g = document.createElement('div');
+    g.textContent = (d.numero ? '#' + d.numero + ' ' : '') + d.nome;
+    g.style.cssText = 'position:fixed;z-index:99999;pointer-events:none;background:var(--blue,#1565C0);color:#fff;font-size:12px;font-weight:800;padding:6px 10px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.3);opacity:.92';
+    document.body.appendChild(g);
+    d.ghost = g;
+  }
+  d.ghost.style.left = (ev.clientX + 10) + 'px';
+  d.ghost.style.top = (ev.clientY + 10) + 'px';
+  const alvo = escTapCelulaSob_(ev.clientX, ev.clientY, d);
+  if (d.alvo && d.alvo !== alvo) d.alvo.style.outline = '';
+  if (alvo) alvo.style.outline = '3px solid var(--blue,#1565C0)';
+  d.alvo = alvo;
+}
+function escTapLimpaDrag_() {
+  document.removeEventListener('pointermove', escTapPM_);
+  document.removeEventListener('pointerup', escTapPU_);
+  document.removeEventListener('pointercancel', escTapPC_);
+  if (_escDrag) {
+    if (_escDrag.ghost) _escDrag.ghost.remove();
+    if (_escDrag.alvo) _escDrag.alvo.style.outline = '';
+  }
+}
+function escTapPC_() { escTapLimpaDrag_(); _escDrag = null; }
+function escTapPU_(ev) {
+  const d = _escDrag;
+  if (!d) return;
+  const alvo = d.moveu ? escTapCelulaSob_(ev.clientX, ev.clientY, d) : null;
+  escTapLimpaDrag_();
+  _escDrag = null;
+  if (!d.moveu) {
+    if (d.origemPos === null) escTapTocar_(d.prefixo, d.lado, d.numero, d.nome);
+    else escTapRemoverPos_(d.prefixo, d.lado, d.origemPos);
+    return;
+  }
+  if (alvo) escTapSoltarEm_(d.prefixo, d.lado, d.numero, d.nome, d.origemPos, Number(alvo.dataset.esctapPos) - 1);
+  else if (d.origemPos !== null) escTapRemoverPos_(d.prefixo, d.lado, d.origemPos);
 }
 
 function escTapQuadraHtml_(st) {
   const por = {}; st.posicoes.forEach((p, i) => { if (p) por[i + 1] = p; });
-  const cel = (pos) => `<div style="background:#fff;border:2px solid ${pos === 1 ? 'var(--gold,#c8960c)' : '#66bb6a'};border-radius:8px;padding:5px 2px;text-align:center;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center">
-    <div style="font-weight:800;font-size:13px;color:${por[pos] ? 'var(--dark)' : '#aab0bb'}">${por[pos] ? (por[pos].numero || '·') : '—'}</div>
-    <div style="font-size:7px;color:${pos === 1 ? 'var(--gold,#c8960c)' : '#2e7d32'};font-weight:700">${pos === 1 ? 'SAQUE' : 'P' + pos}</div>
-  </div>`;
+  const cel = (pos) => {
+    const p = por[pos];
+    const attrs = p ? `data-prefixo="${st.prefixo}" data-lado="${st.lado}" data-numero="${escHtmlS_(p.numero)}" data-nome="${escHtmlS_(p.nome)}" data-origem="${pos - 1}" onpointerdown="escTapPD_(event,this)"` : '';
+    return `<div data-esctap-pos="${pos}" data-prefixo="${st.prefixo}" data-lado="${st.lado}" ${attrs} style="background:${p ? '#fff' : 'rgba(255,255,255,.55)'};border:2px ${p ? 'solid' : 'dashed'} ${pos === 1 ? 'var(--gold,#c8960c)' : '#66bb6a'};border-radius:8px;padding:5px 2px;text-align:center;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;${p ? 'cursor:grab;' : ''}user-select:none">
+      <div style="font-weight:800;font-size:14px;color:${p ? 'var(--dark)' : '#aab0bb'}">${p ? (escHtmlS_(p.numero) || '·') : '—'}</div>
+      ${p ? `<div style="font-size:8px;color:#4b5563;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px">${escHtmlS_(p.nome.split(' ')[0])}</div>` : ''}
+      <div style="font-size:7px;color:${pos === 1 ? 'var(--gold,#c8960c)' : '#2e7d32'};font-weight:700">${pos === 1 ? 'SAQUE' : 'P' + pos}</div>
+    </div>`;
+  };
   return `<div style="background:linear-gradient(180deg,#dff3e0,#c8e6c9);border:2px solid #66bb6a;border-radius:10px;padding:8px">
     <div style="text-align:center;font-size:8px;font-weight:800;color:#2e7d32;letter-spacing:1px;margin-bottom:5px">◤ REDE ◥</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px">${cel(4)}${cel(3)}${cel(2)}</div>
@@ -3832,32 +4184,43 @@ function escTapQuadraHtml_(st) {
   </div>`;
 }
 
-function escTapListaHtml_(prefixo, lado, st, comLiberoCapitao) {
+function escTapCapitaoHtml_(st) {
+  const em = st.posicoes.filter(Boolean);
+  if (em.length < 6) return `<div style="font-size:11px;color:var(--dark-grey);margin:8px 0">🅲 Capitão em quadra: escale os 6 titulares primeiro.</div>`;
+  return `<div style="margin:8px 0">
+    <div style="font-size:11px;font-weight:700;margin-bottom:4px">🅲 Capitão em quadra — toque em quem é:</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px">${em.map(p => `<button type="button" data-prefixo="${st.prefixo}" data-lado="${st.lado}" data-numero="${escHtmlS_(p.numero)}" onclick="escTapSetCapitao_(this)" style="border:1.5px solid var(--blue);border-radius:8px;padding:5px 9px;font-size:12px;font-weight:800;cursor:pointer;${st.capitao === p.numero ? 'background:var(--blue);color:#fff' : 'background:#fff;color:var(--blue)'}">#${escHtmlS_(p.numero) || '?'}</button>`).join('')}</div>
+  </div>`;
+}
+
+function escTapListaHtml_(st, comLiberoCapitao) {
   if (!st.atletas.length) return '';
   return '<div style="display:flex;flex-direction:column;gap:5px;max-height:230px;overflow-y:auto;margin-top:8px">' + st.atletas.map(a => {
     const numero = (a.numero || '').toString();
-    const nomeEsc = (a.nome || '').replace(/'/g, "\\'");
     const idxPos = escTapAchaPos_(st, numero);
     const emQuadra = idxPos >= 0;
     const ehLibero = comLiberoCapitao && st.libero && st.libero.numero === numero;
-    const ehCapitao = comLiberoCapitao && st.capitao === numero;
-    return `<div onclick="escTapTocar_('${prefixo}','${lado}','${numero}','${nomeEsc}')"
+    const dados = `data-prefixo="${st.prefixo}" data-lado="${st.lado}" data-numero="${escHtmlS_(numero)}" data-nome="${escHtmlS_(a.nome)}"`;
+    return `<div ${dados} onclick="escTapTocar_(this.dataset.prefixo,this.dataset.lado,this.dataset.numero,this.dataset.nome)"
         style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;background:${emQuadra ? 'var(--light-blue)' : 'var(--grey)'};border:1.5px solid ${emQuadra ? 'var(--blue)' : 'transparent'}">
-      <div style="width:24px;height:24px;border-radius:50%;background:${emQuadra ? 'var(--blue)' : '#cbd5e1'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${emQuadra ? (idxPos + 1) : (numero || '·')}</div>
-      <div style="flex:1;font-size:12px;font-weight:600;color:var(--dark)">${a.nome}${numero ? ' <span style="color:var(--dark-grey);font-weight:400">#' + numero + '</span>' : ''}</div>
-      ${comLiberoCapitao ? `
-      <span onclick="escTapToggleLibero_('${prefixo}','${lado}','${numero}','${nomeEsc}',event)" title="Líbero" style="font-size:15px;opacity:${ehLibero ? 1 : 0.25};cursor:pointer">🟡</span>
-      <span onclick="escTapToggleCapitao_('${prefixo}','${lado}','${numero}',event)" title="Capitão" style="font-size:13px;font-weight:900;color:${ehCapitao ? 'var(--blue)' : '#cbd5e1'};cursor:pointer">🅲</span>` : ''}
+      <div ${dados} onpointerdown="escTapPD_(event,this)" onclick="event.stopPropagation()" title="Arraste até a posição" style="width:30px;height:30px;border-radius:50%;background:${emQuadra ? 'var(--blue)' : '#94a3b8'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;touch-action:none;cursor:grab;user-select:none">${emQuadra ? 'P' + (idxPos + 1) : (escHtmlS_(numero) || '·')}</div>
+      <div style="flex:1;font-size:12px;font-weight:600;color:var(--dark)">${escHtmlS_(a.nome)}${numero ? ' <span style="color:var(--dark-grey);font-weight:400">#' + escHtmlS_(numero) + '</span>' : ''}</div>
+      ${comLiberoCapitao ? `<span ${dados} onclick="escTapToggleLibero_(this,event)" title="Líbero" style="font-size:15px;opacity:${ehLibero ? 1 : 0.25};cursor:pointer">🟡</span>` : ''}
     </div>`;
   }).join('') + '</div>';
 }
 
+function escTapConteudoHtml_(prefixo, lado, st, comLC) {
+  return escTapQuadraHtml_(st) + (comLC ? escTapCapitaoHtml_(st) : '') + escTapListaHtml_(st, comLC);
+}
+
 function escTapRenderizar_(prefixo, lado) {
   const st = escTapGet_(prefixo, lado);
+  escTapAjustaCapitao_(st);
   const wrap = document.getElementById('esctap-' + prefixo + '-' + lado);
   if (!wrap) return;
   const comLC = wrap.dataset.comLiberoCapitao === '1';
-  wrap.innerHTML = escTapQuadraHtml_(st) + escTapListaHtml_(prefixo, lado, st, comLC);
+  wrap.innerHTML = escTapConteudoHtml_(prefixo, lado, st, comLC);
 }
 
 function escTapLer_(prefixo, lado) {
@@ -3877,16 +4240,10 @@ function renderQuadra_(lado, nomeEquipe, atletas) {
   const st = escTapGet_('wz', lado);
   return `
     <div>
-      <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:var(--light-blue);color:var(--blue);text-align:center;margin-bottom:10px">${nomeEquipe}</div>
-      ${jogadores.length < 6 ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:10px 12px;border-radius:8px;margin-bottom:10px"><i class='bx bx-error'></i> ${jogadores.length ? 'Só ' + jogadores.length + ' atleta(s) cadastrado(s) — faltam ' + (6 - jogadores.length) + ' pra fechar os 6 titulares.' : 'Nenhum atleta cadastrado.'} <a href="javascript:void(0)" onclick="abrirCadastroAtletas();document.getElementById('ca-equipe-nova').value='${nomeEquipe.replace(/'/g, "\\'")}';carregarListaAtletas();" style="color:#856404;text-decoration:underline">Cadastrar agora</a></div>` : ''}
-      <p style="font-size:10px;color:var(--dark-grey);margin:0 0 6px">Toque num atleta pra escalar na próxima posição livre (toque de novo pra tirar). 🟡 líbero · 🅲 capitão.</p>
-      <div id="esctap-wz-${lado}" data-com-libero-capitao="1">${escTapQuadraHtml_(st)}${escTapListaHtml_('wz', lado, st, true)}</div>
+      <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:var(--light-blue);color:var(--blue);text-align:center;margin-bottom:10px">${escHtmlS_(nomeEquipe)}</div>
+      <p style="font-size:10px;color:var(--dark-grey);margin:0 0 6px">1) Arraste o jogador (pela bolinha) até a posição — ou toque pra ocupar a próxima livre. 2) Marque o capitão em quadra. 🟡 = líbero.</p>
+      <div id="esctap-wz-${lado}" data-com-libero-capitao="1">${escTapConteudoHtml_('wz', lado, st, true)}</div>
     </div>`;
-}
-
-function wizardVoltar() {
-  document.getElementById('sumulaWizardStep1').style.display = '';
-  document.getElementById('sumulaWizardStep2').style.display = 'none';
 }
 
 async function gerarSumula() {
@@ -3904,9 +4261,14 @@ async function gerarSumula() {
   const elencoCasa = montarElenco('A');
   const elencoVisitante = montarElenco('B');
   if (elencoCasa.titulares.filter(t => t.nome).length < 6 || elencoVisitante.titulares.filter(t => t.nome).length < 6) {
-    showToast('❌ Toque pra escalar as 6 posições de quadra das duas equipes antes de gerar a súmula.', 'error');
+    showToast('❌ Escale as 6 posições de quadra das duas equipes antes de iniciar.', 'error');
     return;
   }
+  if (!elencoCasa.capitao || !elencoVisitante.capitao) {
+    showToast('❌ Marque o capitão em quadra das duas equipes.', 'error');
+    return;
+  }
+  sumulaLiveWizardData.sacaPrimeiro = document.getElementById('wz-saca-primeiro').value;
 
   const payload = {
     acao: 'criarPartida',
@@ -3927,6 +4289,8 @@ async function gerarSumula() {
   try {
     const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
     if (!res.ok) { showToast('❌ Erro: ' + (res.erro || 'desconhecido'), 'error'); return; }
+    sumulaFila = []; sumulaLotePend = null;
+    try { localStorage.removeItem('sumula_fila_' + res.estado.id); } catch (e) {}
     document.getElementById('sumulaWizard').style.display = 'none';
     iniciarConsoleAoVivo(res.estado);
   } catch (ex) {
@@ -3944,7 +4308,7 @@ function iniciarConsoleAoVivo(estado, offline) {
   renderSumulaConsole();
   if (offline) mostrarOffline_(); else { esconderOffline_(); salvarCacheOffline_(estado); }
   if (sumulaLivePollTimer) clearInterval(sumulaLivePollTimer);
-  sumulaLivePollTimer = setInterval(pollSumulaLive, 4000);
+  sumulaLivePollTimer = setInterval(sumulaTick_, SUMULA_SYNC_MS);
   carregarAtletasSumulaAtual_();
 }
 
@@ -3963,20 +4327,18 @@ async function carregarAtletasSumulaAtual_() {
 
 async function pollSumulaLive() {
   if (!sumulaLiveState || sumulaLiveState.status === 'finalizada') return;
-  if (_sumulaAcaoEmAndamento) return; // não pisa no update otimista de um clique em andamento
+  if (sumulaSyncEmVoo || sumulaFila.length || sumulaLotePend) return; // eventos locais ainda não sincronizados mandam no placar
   try {
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaLiveState.id)).then(r => r.json());
-    // A partida pode ter começado a sofrer uma ação otimista (clique
-    // em ponto) enquanto essa requisição de poll estava em voo — se
-    // aplicássemos essa resposta agora, ela pisaria no placar recém
-    // atualizado com um valor desatualizado (o "sobe, desce, sobe nvo").
-    if (_sumulaAcaoEmAndamento) return;
+    if (sumulaSyncEmVoo || sumulaFila.length || sumulaLotePend) return;
     const obsFocada = document.activeElement && document.activeElement.id === 'sumula-obs';
     if (res.ok && res.estado) {
       sumulaLiveState = res.estado;
       salvarCacheOffline_(sumulaLiveState);
       if (_pollFalhasSeguidas > 0) { _pollFalhasSeguidas = 0; esconderOffline_(); showToast('📶 Conexão de volta.'); }
-      if (!obsFocada) renderSumulaConsole();
+      const s = sumulaLiveState;
+      const formAberto = s.status === 'em_andamento' && (s.rotacaoConfirmadaSet || 1) < s.setAtual;
+      if (!obsFocada && !formAberto) renderSumulaConsole();
     }
   } catch (ex) {
     _pollFalhasSeguidas++;
@@ -4044,13 +4406,13 @@ function capitaoEmQuadra_(s, lado) {
   return { numero: capQuadra, emQuadra: emQuadra, capOficial: capOficial };
 }
 
-async function definirCapitaoQuadra(equipe, numero) {
+function definirCapitaoQuadra(equipe, numero) {
   if (!numero) return;
-  try {
-    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'definirCapitaoQuadra', id: sumulaLiveState.id, equipe: equipe, numero: numero }) }).then(r => r.json());
-    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); showToast('🅲 Capitão em quadra atualizado.'); }
-    else showToast('❌ ' + (res.erro || 'erro'), 'error');
-  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+  const ok = sumulaAcao_('definirCapitaoQuadra', { equipe: equipe, numero: numero }, (e) => {
+    if (equipe === 'B') e.capitaoQuadraVisitante = numero; else e.capitaoQuadraCasa = numero;
+    return null;
+  });
+  if (ok) showToast('🅲 Capitão em quadra atualizado.');
 }
 
 function bannerCapitaoFora_(s, lado, cor) {
@@ -4090,13 +4452,13 @@ function renderEscalacaoSetForm_(s, corA, corB) {
     const st = escTapGet_('es', lado);
     return `<div>
       <div style="text-align:center;font-weight:800;font-size:12px;color:${cor};margin-bottom:6px">${nomeEquipe}</div>
-      <div id="esctap-es-${lado}" data-com-libero-capitao="0">${escTapQuadraHtml_(st)}${escTapListaHtml_('es', lado, st, false)}</div>
+      <div id="esctap-es-${lado}" data-com-libero-capitao="0">${escTapConteudoHtml_('es', lado, st, false)}</div>
     </div>`;
   };
   return `
     <div class="card" style="border:2px solid var(--gold)">
       <div class="card-title"><i class='bx bx-refresh'></i> Nova escalação — Set ${Math.min(s.setAtual, 3)}</div>
-      <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 12px">No vôlei, cada set pode começar com uma ordem de saque diferente. Toque nos atletas pra confirmar (ou ajustar) a posição de cada equipe antes de pontuar — já vem com a última rotação marcada.</p>
+      <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 12px">No vôlei, cada set pode começar com uma ordem de saque diferente. Arraste (ou toque) nos atletas pra confirmar (ou ajustar) a posição de cada equipe antes de pontuar — já vem com a última rotação marcada.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         ${bloco('A', s.equipeCasa, corA, sumulaAtletasCasa, s.rotacaoCasa)}
         ${bloco('B', s.equipeVisitante, corB, sumulaAtletasVisitante, s.rotacaoVisitante)}
@@ -4107,15 +4469,19 @@ function renderEscalacaoSetForm_(s, corA, corB) {
     </div>`;
 }
 
-async function confirmarEscalacaoSet() {
+function confirmarEscalacaoSet() {
   const rotA = escTapLer_('es', 'A').titulares.map(t => t.nome ? t : null);
   const rotB = escTapLer_('es', 'B').titulares.map(t => t.nome ? t : null);
-  if (rotA.filter(Boolean).length < 6 || rotB.filter(Boolean).length < 6) { showToast('❌ Toque pra escalar as 6 posições das duas equipes.', 'error'); return; }
-  try {
-    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'definirEscalacaoSet', id: sumulaLiveState.id, rotacaoCasa: rotA, rotacaoVisitante: rotB }) }).then(r => r.json());
-    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); showToast('✅ Escalação do set confirmada.'); }
-    else showToast('❌ ' + (res.erro || 'erro'), 'error');
-  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+  if (rotA.filter(Boolean).length < 6 || rotB.filter(Boolean).length < 6) { showToast('❌ Escale as 6 posições das duas equipes.', 'error'); return; }
+  const ok = sumulaAcao_('definirEscalacaoSet', { rotacaoCasa: rotA, rotacaoVisitante: rotB }, (e) => {
+    if (e.status !== 'em_andamento') return 'Partida não está em andamento.';
+    e.rotacaoCasa = rotA; e.rotacaoVisitante = rotB;
+    e.rotacaoConfirmadaSet = e.setAtual;
+    e.escalacoesPorSet = e.escalacoesPorSet || {};
+    e.escalacoesPorSet[e.setAtual] = { rotacaoCasa: rotA, rotacaoVisitante: rotB, capitaoQuadraCasa: e.capitaoQuadraCasa, capitaoQuadraVisitante: e.capitaoQuadraVisitante };
+    return null;
+  });
+  if (ok) showToast('✅ Escalação do set confirmada.');
 }
 
 function renderSumulaConsole() {
@@ -4137,6 +4503,7 @@ function renderSumulaConsole() {
     <div class="card" style="padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span style="font-size:11px;font-weight:700;color:${finalizada ? 'var(--dark-grey)' : prontaFinalizar ? 'var(--green)' : 'var(--red)'}">${finalizada ? '🏁 FINALIZADA' : prontaFinalizar ? '✅ PRONTA PRA FINALIZAR' : '🔴 AO VIVO'}</span>
+        <span id="sumula-sync-ind" onclick="flushFilaSumula_()" style="font-size:10px;color:var(--dark-grey);cursor:pointer">${sumulaSyncTexto_()}</span>
         <span style="font-size:11px;color:var(--dark-grey);font-weight:700">SET ${Math.min(s.setAtual, 3)}</span>
       </div>
       <div style="text-align:center">
@@ -4195,7 +4562,7 @@ function renderSumulaConsole() {
     ${prontaFinalizar ? `
     <div class="card" style="text-align:center;background:linear-gradient(135deg,#e8f5e9,#fff)">
       <p style="margin-bottom:10px;font-weight:700;color:var(--green)">Partida decidida: ${s.setsCasa > s.setsVisitante ? s.equipeCasa : s.equipeVisitante} venceu por ${Math.max(s.setsCasa, s.setsVisitante)} sets a ${Math.min(s.setsCasa, s.setsVisitante)}.</p>
-      <button class="btn btn-success" onclick="sumulaFinalizarPartida()"><i class='bx bxs-file-export'></i> Finalizar Partida e Gerar PDF</button>
+      <button class="btn btn-success" onclick="sumulaFinalizarPartida()"><i class='bx bxs-file-export'></i> 💾 Salvar e Exportar</button>
     </div>` : ''}
 
     ${finalizada ? `
@@ -4246,64 +4613,203 @@ async function postSumulaComRetry_(payload) {
   }
 }
 
-async function sumulaPonto(equipe) {
-  // O Apps Script pode levar 1-2s pra responder, então soma o ponto
-  // na tela na hora (otimista) em vez de esperar o servidor. Trava
-  // clique duplo enquanto a requisição anterior ainda não voltou.
-  //
-  // IMPORTANTE: não reenvia o POST de ponto em caso de falha de rede
-  // (isso arriscaria contar o mesmo ponto duas vezes, já que o Apps
-  // Script às vezes processa o pedido mesmo quando a resposta não
-  // chega até o cliente). Em vez de desfazer às cegas — o que causava
-  // aquele "sobe, desce, sobe de novo" quando o ponto na real tinha
-  // sido salvo — confere o placar real no servidor antes de decidir.
-  if (_sumulaAcaoEmAndamento) return;
-  _sumulaAcaoEmAndamento = true;
-  const antes = { pontosCasa: sumulaLiveState.pontosCasa, pontosVisitante: sumulaLiveState.pontosVisitante };
-  if (equipe === 'A') sumulaLiveState.pontosCasa++; else sumulaLiveState.pontosVisitante++;
-  renderSumulaConsole();
-  try {
-    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'ponto', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
-    if (res.ok) { sumulaLiveState = res.estado; }
-    else { sumulaLiveState.pontosCasa = antes.pontosCasa; sumulaLiveState.pontosVisitante = antes.pontosVisitante; showToast('❌ ' + (res.erro || 'erro'), 'error'); }
-  } catch (ex) {
-    try {
-      const real = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaLiveState.id)).then(r => r.json());
-      if (real.ok && real.estado) { sumulaLiveState = real.estado; showToast('⚠️ Conexão instável — placar conferido com o servidor.', 'error'); }
-      else { sumulaLiveState.pontosCasa = antes.pontosCasa; sumulaLiveState.pontosVisitante = antes.pontosVisitante; showToast('❌ Erro: ' + ex.message, 'error'); }
-    } catch (ex2) {
-      sumulaLiveState.pontosCasa = antes.pontosCasa; sumulaLiveState.pontosVisitante = antes.pontosVisitante;
-      showToast('❌ Erro: ' + ex.message, 'error');
-    }
-  } finally {
-    _sumulaAcaoEmAndamento = false;
-    renderSumulaConsole();
+// ════════════════════════════════════════════════════════
+// FILA LOCAL + SYNC EM LOTE (a cada 30s) — cada ação aplica na
+// hora no estado local (mesmas regras do servidor) e entra numa
+// fila; um único POST "processarEventosLote" manda tudo junto.
+// O servidor refaz as regras e devolve o estado oficial.
+// ════════════════════════════════════════════════════════
+const SUMULA_SYNC_MS = 30000;
+let sumulaFila = [];
+let sumulaLotePend = null;
+let sumulaSyncEmVoo = false;
+
+function sumulaClone_(o) { return JSON.parse(JSON.stringify(o)); }
+function sumulaHoraStr_() { return new Date().toLocaleTimeString('pt-BR'); }
+function sumulaDataHoraStr_() {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+function sumulaRotacionar_(arr) { return (!arr || arr.length < 2) ? (arr || []) : arr.slice(1).concat([arr[0]]); }
+
+function sumulaAplicarPontoLocal_(e, equipe) {
+  if (equipe !== e.sacando) {
+    if (equipe === 'A') e.rotacaoCasa = sumulaRotacionar_(e.rotacaoCasa);
+    else e.rotacaoVisitante = sumulaRotacionar_(e.rotacaoVisitante);
+    e.sacando = equipe;
+  }
+  if (equipe === 'A') e.pontosCasa++; else e.pontosVisitante++;
+  e.historicoPontos = (e.historicoPontos || []).concat([{ set: e.setAtual, equipe: equipe, hora: sumulaHoraStr_(), pontosCasa: e.pontosCasa, pontosVisitante: e.pontosVisitante }]);
+  const a = e.pontosCasa, b = e.pontosVisitante;
+  if ((a >= 25 || b >= 25) && Math.abs(a - b) >= 2) {
+    e.historicoSets = (e.historicoSets || []).concat([{ a: a, b: b }]);
+    if (a > b) e.setsCasa++; else e.setsVisitante++;
+    e.pontosCasa = 0; e.pontosVisitante = 0;
+    e.setAtual++;
+    e.primeiroSaqueSet = (e.primeiroSaqueSet === 'A') ? 'B' : 'A';
+    e.sacando = e.primeiroSaqueSet;
+    if (e.setsCasa >= 2 || e.setsVisitante >= 2) e.status = 'sets_completos';
+    e.horariosSets = e.horariosSets || {};
+    e.horariosSets[e.setAtual] = sumulaDataHoraStr_();
   }
 }
 
-async function sumulaPontoMenos(equipe) {
+function sumulaAcao_(tipo, dados, aplicar) {
+  const antes = sumulaLiveState;
+  const novo = sumulaClone_(antes);
+  const erro = aplicar(novo);
+  if (erro) { showToast('❌ ' + erro, 'error'); return false; }
+  sumulaFila.push({ tipo: tipo, dados: dados, snap: antes });
+  sumulaLiveState = novo;
+  sumulaFilaSalvar_();
+  salvarCacheOffline_(novo);
+  renderSumulaConsole();
+  if (sumulaFila.length >= 40) flushFilaSumula_();
+  return true;
+}
+
+function sumulaFilaSalvar_() {
+  if (!sumulaLiveState) return;
   try {
-    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'pontoMenos', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
-    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
-  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+    const k = 'sumula_fila_' + sumulaLiveState.id;
+    if (!sumulaFila.length && !sumulaLotePend) localStorage.removeItem(k);
+    else localStorage.setItem(k, JSON.stringify({ fila: sumulaFila.map(e => ({ tipo: e.tipo, dados: e.dados })), estado: sumulaLiveState, lotePend: sumulaLotePend }));
+  } catch (ex) { /* localStorage indisponível */ }
+}
+
+function sumulaRestaurarFila_(estadoServidor) {
+  sumulaFila = []; sumulaLotePend = null;
+  try {
+    const raw = localStorage.getItem('sumula_fila_' + estadoServidor.id);
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && o.fila && o.fila.length && o.estado) {
+        sumulaFila = o.fila.map(e => ({ tipo: e.tipo, dados: e.dados, snap: null }));
+        sumulaLotePend = o.lotePend || null;
+        showToast('♻️ Eventos pendentes recuperados — sincronizando…');
+        setTimeout(() => flushFilaSumula_(), 800);
+        return o.estado;
+      }
+    }
+  } catch (ex) { /* ignora cache corrompido */ }
+  return estadoServidor;
+}
+
+function sumulaSyncTexto_() {
+  if (sumulaSyncEmVoo) return '⏳ Sincronizando…';
+  if (sumulaFila.length) return '🕒 ' + sumulaFila.length + ' pendente(s) — toque pra sincronizar';
+  return '✅ Sincronizado';
+}
+function atualizarIndicadorSync_() {
+  const el = document.getElementById('sumula-sync-ind');
+  if (el) el.textContent = sumulaSyncTexto_();
+}
+
+async function flushFilaSumula_() {
+  if (sumulaSyncEmVoo || !sumulaLiveState || !sumulaFila.length) return true;
+  sumulaSyncEmVoo = true; atualizarIndicadorSync_();
+  if (!sumulaLotePend) sumulaLotePend = { id: 'L' + Date.now() + '-' + Math.random().toString(36).slice(2, 8), n: sumulaFila.length };
+  const lote = sumulaFila.slice(0, sumulaLotePend.n);
+  let ok = false;
+  try {
+    const res = await postSumulaComRetry_({ acao: 'processarEventosLote', id: sumulaLiveState.id, loteId: sumulaLotePend.id, eventos: lote.map(e => ({ tipo: e.tipo, dados: e.dados })) });
+    if (!res.ok) throw new Error(res.erro || 'erro');
+    sumulaFila.splice(0, lote.length);
+    sumulaLotePend = null;
+    ok = true;
+    esconderOffline_(); _pollFalhasSeguidas = 0;
+    if (res.erros && res.erros.length) showToast('⚠️ O servidor recusou ' + res.erros.length + ' evento(s) — placar corrigido.', 'error');
+    if (!sumulaFila.length && res.estado) {
+      sumulaLiveState = res.estado;
+      salvarCacheOffline_(sumulaLiveState);
+      const s = sumulaLiveState;
+      const obsFocada = document.activeElement && document.activeElement.id === 'sumula-obs';
+      const formAberto = s.status === 'em_andamento' && (s.rotacaoConfirmadaSet || 1) < s.setAtual;
+      if (!obsFocada && !formAberto) renderSumulaConsole();
+    }
+  } catch (ex) {
+    mostrarOffline_();
+  } finally {
+    sumulaSyncEmVoo = false;
+    sumulaFilaSalvar_();
+    atualizarIndicadorSync_();
+  }
+  return ok;
+}
+
+async function sumulaFlushTudo_() {
+  for (let i = 0; i < 4; i++) {
+    while (sumulaSyncEmVoo) await new Promise(r => setTimeout(r, 300));
+    if (!sumulaFila.length) return true;
+    await flushFilaSumula_();
+  }
+  return !sumulaFila.length;
+}
+
+async function sumulaTick_() {
+  if (!sumulaLiveState || sumulaLiveState.status === 'finalizada') return;
+  if (sumulaFila.length) await flushFilaSumula_();
+  else await pollSumulaLive();
+}
+
+window.addEventListener('beforeunload', (ev) => {
+  if (sumulaFila.length) { ev.preventDefault(); ev.returnValue = ''; }
+});
+
+function sumulaPonto(equipe) {
+  sumulaAcao_('ponto', { equipe: equipe }, (e) => {
+    if (e.status !== 'em_andamento') return 'Partida não está em andamento.';
+    if ((e.rotacaoConfirmadaSet || 1) < e.setAtual) return 'Confirme a escalação do set ' + e.setAtual + ' antes de pontuar.';
+    sumulaAplicarPontoLocal_(e, equipe === 'B' ? 'B' : 'A');
+    return null;
+  });
+}
+
+function sumulaPontoMenos(equipe) {
+  sumulaAcao_('pontoMenos', { equipe: equipe }, (e) => {
+    if (e.status !== 'em_andamento') return 'Partida não está em andamento.';
+    const eq = equipe === 'B' ? 'B' : 'A';
+    if (eq === 'A') e.pontosCasa = Math.max(0, e.pontosCasa - 1); else e.pontosVisitante = Math.max(0, e.pontosVisitante - 1);
+    const hist = (e.historicoPontos || []).slice();
+    for (let i = hist.length - 1; i >= 0; i--) { if (hist[i].equipe === eq) { hist.splice(i, 1); break; } }
+    e.historicoPontos = hist;
+    return null;
+  });
 }
 
 async function sumulaDesfazer() {
+  if (sumulaFila.length) {
+    const ult = sumulaFila[sumulaFila.length - 1];
+    if (ult.snap && !sumulaSyncEmVoo) {
+      sumulaFila.pop();
+      sumulaLiveState = ult.snap;
+      sumulaFilaSalvar_();
+      salvarCacheOffline_(sumulaLiveState);
+      renderSumulaConsole();
+      showToast('↩️ Último evento desfeito.');
+      return;
+    }
+    const sincronizou = await sumulaFlushTudo_();
+    if (!sincronizou) { showToast('❌ Sem conexão pra sincronizar antes de desfazer. Tente de novo.', 'error'); return; }
+  }
   try {
     const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'desfazerPonto', id: sumulaLiveState.id }) }).then(r => r.json());
     if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
   } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
 }
 
-async function sumulaTimeout(equipe) {
-  try {
-    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'timeout', id: sumulaLiveState.id, equipe: equipe }) }).then(r => r.json());
-    if (res.ok) {
-      sumulaLiveState = res.estado; renderSumulaConsole(); showToast('⏱ Tempo técnico registrado.');
-      const nomeEquipe = equipe === 'A' ? sumulaLiveState.equipeCasa : sumulaLiveState.equipeVisitante;
-      abrirCronometroTempo_(nomeEquipe);
-    }
-  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+function sumulaTimeout(equipe) {
+  const ok = sumulaAcao_('timeout', { equipe: equipe }, (e) => {
+    const eq = equipe === 'B' ? 'B' : 'A';
+    const ja = (e.timeouts || []).filter(t => t.equipe === eq && t.set === e.setAtual).length;
+    if (ja >= 2) return 'Essa equipe já pediu os 2 tempos técnicos permitidos neste set.';
+    e.timeouts = (e.timeouts || []).concat([{ equipe: eq, set: e.setAtual, hora: sumulaHoraStr_() }]);
+    return null;
+  });
+  if (ok) {
+    showToast('⏱ Tempo técnico registrado.');
+    abrirCronometroTempo_(equipe === 'A' ? sumulaLiveState.equipeCasa : sumulaLiveState.equipeVisitante);
+  }
 }
 
 // ── Cronômetro de tempo técnico (45s) ────────────────────────
@@ -4346,20 +4852,18 @@ function fecharCronometroTempo_() {
   closeModal('modal-cronometro');
 }
 
-async function sumulaSalvarObs() {
+function sumulaSalvarObs() {
   const texto = document.getElementById('sumula-obs').value;
-  try {
-    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'atualizarObservacoes', id: sumulaLiveState.id, observacoes: texto }) }).then(r => r.json());
-    if (res.ok) { sumulaLiveState = res.estado; showToast('✅ Observações salvas.'); }
-    else showToast('❌ ' + (res.erro || 'erro'), 'error');
-  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+  const ok = sumulaAcao_('atualizarObservacoes', { observacoes: texto }, (e) => { e.observacoes = texto; return null; });
+  if (ok) showToast('✅ Observações salvas.');
 }
 
-async function sumulaRemoverEvento(tipo, index) {
-  try {
-    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'removerEvento', id: sumulaLiveState.id, tipo: tipo, index: index }) }).then(r => r.json());
-    if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); }
-  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+function sumulaRemoverEvento(tipo, index) {
+  const chave = { timeout: 'timeouts', cartao: 'cartoes', substituicao: 'substituicoes' }[tipo];
+  sumulaAcao_('removerEvento', { tipo: tipo, index: index }, (e) => {
+    if (chave && e[chave] && index >= 0 && index < e[chave].length) e[chave].splice(index, 1);
+    return null;
+  });
 }
 
 function opcoesJogadores_(lista) {
@@ -4380,18 +4884,23 @@ function preencherJogadorCartao_() {
   const lista = equipe === 'A' ? sumulaAtletasCasa : sumulaAtletasVisitante;
   document.getElementById('sc-jogador').innerHTML = opcoesJogadores_(lista);
 }
-async function salvarCartaoSumula() {
+function salvarCartaoSumula() {
   const val = document.getElementById('sc-jogador').value;
   if (!val) { showToast('Selecione o jogador.', 'error'); return; }
   const idx = val.indexOf('|');
   const numero = val.slice(0, idx), nome = val.slice(idx + 1);
   const tipo = document.getElementById('sc-tipo').value;
-  const payload = { acao: 'cartao', id: sumulaLiveState.id, equipe: document.getElementById('sc-equipe').value, jogador: (numero ? numero + ' - ' : '') + nome, tipo: tipo, motivo: document.getElementById('sc-motivo').value.trim() };
-  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
-  if (res.ok) {
-    sumulaLiveState = res.estado; renderSumulaConsole(); closeModal('modal-sumula-cartao');
+  const equipe = document.getElementById('sc-equipe').value;
+  const dados = { equipe: equipe, jogador: (numero ? numero + ' - ' : '') + nome, tipo: tipo, motivo: document.getElementById('sc-motivo').value.trim() };
+  const ok = sumulaAcao_('cartao', dados, (e) => {
+    e.cartoes = (e.cartoes || []).concat([{ equipe: dados.equipe, jogador: dados.jogador, tipo: dados.tipo, motivo: dados.motivo, set: e.setAtual }]);
+    if (tipo === 'Vermelho' && e.status === 'em_andamento') sumulaAplicarPontoLocal_(e, equipe === 'A' ? 'B' : 'A');
+    return null;
+  });
+  if (ok) {
+    closeModal('modal-sumula-cartao');
     if (tipo === 'Vermelho') showToast('🟥 Cartão vermelho — ponto pro adversário.');
-  } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  }
 }
 
 function abrirModalSub() {
@@ -4409,29 +4918,78 @@ function preencherJogadoresSub_() {
   document.getElementById('ss-saiu').innerHTML = opcoesJogadores_((rotacao || []).filter(p => p.nome));
   document.getElementById('ss-entrou').innerHTML = opcoesJogadores_(squad.filter(a => !emQuadraNomes.has(a.nome)));
 }
-async function salvarSubSumula() {
+// Regras CBV de substituição: máx. 6 por set por equipe; quem entrou só
+// pode sair pra dar lugar a quem ele substituiu, e quem saiu só pode voltar
+// no lugar de quem o substituiu (uma única vez por set).
+function sumulaValidarSubCbv_(s, equipe, saiu, entrou) {
+  const subsSet = (s.substituicoes || []).filter(x => x.equipe === equipe && x.set === s.setAtual);
+  if (subsSet.length >= 6) return 'Limite CBV: máximo de 6 substituições por equipe por set.';
+  const envolvidos = (nome) => subsSet.filter(x => x.saiu === nome || x.entrou === nome).length;
+  if (envolvidos(saiu) >= 2) return saiu + ' já saiu e voltou neste set — não pode ser substituído(a) de novo.';
+  if (envolvidos(entrou) >= 2) return entrou + ' já saiu e voltou neste set — não pode entrar de novo.';
+  const entrouAntes = subsSet.find(x => x.entrou === saiu);
+  if (entrouAntes && entrouAntes.saiu !== entrou) return saiu + ' entrou no lugar de ' + entrouAntes.saiu + ' — só ' + entrouAntes.saiu + ' pode voltar no lugar dele(a).';
+  const saiuAntes = subsSet.find(x => x.saiu === entrou);
+  if (saiuAntes && saiuAntes.entrou !== saiu) return entrou + ' saiu para ' + saiuAntes.entrou + ' — só pode voltar no lugar de ' + saiuAntes.entrou + '.';
+  if (!entrouAntes && !saiuAntes) {
+    const jaTrocado = subsSet.find(x => x.saiu === saiu || x.entrou === entrou);
+    if (jaTrocado) return 'Troca inválida pelas regras CBV (jogador já envolvido em outra substituição neste set).';
+  }
+  return '';
+}
+
+function salvarSubSumula() {
   const saiuVal = document.getElementById('ss-saiu').value;
   const entrouVal = document.getElementById('ss-entrou').value;
   if (!saiuVal || !entrouVal) { showToast('Selecione quem sai e quem entra.', 'error'); return; }
   const saiuNome = saiuVal.slice(saiuVal.indexOf('|') + 1);
   const idx = entrouVal.indexOf('|');
   const entrouNumero = entrouVal.slice(0, idx), entrouNome = entrouVal.slice(idx + 1);
-  const payload = { acao: 'substituicao', id: sumulaLiveState.id, equipe: document.getElementById('ss-equipe').value, saiu: saiuNome, entrou: entrouNome, numeroEntrou: entrouNumero };
-  const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
-  if (res.ok) { sumulaLiveState = res.estado; renderSumulaConsole(); closeModal('modal-sumula-sub'); }
-  else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  const equipe = document.getElementById('ss-equipe').value;
+  const erroCbv = sumulaValidarSubCbv_(sumulaLiveState, equipe, saiuNome, entrouNome);
+  if (erroCbv) { showToast('❌ ' + erroCbv, 'error'); return; }
+  const ok = sumulaAcao_('substituicao', { equipe: equipe, saiu: saiuNome, entrou: entrouNome, numeroEntrou: entrouNumero }, (e) => {
+    e.substituicoes = (e.substituicoes || []).concat([{ equipe: equipe, saiu: saiuNome, entrou: entrouNome, set: e.setAtual }]);
+    const rot = equipe === 'A' ? e.rotacaoCasa : e.rotacaoVisitante;
+    const i = rot.findIndex(p => p && (p.nome || '') === saiuNome);
+    if (i >= 0) rot[i] = { numero: entrouNumero || '', nome: entrouNome };
+    return null;
+  });
+  if (ok) closeModal('modal-sumula-sub');
+}
+
+async function sumulaAssinaturasParaPdf_(s) {
+  const out = {};
+  try {
+    const [jz, assA, assB] = await Promise.all([
+      fetch(SUMULA_SCRIPT_URL + '?action=listarJuizes').then(r => r.json()).catch(() => null),
+      fetch(SUMULA_SCRIPT_URL + '?action=assinaturasEquipe&equipe=' + encodeURIComponent(s.equipeCasa)).then(r => r.json()).catch(() => null),
+      fetch(SUMULA_SCRIPT_URL + '?action=assinaturasEquipe&equipe=' + encodeURIComponent(s.equipeVisitante)).then(r => r.json()).catch(() => null)
+    ]);
+    const juizes = (jz && jz.juizes) || [];
+    const achar = (nome) => { const j = juizes.find(x => x.nome === nome); return j ? j.assinatura : ''; };
+    out.arbitro1 = achar(s.arbitro1); out.arbitro2 = achar(s.arbitro2); out.apontador = achar(s.apontador);
+    const a = (assA && assA.assinaturas) || {}, b = (assB && assB.assinaturas) || {};
+    out.capitaoCasa = a.capitao || ''; out.tecnicoCasa = a.tecnico || '';
+    out.capitaoVisitante = b.capitao || ''; out.tecnicoVisitante = b.tecnico || '';
+  } catch (ex) { /* PDF sai sem assinaturas se falhar */ }
+  return out;
 }
 
 async function sumulaFinalizarPartida() {
   showLoading(true);
   try {
+    const sincronizou = await sumulaFlushTudo_();
+    if (!sincronizou) { showToast('❌ Não consegui sincronizar os últimos eventos com a planilha. Confira a conexão e tente de novo.', 'error'); return; }
+    sumulaLiveState._assinaturas = await sumulaAssinaturasParaPdf_(sumulaLiveState);
     const pdfInfo = await gerarPdfSumula(sumulaLiveState);
+    delete sumulaLiveState._assinaturas;
     const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'finalizarPartida', id: sumulaLiveState.id, linkPdf: pdfInfo.link || '' }) }).then(r => r.json());
     if (res.ok) {
       sumulaLiveState = res.estado;
       if (sumulaLivePollTimer) { clearInterval(sumulaLivePollTimer); sumulaLivePollTimer = null; }
       renderSumulaConsole();
-      showToast('✅ Súmula finalizada!');
+      showToast('✅ Súmula salva e exportada! Já pode escolher o próximo jogo.');
     } else showToast('❌ ' + (res.erro || 'erro'), 'error');
   } catch (ex) {
     showToast('❌ Erro ao finalizar: ' + ex.message, 'error');
@@ -4724,23 +5282,26 @@ async function gerarPdfSumula(s) {
     }
     const capNomeA = nomePorNumero_(s.elencoCasa, s.capitaoCasa);
     const capNomeB = nomePorNumero_(s.elencoVisitante, s.capitaoVisitante);
-    function linhaAssinaturas_(itens, yy) {
+    function linhaAssinaturas_(itens, yy, imgs) {
       const w = MW / itens.length;
       itens.forEach((label, i) => {
         const x = MX + i * w;
+        const img = imgs && imgs[i];
+        if (img) { try { doc.addImage(img, 'PNG', x + w / 2 - 10.5, yy - 7.6, 21, 7); } catch (e) { /* assinatura inválida: segue sem */ } }
         doc.setDrawColor(LINHA[0], LINHA[1], LINHA[2]); doc.line(x + 8, yy, x + w - 8, yy);
         doc.setFontSize(7); doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]); doc.setFont(undefined, 'normal');
         txt(label, x + w / 2, yy + 4.3, { align: 'center' });
       });
     }
-    linhaAssinaturas_(['Árbitro 1', 'Árbitro 2', 'Apontador(a)'], y);
+    const ass_ = s._assinaturas || {};
+    linhaAssinaturas_(['Árbitro 1', 'Árbitro 2', 'Apontador(a)'], y, [ass_.arbitro1, ass_.arbitro2, ass_.apontador]);
     y += 11;
     linhaAssinaturas_([
       'Capitão · ' + s.equipeCasa + (capNomeA ? ' (' + capNomeA + ')' : ''),
       'Técnico · ' + s.equipeCasa + ((s.elencoCasa && s.elencoCasa.tecnico && s.elencoCasa.tecnico.nome) ? ' (' + s.elencoCasa.tecnico.nome + ')' : ''),
       'Capitão · ' + s.equipeVisitante + (capNomeB ? ' (' + capNomeB + ')' : ''),
       'Técnico · ' + s.equipeVisitante + ((s.elencoVisitante && s.elencoVisitante.tecnico && s.elencoVisitante.tecnico.nome) ? ' (' + s.elencoVisitante.tecnico.nome + ')' : '')
-    ], y);
+    ], y, [ass_.capitaoCasa, ass_.tecnicoCasa, ass_.capitaoVisitante, ass_.tecnicoVisitante]);
 
     doc.setFontSize(6.5); doc.setTextColor(170);
     txt('Súmula gerada automaticamente pelo Painel Admin da Supercopa AFC · ' + s.id, MX + MW / 2, 205, { align: 'center' });
