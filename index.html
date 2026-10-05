@@ -1415,6 +1415,47 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
         </div>
       </div>
 
+      <!-- Extras da tela inicial da súmula -->
+      <div id="sumulaExtras">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <div class="card-title" style="margin-bottom:0"><i class='bx bx-calendar-check'></i> Resumo dos jogos</div>
+            <button class="refresh-btn" style="margin-left:auto" onclick="carregarResumoJogos(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+          </div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:0 0 12px">Situação da súmula de cada jogo da chave. "Reabrir" volta uma súmula finalizada com erro para correção.</p>
+          <div id="sumulaResumoLista"><p style="color:var(--dark-grey);font-size:13px">Clique em Atualizar pra carregar.</p></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class='bx bx-qr-scan'></i> Conferência na entrada</div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 12px">Aponte a câmera para o QR da carteirinha digital do atleta. A presença é registrada para o jogo escolhido acima.</p>
+          <button class="btn btn-primary" onclick="abrirScanner()"><i class='bx bx-camera'></i> Ler carteirinha</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class='bx bx-bar-chart-alt-2'></i> Relatórios (Excel/CSV)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('atletas')"><i class='bx bx-group'></i> Atletas por equipe</button>
+            <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('resultados')"><i class='bx bx-trophy'></i> Resultados</button>
+            <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('cartoes')"><i class='bx bxs-flag-alt'></i> Cartões da rodada</button>
+            <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('acumulados')"><i class='bx bx-error'></i> Cartões acumulados (suspensões)</button>
+            <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('presencas')"><i class='bx bx-check-double'></i> Presenças</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class='bx bx-lock-alt'></i> Senha de liberação</div>
+          <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 12px">Senha pedida para adicionar atleta na tela da súmula. Fica guardada no servidor.</p>
+          <button class="btn btn-secondary btn-sm" onclick="trocarSenhaAdminUI()"><i class='bx bx-key'></i> Trocar senha</button>
+        </div>
+      </div>
+
+      <div id="modal-scanner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;padding:16px">
+        <div style="width:100%;max-width:420px;background:#111827;border-radius:18px;padding:14px;color:#fff">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>Conferência na entrada</b><button onclick="fecharScanner()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px">Fechar</button></div>
+          <video id="scanner-video" playsinline muted style="width:100%;border-radius:12px;background:#000;aspect-ratio:1/1;object-fit:cover"></video>
+          <canvas id="scanner-canvas" style="display:none"></canvas>
+          <div id="scanner-resultado" style="margin-top:10px;font-size:13px;min-height:54px;text-align:center;color:rgba(255,255,255,.7)">Aponte para o QR da carteirinha…</div>
+        </div>
+      </div>
+
       <!-- Aviso de offline -->
       <div class="card" id="sumulaOfflineBanner" style="display:none;background:#fff3cd;border:1px solid #ffe08a;color:#8a6100">
         <div style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700">
@@ -1445,6 +1486,12 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
             <div class="form-group" style="flex:1;min-width:180px;margin:0"><label>Nome</label><input class="form-control" id="ca-nome" placeholder="Nome completo"></div>
             <div class="form-group" style="width:190px;margin:0"><label>Tipo</label><select class="form-control" id="ca-tipo"><option value="Atleta">Atleta (máx. 14)</option><option value="Comissão Técnica">Comissão Técnica (máx. 2)</option></select></div>
             <button class="btn btn-primary" onclick="salvarAtletaCadastro()"><i class='bx bx-user-plus'></i> Adicionar</button>
+          </div>
+          <div style="margin:0 0 16px;padding:14px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px">
+            <div style="font-size:12px;font-weight:800;margin-bottom:6px"><i class='bx bx-list-plus'></i> Cadastrar vários de uma vez</div>
+            <p style="font-size:11px;color:var(--dark-grey);margin:0 0 8px">Cole uma linha por atleta, com número e nome (ex.: <code>10 Maria Silva</code>). Entram como Atleta na equipe selecionada acima.</p>
+            <textarea class="form-control" id="ca-lote-texto" rows="5" placeholder="1 Ana Souza&#10;2 Bia Lima&#10;3 Carla Dias" style="resize:vertical"></textarea>
+            <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="cadastrarLote()"><i class='bx bx-upload'></i> Cadastrar lista</button>
           </div>
           <div id="ca-lista-atletas"></div>
         </div>
@@ -3650,6 +3697,7 @@ function copiarLinkConvite() {
 }
 
 function initSumulaLive() {
+  setTimeout(() => carregarResumoJogos(), 300);
   const sel = document.getElementById('sumula-select-jogo');
   const opcoesReais = state.jogos.volei.filter(j => j.sumulaId).map(j =>
     `<option value="${j.sumulaId}">${j.sumulaId} — ${j.equipeA} vs ${j.equipeB}</option>`
@@ -3660,7 +3708,7 @@ function initSumulaLive() {
       <option value="TESTE1">TESTE1 — EQUIPE TESTE A vs EQUIPE TESTE B</option>
     </optgroup>
     <optgroup label="Jogos da chave">${opcoesReais}</optgroup>`;
-  document.getElementById('sumulaSeletorCard').style.display = '';
+  setSeletorVisivel_(true);
   document.getElementById('sumulaWizard').style.display = 'none';
   document.getElementById('sumulaConsole').style.display = 'none';
   document.getElementById('sumulaConsole').innerHTML = '';
@@ -3695,7 +3743,7 @@ async function abrirCadastroAtletas() {
 
 function fecharCadastroAtletas() {
   document.getElementById('cadastroAtletasCard').style.display = 'none';
-  document.getElementById('sumulaSeletorCard').style.display = '';
+  setSeletorVisivel_(true);
 }
 
 function equipeAtivaCadastro() {
@@ -3762,7 +3810,7 @@ async function abrirOuCriarPartida() {
   try {
     const res = await fetch(SUMULA_SCRIPT_URL + '?action=partida&id=' + encodeURIComponent(sumulaId)).then(r => r.json());
     if (res.ok && res.estado) {
-      document.getElementById('sumulaSeletorCard').style.display = 'none';
+      setSeletorVisivel_(false);
       iniciarConsoleAoVivo(sumulaRestaurarFila_(res.estado));
     } else {
       abrirWizard(sumulaId, jogo);
@@ -3771,7 +3819,7 @@ async function abrirOuCriarPartida() {
     // Sem conexão — tenta abrir o último placar salvo localmente pra essa partida.
     const cache = carregarCacheOffline_(sumulaId);
     if (cache) {
-      document.getElementById('sumulaSeletorCard').style.display = 'none';
+      setSeletorVisivel_(false);
       iniciarConsoleAoVivo(sumulaRestaurarFila_(cache), true);
       showToast('📡 Sem conexão — mostrando último placar salvo neste navegador.', 'error');
     } else {
@@ -3800,11 +3848,224 @@ function mostrarOffline_() { const b = document.getElementById('sumulaOfflineBan
 function esconderOffline_() { const b = document.getElementById('sumulaOfflineBanner'); if (b) b.style.display = 'none'; }
 let _pollFalhasSeguidas = 0;
 
+function nomeDoCartao_(jogador) { const s = String(jogador || ''); const i = s.indexOf(' - '); return i >= 0 ? s.slice(i + 3) : s; }
+// ── Suspensão / cartões anteriores no elenco ──
+let _cartoesCache = { em: 0, mapa: {} };
+async function carregarCartoesResumo_() {
+  if (Date.now() - _cartoesCache.em < 60000) return;
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL + '?action=relatorioCartoes').then(x => x.json());
+    const mapa = {};
+    ((r && r.cartoes) || []).forEach(c => {
+      const k = String(c.equipe).toLowerCase() + '|' + nomeDoCartao_(c.jogador).toLowerCase();
+      const o = mapa[k] = mapa[k] || { am: 0, vm: 0 };
+      if (c.tipo === 'Vermelho') o.vm++; else o.am++;
+    });
+    _cartoesCache = { em: Date.now(), mapa: mapa };
+  } catch (ex) { /* sem o aviso, segue */ }
+}
+function cartoesAtleta_(equipe, nome) {
+  return _cartoesCache.mapa[String(equipe).toLowerCase() + '|' + String(nome).toLowerCase()] || null;
+}
+
+
+// ════════ Resumo dos jogos, conferência por QR, relatórios, senha ════════
+function setSeletorVisivel_(v) {
+  const a = document.getElementById('sumulaSeletorCard');
+  const b = document.getElementById('sumulaExtras');
+  if (a) a.style.display = v ? '' : 'none';
+  if (b) b.style.display = v ? '' : 'none';
+}
+
+async function carregarResumoJogos(manual) {
+  const el = document.getElementById('sumulaResumoLista');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  let porId = {};
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=partidasTodas').then(r => r.json());
+    ((res && res.partidas) || []).forEach(p => { porId[String(p.id).toUpperCase()] = p; });
+  } catch (ex) { el.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar o status das súmulas.</p>'; return; }
+  const jogos = (state.jogos.volei || []).filter(j => j.sumulaId);
+  if (!jogos.length) { el.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Nenhum jogo carregado ainda.</p>'; return; }
+  const badge = (p) => {
+    if (!p) return '<span style="background:#eef0f5;color:#6b7280;padding:3px 9px;border-radius:99px;font-size:10px;font-weight:800">Não iniciada</span>';
+    if (p.status === 'em_andamento') return '<span style="background:#fee2e2;color:#b91c1c;padding:3px 9px;border-radius:99px;font-size:10px;font-weight:800">🔴 Ao vivo ' + p.pontosCasa + '×' + p.pontosVisitante + '</span>';
+    if (p.status === 'sets_completos') return '<span style="background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:99px;font-size:10px;font-weight:800">Falta finalizar</span>';
+    return '<span style="background:#dcfce7;color:#166534;padding:3px 9px;border-radius:99px;font-size:10px;font-weight:800">✅ ' + p.setsCasa + '×' + p.setsVisitante + '</span>';
+  };
+  el.innerHTML = jogos.map(j => {
+    const p = porId[String(j.sumulaId).toUpperCase()];
+    return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 10px;background:var(--grey);border-radius:10px;margin-bottom:6px">
+      <div style="min-width:96px;font-size:11px;color:var(--dark-grey)"><b>${escHtmlS_(j.sumulaId)}</b> · ${escHtmlS_(j.data || '')} ${escHtmlS_(j.hora || '')}</div>
+      <div style="flex:1;min-width:180px;font-size:12px;font-weight:600">${escHtmlS_(j.equipeA)} <span style="color:var(--dark-grey);font-weight:400">x</span> ${escHtmlS_(j.equipeB)}</div>
+      ${badge(p)}
+      <button class="btn btn-secondary btn-sm" data-id="${escHtmlS_(j.sumulaId)}" onclick="resumoAbrir_(this.dataset.id)">${p && p.status !== 'finalizada' ? 'Continuar' : (p ? 'Ver' : 'Abrir')}</button>
+      ${p && p.status === 'finalizada' ? `<button class="btn btn-sm" style="background:#fef3c7;color:#92400e" data-id="${escHtmlS_(j.sumulaId)}" onclick="resumoReabrir_(this.dataset.id)">Reabrir</button>` : ''}
+      ${p && p.linkPdf ? `<a class="btn btn-secondary btn-sm" href="${escHtmlS_(p.linkPdf)}" target="_blank" rel="noopener">PDF</a>` : ''}
+    </div>`;
+  }).join('');
+  if (manual) showToast('✅ Resumo atualizado!');
+}
+function resumoAbrir_(id) {
+  const sel = document.getElementById('sumula-select-jogo');
+  sel.value = id;
+  abrirOuCriarPartida();
+}
+async function resumoReabrir_(id) {
+  if (!confirm('Reabrir a súmula ' + id + ' para correção? O PDF atual continua no Drive; depois de corrigir é só exportar de novo.')) return;
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'reabrirPartida', id: id }) }).then(r => r.json());
+    if (res.ok) { showToast('✅ Súmula reaberta.'); carregarResumoJogos(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+async function trocarSenhaAdminUI() {
+  const atual = prompt('Senha atual:');
+  if (atual === null) return;
+  const nova = prompt('Nova senha (mínimo 4 caracteres):');
+  if (nova === null) return;
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'trocarSenhaAdmin', senhaAtual: atual.trim(), novaSenha: nova.trim() }) }).then(r => r.json());
+    if (res.ok) showToast('✅ Senha trocada!'); else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+// ── Leitor de QR (carteirinha) ──
+let _scanStream = null, _scanAtivo = false, _scanPausa = 0;
+function carregarJsQr_() {
+  return new Promise((resolve, reject) => {
+    if (window.jsQR) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+async function abrirScanner() {
+  try { await carregarJsQr_(); } catch (e) { showToast('❌ Sem conexão pra carregar o leitor de QR.', 'error'); return; }
+  try {
+    _scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch (e) { showToast('❌ Não consegui acessar a câmera (permita o uso da câmera).', 'error'); return; }
+  const v = document.getElementById('scanner-video');
+  v.srcObject = _scanStream; await v.play();
+  document.getElementById('scanner-resultado').textContent = 'Aponte para o QR da carteirinha…';
+  document.getElementById('modal-scanner').style.display = 'flex';
+  _scanAtivo = true;
+  requestAnimationFrame(scannerLoop_);
+}
+function fecharScanner() {
+  _scanAtivo = false;
+  if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
+  document.getElementById('modal-scanner').style.display = 'none';
+}
+function scannerLoop_() {
+  if (!_scanAtivo) return;
+  const v = document.getElementById('scanner-video');
+  if (v.readyState === v.HAVE_ENOUGH_DATA && Date.now() > _scanPausa) {
+    const c = document.getElementById('scanner-canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    const ctx = c.getContext('2d'); ctx.drawImage(v, 0, 0, c.width, c.height);
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    const code = window.jsQR(img.data, img.width, img.height);
+    if (code && code.data) { _scanPausa = Date.now() + 3000; scannerProcessar_(code.data); }
+  }
+  requestAnimationFrame(scannerLoop_);
+}
+async function scannerProcessar_(texto) {
+  const out = document.getElementById('scanner-resultado');
+  const p = String(texto).split('|');
+  if (p[0] !== 'SUPERCOPA' || p.length < 5) { out.innerHTML = '<span style="color:#fca5a5">QR inválido (não é uma carteirinha da Supercopa).</span>'; return; }
+  const [, equipe, numero, nome, tipo] = p;
+  out.innerHTML = 'Conferindo ' + escHtmlS_(nome) + '…';
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(equipe)).then(r => r.json());
+    const existe = ((res && res.atletas) || []).some(a => (a.nome || '') === nome && (a.numero || '').toString() === numero);
+    if (!existe) { out.innerHTML = '<div style="color:#fca5a5;font-weight:800">❌ NÃO CONSTA no cadastro</div><div>' + escHtmlS_(nome) + ' · ' + escHtmlS_(equipe) + '</div>'; return; }
+    const jogo = (document.getElementById('sumula-select-jogo') || {}).value || '';
+    const reg = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'registrarPresenca', jogo: jogo, equipe: equipe, numero: numero, nome: nome, tipo: tipo }) }).then(r => r.json());
+    out.innerHTML = '<div style="color:#86efac;font-weight:800;font-size:15px">✅ ' + (reg.jaRegistrado ? 'JÁ REGISTRADO' : 'PRESENÇA REGISTRADA') + '</div><div style="font-size:18px;font-weight:900">#' + escHtmlS_(numero) + ' ' + escHtmlS_(nome) + '</div><div>' + escHtmlS_(equipe) + ' · ' + escHtmlS_(tipo) + (jogo ? ' · jogo ' + escHtmlS_(jogo) : '') + '</div>';
+  } catch (ex) { out.innerHTML = '<span style="color:#fca5a5">Erro de conexão ao conferir.</span>'; }
+}
+
+// ── Relatórios CSV ──
+function csvCel_(v) { const s = String(v == null ? '' : v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function baixarCsv_(nome, linhas) {
+  const txt = '﻿' + linhas.map(l => l.map(csvCel_).join(';')).join('\r\n');
+  const blob = new Blob([txt], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function baixarRelatorio(tipo) {
+  showLoading(true);
+  try {
+    if (tipo === 'atletas') {
+      const r = await fetch(SUMULA_SCRIPT_URL + '?action=atletasTodos').then(x => x.json());
+      const l = [['Equipe', 'Número', 'Nome', 'Tipo']];
+      ((r && r.atletas) || []).sort((a, b) => String(a.equipe).localeCompare(String(b.equipe)) || (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0)).forEach(a => l.push([a.equipe, a.numero, a.nome, a.tipo]));
+      baixarCsv_('atletas-por-equipe.csv', l);
+    } else if (tipo === 'resultados') {
+      const r = await fetch(SUMULA_SCRIPT_URL + '?action=partidasFinalizadas').then(x => x.json());
+      const l = [['Jogo', 'Casa', 'Visitante', 'Sets casa', 'Sets visitante', 'Parciais', 'PDF']];
+      ((r && r.partidas) || []).forEach(p => l.push([p.id, p.equipeCasa, p.equipeVisitante, p.setsCasa, p.setsVisitante, (p.historicoSets || []).map(s => s.a + 'x' + s.b).join(' / '), p.linkPdf || '']));
+      baixarCsv_('resultados.csv', l);
+    } else if (tipo === 'cartoes') {
+      const r = await fetch(SUMULA_SCRIPT_URL + '?action=relatorioCartoes').then(x => x.json());
+      const l = [['Jogo', 'Equipe', 'Adversário', 'Set', 'Jogador', 'Cartão', 'Motivo']];
+      ((r && r.cartoes) || []).forEach(c => l.push([c.jogo, c.equipe, c.adversario, c.set, c.jogador, c.tipo, c.motivo]));
+      baixarCsv_('cartoes.csv', l);
+    } else if (tipo === 'acumulados') {
+      const r = await fetch(SUMULA_SCRIPT_URL + '?action=relatorioCartoes').then(x => x.json());
+      const mapa = {};
+      ((r && r.cartoes) || []).forEach(c => {
+        const k = c.equipe + '|' + nomeDoCartao_(c.jogador);
+        const o = mapa[k] = mapa[k] || { equipe: c.equipe, nome: nomeDoCartao_(c.jogador), am: 0, vm: 0 };
+        if (c.tipo === 'Vermelho') o.vm++; else o.am++;
+      });
+      const l = [['Equipe', 'Atleta', 'Amarelos', 'Vermelhos', 'Atenção']];
+      Object.values(mapa).sort((a, b) => b.vm - a.vm || b.am - a.am).forEach(o => l.push([o.equipe, o.nome, o.am, o.vm, (o.vm >= 1 || o.am >= 3) ? 'Verificar suspensão no regulamento' : '']));
+      baixarCsv_('cartoes-acumulados.csv', l);
+    } else if (tipo === 'presencas') {
+      const r = await fetch(SUMULA_SCRIPT_URL + '?action=listarPresencas').then(x => x.json());
+      const l = [['Registrado em', 'Jogo', 'Equipe', 'Número', 'Nome', 'Tipo']];
+      ((r && r.presencas) || []).forEach(p => l.push([p.em, p.jogo, p.equipe, p.numero, p.nome, p.tipo]));
+      baixarCsv_('presencas.csv', l);
+    }
+    showToast('⬇️ Relatório baixado!');
+  } catch (ex) { showToast('❌ Erro ao gerar relatório: ' + ex.message, 'error'); }
+  finally { showLoading(false); }
+}
+
+// ── Cadastro de atletas em lote ──
+async function cadastrarLote() {
+  const equipe = equipeAtivaCadastro();
+  if (!equipe) { showToast('Selecione a equipe primeiro.', 'error'); return; }
+  const linhas = document.getElementById('ca-lote-texto').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!linhas.length) { showToast('Cole a lista (uma linha por atleta: "10 Maria Silva").', 'error'); return; }
+  showLoading(true);
+  let ok = 0; const erros = [];
+  for (const l of linhas) {
+    const m = l.match(/^(\d{1,3})?[\s.\-–,;:)]*(.+)$/);
+    const numero = m && m[1] ? m[1] : '';
+    const nome = (m ? m[2] : l).trim();
+    if (!nome) continue;
+    try {
+      const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'cadastrarAtleta', equipe: equipe, numero: numero, nome: nome, tipo: 'Atleta' }) }).then(r => r.json());
+      if (res.ok) ok++; else erros.push(nome + ': ' + (res.erro || 'erro'));
+    } catch (ex) { erros.push(nome + ': sem conexão'); }
+  }
+  showLoading(false);
+  document.getElementById('ca-lote-texto').value = erros.length ? erros.join('\n') : '';
+  showToast(erros.length ? ('⚠️ ' + ok + ' salvos, ' + erros.length + ' com erro (ficaram na caixa).') : ('✅ ' + ok + ' atletas salvos!'), erros.length ? 'error' : undefined);
+  carregarListaAtletas();
+}
+
+
 function escHtmlS_(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const WZ_SENHA_ADMIN = '5912';
 let wizardJuizes = [];
 let _wzAddLado = null;
 let _wzSenha = '';
@@ -3816,7 +4077,7 @@ async function abrirWizard(sumulaId, jogo) {
     equipeA: jogo ? jogo.equipeA : (ehTeste ? 'EQUIPE TESTE A' : ''),
     equipeB: jogo ? jogo.equipeB : (ehTeste ? 'EQUIPE TESTE B' : '')
   };
-  document.getElementById('sumulaSeletorCard').style.display = 'none';
+  setSeletorVisivel_(false);
 
   const selA = document.getElementById('wz-equipeA');
   const selB = document.getElementById('wz-equipeB');
@@ -3857,6 +4118,7 @@ async function wizardCarregarElencos_() {
   const boxA = document.getElementById('wz-elenco-A');
   const boxB = document.getElementById('wz-elenco-B');
   boxA.innerHTML = boxB.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  await carregarCartoesResumo_();
   const buscar = (eq) => eq
     ? fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(eq)).then(r => r.json()).then(r => (r && r.atletas) || []).catch(() => null)
     : Promise.resolve([]);
@@ -3875,7 +4137,7 @@ function wizardElencoHtml_(atletas, equipe) {
   const aviso = jog.length < 6 ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:8px"><i class='bx bx-error'></i> ${jog.length ? 'Só ' + jog.length + ' atleta(s) — precisa de pelo menos 6 pra escalar.' : 'Nenhum atleta cadastrado — cadastre pelo menos 6.'}</div>` : '';
   const linha = (a) => `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--grey);border-radius:10px;margin-bottom:6px">
       <div style="width:30px;height:30px;border-radius:50%;background:${(a.tipo || 'Atleta') === 'Atleta' ? 'var(--blue)' : '#c8960c'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">${escHtmlS_(a.numero) || '·'}</div>
-      <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtmlS_(a.nome)}</div><div style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.tipo === 'Comissão Técnica' ? 'Técnico' : (a.tipo || 'Atleta'))}</div></div>
+      <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtmlS_(a.nome)}${(() => { const c = cartoesAtleta_(equipe, a.nome); return c ? ` <span title="Cartões em jogos anteriores" style="font-size:10px;color:${(c.vm >= 1 || c.am >= 3) ? 'var(--red)' : '#92400e'}">${c.vm ? '🟥×' + c.vm + ' ' : ''}${c.am ? '🟨×' + c.am : ''}${(c.vm >= 1 || c.am >= 3) ? ' ⚠️ ver suspensão' : ''}</span>` : ''; })()}</div><div style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.tipo === 'Comissão Técnica' ? 'Técnico' : (a.tipo || 'Atleta'))}</div></div>
     </div>`;
   return cab + aviso + jog.map(linha).join('') + com.map(linha).join('');
 }
@@ -3892,9 +4154,13 @@ function wizardAbrirAdd_(lado) {
   document.getElementById('wz-add-panel').style.display = '';
   document.getElementById('wz-add-senha').focus();
 }
-function wizardAddSenhaOk_() {
+async function wizardAddSenhaOk_() {
   const v = document.getElementById('wz-add-senha').value.trim();
-  if (v !== WZ_SENHA_ADMIN) { showToast('❌ Senha incorreta.', 'error'); return; }
+  if (!v) { showToast('Digite a senha de liberação.', 'error'); return; }
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=verificarSenhaAdmin&senha=' + encodeURIComponent(v)).then(r => r.json());
+    if (!res.ok) { showToast('❌ Senha incorreta.', 'error'); return; }
+  } catch (ex) { showToast('❌ Sem conexão pra validar a senha.', 'error'); return; }
   _wzSenha = v;
   document.getElementById('wz-add-senha-box').style.display = 'none';
   document.getElementById('wz-add-form-box').style.display = '';
@@ -4031,7 +4297,7 @@ function sigPadInit_(canvas) {
 }
 
 async function abrirArbitragem() {
-  document.getElementById('sumulaSeletorCard').style.display = 'none';
+  setSeletorVisivel_(false);
   document.getElementById('arbitragemCard').style.display = '';
   sigPadInit_(document.getElementById('arb-canvas')).limpar();
   document.getElementById('arb-nome').value = '';
@@ -4039,7 +4305,7 @@ async function abrirArbitragem() {
 }
 function fecharArbitragem() {
   document.getElementById('arbitragemCard').style.display = 'none';
-  document.getElementById('sumulaSeletorCard').style.display = '';
+  setSeletorVisivel_(true);
 }
 function arbLimpar() { sigPadInit_(document.getElementById('arb-canvas')).limpar(); }
 
@@ -6905,6 +7171,7 @@ function abrirTvVolei(){
   window.open(VOLEI_TV_URL+'?s='+codes,'_blank');
 }
 
+try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw-painel.js'); } catch (e) { /* offline cache é opcional */ }
 </script>
 </body>
 </html>

@@ -1052,11 +1052,30 @@ async function abrirOuCriarPartida() {
   }
 }
 
+function nomeDoCartao_(jogador) { const s = String(jogador || ''); const i = s.indexOf(' - '); return i >= 0 ? s.slice(i + 3) : s; }
+// ── Suspensão / cartões anteriores no elenco ──
+let _cartoesCache = { em: 0, mapa: {} };
+async function carregarCartoesResumo_() {
+  if (Date.now() - _cartoesCache.em < 60000) return;
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL + '?action=relatorioCartoes').then(x => x.json());
+    const mapa = {};
+    ((r && r.cartoes) || []).forEach(c => {
+      const k = String(c.equipe).toLowerCase() + '|' + nomeDoCartao_(c.jogador).toLowerCase();
+      const o = mapa[k] = mapa[k] || { am: 0, vm: 0 };
+      if (c.tipo === 'Vermelho') o.vm++; else o.am++;
+    });
+    _cartoesCache = { em: Date.now(), mapa: mapa };
+  } catch (ex) { /* sem o aviso, segue */ }
+}
+function cartoesAtleta_(equipe, nome) {
+  return _cartoesCache.mapa[String(equipe).toLowerCase() + '|' + String(nome).toLowerCase()] || null;
+}
+
 function escHtmlS_(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const WZ_SENHA_ADMIN = '5912';
 let wizardJuizes = [];
 let _wzAddLado = null;
 let _wzSenha = '';
@@ -1109,6 +1128,7 @@ async function wizardCarregarElencos_() {
   const boxA = document.getElementById('wz-elenco-A');
   const boxB = document.getElementById('wz-elenco-B');
   boxA.innerHTML = boxB.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  await carregarCartoesResumo_();
   const buscar = (eq) => eq
     ? fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(eq)).then(r => r.json()).then(r => (r && r.atletas) || []).catch(() => null)
     : Promise.resolve([]);
@@ -1127,7 +1147,7 @@ function wizardElencoHtml_(atletas, equipe) {
   const aviso = jog.length < 6 ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:8px"><i class='bx bx-error'></i> ${jog.length ? 'Só ' + jog.length + ' atleta(s) — precisa de pelo menos 6 pra escalar.' : 'Nenhum atleta cadastrado — cadastre pelo menos 6.'}</div>` : '';
   const linha = (a) => `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--grey);border-radius:10px;margin-bottom:6px">
       <div style="width:30px;height:30px;border-radius:50%;background:${(a.tipo || 'Atleta') === 'Atleta' ? 'var(--blue)' : '#c8960c'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">${escHtmlS_(a.numero) || '·'}</div>
-      <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtmlS_(a.nome)}</div><div style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.tipo === 'Comissão Técnica' ? 'Técnico' : (a.tipo || 'Atleta'))}</div></div>
+      <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtmlS_(a.nome)}${(() => { const c = cartoesAtleta_(equipe, a.nome); return c ? ` <span title="Cartões em jogos anteriores" style="font-size:10px;color:${(c.vm >= 1 || c.am >= 3) ? 'var(--red)' : '#92400e'}">${c.vm ? '🟥×' + c.vm + ' ' : ''}${c.am ? '🟨×' + c.am : ''}${(c.vm >= 1 || c.am >= 3) ? ' ⚠️ ver suspensão' : ''}</span>` : ''; })()}</div><div style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.tipo === 'Comissão Técnica' ? 'Técnico' : (a.tipo || 'Atleta'))}</div></div>
     </div>`;
   return cab + aviso + jog.map(linha).join('') + com.map(linha).join('');
 }
@@ -1144,9 +1164,13 @@ function wizardAbrirAdd_(lado) {
   document.getElementById('wz-add-panel').style.display = '';
   document.getElementById('wz-add-senha').focus();
 }
-function wizardAddSenhaOk_() {
+async function wizardAddSenhaOk_() {
   const v = document.getElementById('wz-add-senha').value.trim();
-  if (v !== WZ_SENHA_ADMIN) { showToast('❌ Senha incorreta.', 'error'); return; }
+  if (!v) { showToast('Digite a senha de liberação.', 'error'); return; }
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=verificarSenhaAdmin&senha=' + encodeURIComponent(v)).then(r => r.json());
+    if (!res.ok) { showToast('❌ Senha incorreta.', 'error'); return; }
+  } catch (ex) { showToast('❌ Sem conexão pra validar a senha.', 'error'); return; }
   _wzSenha = v;
   document.getElementById('wz-add-senha-box').style.display = 'none';
   document.getElementById('wz-add-form-box').style.display = '';
@@ -2697,6 +2721,7 @@ initSumulaLive();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('arbitro2-sw.js').catch(()=>{});
 }
+try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw-painel.js'); } catch (e) { /* offline cache é opcional */ }
 </script>
 </body>
 </html>

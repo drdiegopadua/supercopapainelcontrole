@@ -335,14 +335,17 @@ function doPost(e) {
     // SÚMULA 2.0 — lote de eventos, juízes, assinaturas, cadastro com senha
     if (acao === 'processarEventosLote') return okJson(comLock_(() => processarEventosLote_(dados)));
     if (acao === 'cadastrarJuiz') return okJson(cadastrarJuiz_(dados));
+    if (acao === 'trocarSenhaAdmin') return okJson(trocarSenhaAdmin_(dados));
+    if (acao === 'reabrirPartida') return okJson(comLock_(() => reabrirPartida_(dados)));
+    if (acao === 'registrarPresenca') return okJson(registrarPresenca_(dados));
     if (acao === 'removerJuiz') return okJson(removerJuiz_(dados));
     if (acao === 'salvarAssinatura') return okJson(salvarAssinatura_(dados));
     if (acao === 'cadastrarAtletaAdmin') {
-      if ((dados.senha || '').toString() !== SENHA_ADMIN_SUMULA) return okJson({ ok: false, erro: 'Senha incorreta.' });
+      if ((dados.senha || '').toString() !== getSenhaAdmin_()) return okJson({ ok: false, erro: 'Senha incorreta.' });
       return okJson(cadastrarAtleta_(dados));
     }
     if (acao === 'removerAtletaAdmin') {
-      if ((dados.senha || '').toString() !== SENHA_ADMIN_SUMULA) return okJson({ ok: false, erro: 'Senha incorreta.' });
+      if ((dados.senha || '').toString() !== getSenhaAdmin_()) return okJson({ ok: false, erro: 'Senha incorreta.' });
       return okJson(removerAtleta_(dados));
     }
 
@@ -384,6 +387,10 @@ function doGet(e) {
       return okJson({ ok: okPin });
     }
     if (action === 'statusCadastroEquipes') return okJson({ ok: true, equipes: statusCadastroEquipes_() });
+    if (action === 'verificarSenhaAdmin') return okJson({ ok: ((e.parameter && e.parameter.senha) || '') === getSenhaAdmin_() });
+    if (action === 'partidasTodas') return okJson({ ok: true, partidas: listarPartidasTodas_() });
+    if (action === 'relatorioCartoes') return okJson({ ok: true, cartoes: relatorioCartoes_() });
+    if (action === 'listarPresencas') return okJson({ ok: true, presencas: listarPresencas_((e.parameter && e.parameter.jogo) || '') });
     if (action === 'listarJuizes') return okJson({ ok: true, juizes: listarJuizes_() });
     if (action === 'assinaturasEquipe') return okJson({ ok: true, assinaturas: assinaturasEquipe_((e.parameter && e.parameter.equipe) || '') });
     if (action === 'atletasEquipeApp') {
@@ -1543,7 +1550,10 @@ function uploadPdfSumula_(d) {
 // ============================================================
 //  SÚMULA 2.0 — lote de eventos, juízes e assinaturas
 // ============================================================
-const SENHA_ADMIN_SUMULA = '5912';
+const SENHA_ADMIN_PADRAO_ = '5912';
+function getSenhaAdmin_() {
+  return PropertiesService.getScriptProperties().getProperty('SENHA_ADMIN') || SENHA_ADMIN_PADRAO_;
+}
 const ABA_JUIZES = 'Juizes';
 const ABA_ASSINATURAS = 'Assinaturas';
 const LIMITE_ASSINATURA_CHARS = 45000;
@@ -1774,6 +1784,111 @@ function statusCadastroEquipes_() {
         assCapitao: !!ass[k + '|capitao']
       };
     });
+}
+
+// ── Senha de liberação (cadastro de atleta no painel) ──────────
+function trocarSenhaAdmin_(d) {
+  if ((d.senhaAtual || '').toString() !== getSenhaAdmin_()) return { ok: false, erro: 'Senha atual incorreta.' };
+  const nova = (d.novaSenha || '').toString().trim();
+  if (nova.length < 4) return { ok: false, erro: 'A nova senha precisa ter pelo menos 4 caracteres.' };
+  PropertiesService.getScriptProperties().setProperty('SENHA_ADMIN', nova);
+  return { ok: true };
+}
+
+// ── Resumo dos jogos / reabrir súmula ───────────────────────────
+function listarPartidasTodas_() {
+  const sh = getPartidasSheet_();
+  if (sh.getLastRow() < 2) return [];
+  return sh.getDataRange().getValues().slice(1)
+    .filter(r => r[PC.id] && !ehJogoTeste_(r[PC.id]))
+    .map(r => ({
+      id: r[PC.id], equipeCasa: r[PC.equipeCasa], equipeVisitante: r[PC.equipeVisitante],
+      setAtual: r[PC.setAtual], pontosCasa: r[PC.pontosCasa], pontosVisitante: r[PC.pontosVisitante],
+      setsCasa: r[PC.setsCasa], setsVisitante: r[PC.setsVisitante],
+      status: r[PC.status], linkPdf: r[PC.linkPdf]
+    }));
+}
+
+function reabrirPartida_(d) {
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  const estado = linhaParaEstado_(info.dados);
+  if (estado.status !== 'finalizada') return { ok: false, erro: 'A partida não está finalizada.' };
+  estado.status = (estado.setsCasa >= 2 || estado.setsVisitante >= 2) ? 'sets_completos' : 'em_andamento';
+  estado._eventosLog = parseJson_(info.dados[PC.eventosLog], []);
+  salvarLinhaPartida_(sh, info.linha, estado);
+  delete estado._eventosLog;
+  return { ok: true, estado: estado };
+}
+
+// ── Relatório de cartões (todas as partidas reais) ──────────────
+function relatorioCartoes_() {
+  const sh = getPartidasSheet_();
+  if (sh.getLastRow() < 2) return [];
+  const out = [];
+  sh.getDataRange().getValues().slice(1).forEach(r => {
+    if (!r[PC.id] || ehJogoTeste_(r[PC.id])) return;
+    const cartoes = parseJson_(r[PC.cartoes], []);
+    cartoes.forEach(c => {
+      out.push({
+        jogo: r[PC.id],
+        equipe: c.equipe === 'A' ? r[PC.equipeCasa] : r[PC.equipeVisitante],
+        adversario: c.equipe === 'A' ? r[PC.equipeVisitante] : r[PC.equipeCasa],
+        set: c.set, jogador: c.jogador || '', tipo: c.tipo || '', motivo: c.motivo || '',
+        status: r[PC.status]
+      });
+    });
+  });
+  return out;
+}
+
+// ── Presença na entrada (leitura do QR da carteirinha) ──────────
+const ABA_PRESENCAS = 'Presencas';
+const HEADERS_PRESENCAS = ['Registrado em', 'Jogo', 'Equipe', 'Número', 'Nome', 'Tipo'];
+function registrarPresenca_(d) {
+  const equipe = (d.equipe || '').toString().trim();
+  const nome = (d.nome || '').toString().trim();
+  if (!equipe || !nome) return { ok: false, erro: 'Equipe e nome são obrigatórios.' };
+  const jogo = (d.jogo || '').toString().trim();
+  const sh = abaOuCria_(ABA_PRESENCAS, HEADERS_PRESENCAS);
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues() : [];
+  const ja = rows.some(r => r[1] === jogo && r[2] === equipe && r[3].toString() === (d.numero || '').toString() && r[4] === nome);
+  if (ja) return { ok: true, jaRegistrado: true };
+  sh.appendRow([agoraStr_(), jogo, equipe, (d.numero || '').toString(), nome, (d.tipo || 'Atleta').toString()]);
+  return { ok: true, jaRegistrado: false };
+}
+function listarPresencas_(jogo) {
+  const sh = abaOuCria_(ABA_PRESENCAS, HEADERS_PRESENCAS);
+  if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
+    .filter(r => !jogo || r[1] === jogo)
+    .map(r => ({ em: r[0], jogo: r[1], equipe: r[2], numero: r[3].toString(), nome: r[4], tipo: r[5] }));
+}
+
+// ── Backup diário da planilha ───────────────────────────────────
+// Rode configurarBackupDiario() UMA vez no editor (▶ Executar) e
+// autorize. Depois disso o Google faz uma cópia por dia, de madrugada,
+// numa pasta "Supercopa Vôlei - Backups", mantendo as últimas 14.
+function backupPlanilha_() {
+  const ss = getSS_();
+  const pastas = DriveApp.getFoldersByName('Supercopa Vôlei - Backups');
+  const pasta = pastas.hasNext() ? pastas.next() : DriveApp.createFolder('Supercopa Vôlei - Backups');
+  const nome = 'Backup ' + ss.getName() + ' ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH-mm');
+  DriveApp.getFileById(ss.getId()).makeCopy(nome, pasta);
+  const arquivos = [];
+  const it = pasta.getFiles();
+  while (it.hasNext()) { const a = it.next(); arquivos.push({ f: a, t: a.getDateCreated().getTime() }); }
+  arquivos.sort((a, b) => b.t - a.t);
+  arquivos.slice(14).forEach(x => x.f.setTrashed(true));
+  return nome;
+}
+function backupDiario() { backupPlanilha_(); }
+function configurarBackupDiario() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'backupDiario').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('backupDiario').timeBased().everyDays(1).atHour(3).create();
+  const nome = backupPlanilha_();
+  Logger.log('Backup agendado (todo dia ~3h). Primeira cópia criada agora: ' + nome);
 }
 
 // ============================================================
