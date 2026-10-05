@@ -383,6 +383,7 @@ function doGet(e) {
       const okPin = verificarPin_((e.parameter && e.parameter.equipe) || '', (e.parameter && e.parameter.pin) || '');
       return okJson({ ok: okPin });
     }
+    if (action === 'statusCadastroEquipes') return okJson({ ok: true, equipes: statusCadastroEquipes_() });
     if (action === 'listarJuizes') return okJson({ ok: true, juizes: listarJuizes_() });
     if (action === 'assinaturasEquipe') return okJson({ ok: true, assinaturas: assinaturasEquipe_((e.parameter && e.parameter.equipe) || '') });
     if (action === 'atletasEquipeApp') {
@@ -1740,6 +1741,39 @@ function salvarAssinatura_(d) {
   if (idx >= 0) sh.getRange(idx + 2, 3, 1, 2).setValues([[d.assinatura, agoraStr_()]]);
   else sh.appendRow([equipe, papel, d.assinatura, agoraStr_()]);
   return { ok: true };
+}
+
+// Painel: situação do cadastro de cada equipe com PIN (atletas, comissão
+// técnica e assinaturas) — pra cobrar quem ainda falta.
+function statusCadastroEquipes_() {
+  const shPin = getEquipesPinSheet_();
+  if (shPin.getLastRow() < 2) return [];
+  const confirmou = {};
+  listarConfirmacoes_().forEach(c => { confirmou[c.equipe.toLowerCase()] = c.confirmadoEm; });
+  const porEquipe = {};
+  listarTodosAtletas_().forEach(a => {
+    const k = (a.equipe || '').toString().trim().toLowerCase();
+    (porEquipe[k] = porEquipe[k] || []).push(a);
+  });
+  const shAss = abaOuCria_(ABA_ASSINATURAS, ['Equipe', 'Papel', 'Assinatura', 'Atualizado em']);
+  const assRows = shAss.getLastRow() > 1 ? shAss.getRange(2, 1, shAss.getLastRow() - 1, 3).getValues() : [];
+  const ass = {};
+  assRows.forEach(r => { if (r[2]) ass[(r[0] || '').toString().trim().toLowerCase() + '|' + r[1]] = true; });
+  return shPin.getDataRange().getValues().slice(1)
+    .map(r => (r[0] || '').toString().trim()).filter(Boolean).sort()
+    .map(nome => {
+      const k = nome.toLowerCase();
+      const lista = porEquipe[k] || [];
+      return {
+        equipe: nome,
+        confirmou: !!confirmou[k],
+        atletas: lista.filter(a => a.tipo === 'Atleta').length,
+        tecnico: lista.some(a => a.tipo === 'Técnico' || a.tipo === 'Comissão Técnica'),
+        auxiliar: lista.some(a => a.tipo === 'Auxiliar Técnico'),
+        assTecnico: !!ass[k + '|tecnico'],
+        assCapitao: !!ass[k + '|capitao']
+      };
+    });
 }
 
 // ============================================================

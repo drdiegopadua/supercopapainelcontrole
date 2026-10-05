@@ -1609,6 +1609,15 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
         <p style="font-size:11px;color:var(--dark-grey);margin:0 0 14px">Equipes que receberam o convite e assinaram o termo de compromisso na página de convite.</p>
         <div id="cv-confirmacoes-list"><p style="color:var(--dark-grey);font-size:13px">Clique em Atualizar pra carregar.</p></div>
       </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div class="card-title" style="margin-bottom:0"><i class='bx bx-task'></i> Status dos cadastros (atletas e assinaturas)</div>
+          <button class="refresh-btn" style="margin-left:auto" onclick="loadStatusCadastros(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+        </div>
+        <p style="font-size:11px;color:var(--dark-grey);margin:0 0 14px">Quem já cadastrou atletas, técnico e as assinaturas (técnico e capitão) no app. O botão de cobrança abre o WhatsApp do responsável já com a lista do que falta.</p>
+        <div id="cv-status-cadastros"><p style="color:var(--dark-grey);font-size:13px">Clique em Atualizar pra carregar.</p></div>
+      </div>
     </div>
 
     <!-- ─── EDIÇÕES ─── -->
@@ -3505,6 +3514,63 @@ async function initConvitePage() {
   } catch (ex) {
     sel.innerHTML = '<option value="">Erro ao carregar inscrições</option>';
   }
+}
+
+const APP_LINK_CADASTRO_ = 'https://drdiegopadua.github.io/supercopa-app/';
+function pendenciasEquipe_(e) {
+  const p = [];
+  if (!e.confirmou) p.push('confirmar a presença da equipe (link do convite)');
+  if (e.atletas < 6) p.push('cadastrar os atletas (mínimo 6, hoje ' + e.atletas + ')');
+  if (!e.tecnico) p.push('cadastrar o técnico');
+  if (!e.assTecnico) p.push('assinatura do técnico');
+  if (!e.assCapitao) p.push('assinatura do capitão');
+  return p;
+}
+
+async function loadStatusCadastros(manual) {
+  const el = document.getElementById('cv-status-cadastros');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=statusCadastroEquipes').then(r => r.json());
+    if (!res.ok) throw new Error(res.erro || 'erro');
+    if (!window._inscricoesCache && typeof INSCRICAO_SCRIPT_URL !== 'undefined' && INSCRICAO_SCRIPT_URL) {
+      try {
+        const d = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
+        if (d && d.ok) window._inscricoesCache = d.inscricoes || [];
+      } catch (e) { /* cobrança por WhatsApp fica sem telefone */ }
+    }
+    window._statusCadastros = res.equipes || [];
+    const lista = window._statusCadastros;
+    if (!lista.length) { el.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Nenhuma equipe com PIN ainda.</p>'; return; }
+    const ok = (v) => v ? '<span style="color:var(--green)">✅</span>' : '<span style="color:var(--red)">❌</span>';
+    const completas = lista.filter(e => !pendenciasEquipe_(e).length).length;
+    el.innerHTML = `<div style="font-size:12px;margin-bottom:10px"><strong>${completas}/${lista.length}</strong> equipes com cadastro completo</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="text-align:left;color:var(--dark-grey)"><th style="padding:6px">Equipe</th><th>Presença</th><th>Atletas</th><th>Técnico</th><th>Ass. téc.</th><th>Ass. cap.</th><th></th></tr></thead>
+      <tbody>${lista.map((e, i) => `<tr style="border-top:1px solid #eef0f5">
+        <td style="padding:8px 6px;font-weight:700">${escHtmlS_(e.equipe)}</td>
+        <td>${ok(e.confirmou)}</td>
+        <td style="color:${e.atletas >= 6 ? 'inherit' : 'var(--red)'};font-weight:700">${e.atletas}/14</td>
+        <td>${ok(e.tecnico)}</td><td>${ok(e.assTecnico)}</td><td>${ok(e.assCapitao)}</td>
+        <td>${pendenciasEquipe_(e).length ? `<button class="btn btn-sm" style="background:#25D366;color:#fff" onclick="cobrarCadastroEquipe_(${i})"><i class='bx bxl-whatsapp'></i> Cobrar</button>` : '<span style="color:var(--green);font-weight:700">completo</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+    if (manual) showToast('✅ Status atualizado!');
+  } catch (ex) {
+    el.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar: ' + escHtmlS_(ex.message) + '</p>';
+  }
+}
+
+function cobrarCadastroEquipe_(i) {
+  const e = (window._statusCadastros || [])[i];
+  if (!e) return;
+  const insc = (window._inscricoesCache || []).find(x => (x['Nome da Equipe'] || '').toString().trim().toLowerCase() === e.equipe.toLowerCase());
+  const numero = insc ? telefoneParaWhats_(insc['Telefone/WhatsApp']) : '';
+  if (!numero) { showToast('⚠️ Não achei o telefone dessa equipe nas inscrições.', 'error'); return; }
+  const resp = insc['Nome do Responsável'] || '';
+  const pend = pendenciasEquipe_(e).map(p => '• ' + p).join('\n');
+  const msg = 'Olá' + (resp ? ', ' + resp : '') + '! Aqui é da organização da Supercopa AFC.\n\nPara a equipe *' + e.equipe + '* ainda falta:\n' + pend + '\n\nFaça pelo app (Cadastro de Atletas, use o PIN da equipe): ' + APP_LINK_CADASTRO_ + '\n\nPrazo: 27/11. Qualquer dúvida é só chamar!';
+  window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 async function loadConfirmacoesPresenca(manual) {
