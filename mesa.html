@@ -1657,8 +1657,8 @@ async function carregarAtletasSumulaAtual_() {
       fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(sumulaLiveState.equipeCasa)).then(r => r.json()).catch(() => ({ atletas: [] })),
       fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(sumulaLiveState.equipeVisitante)).then(r => r.json()).catch(() => ({ atletas: [] }))
     ]);
-    sumulaAtletasCasa = ((resA && resA.atletas) || []).filter(a => a.tipo !== 'Comissão Técnica').sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
-    sumulaAtletasVisitante = ((resB && resB.atletas) || []).filter(a => a.tipo !== 'Comissão Técnica').sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
+    sumulaAtletasCasa = ((resA && resA.atletas) || []).filter(a => (a.tipo || 'Atleta') === 'Atleta').sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
+    sumulaAtletasVisitante = ((resB && resB.atletas) || []).filter(a => (a.tipo || 'Atleta') === 'Atleta').sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
   } catch (ex) { /* silencioso */ }
 }
 
@@ -2248,13 +2248,38 @@ function abrirModalSub() {
   preencherJogadoresSub_();
   openModal('modal-sumula-sub');
 }
+// Reservas que podem entrar no lugar de `saiuNome` pelas regras CBV: quem já
+// entrou no set só sai pro jogador que ele substituiu, e quem já saiu só volta
+// no lugar de quem o substituiu (e cada dupla troca uma única vez).
+function sumulaReservasPermitidas_(s, equipe, saiuNome) {
+  const rotacao = equipe === 'A' ? s.rotacaoCasa : s.rotacaoVisitante;
+  const squad = equipe === 'A' ? sumulaAtletasCasa : sumulaAtletasVisitante;
+  const emQuadra = new Set((rotacao || []).map(p => p && p.nome).filter(Boolean));
+  const subsSet = (s.substituicoes || []).filter(x => x.equipe === equipe && x.set === s.setAtual);
+  const envolvidos = (nome) => subsSet.filter(x => x.saiu === nome || x.entrou === nome).length;
+  if (saiuNome && envolvidos(saiuNome) >= 2) return [];
+  const entrouAntes = saiuNome ? subsSet.find(x => x.entrou === saiuNome) : null;
+  return squad.filter(a => {
+    if (emQuadra.has(a.nome) || envolvidos(a.nome) >= 2) return false;
+    if (entrouAntes) return a.nome === entrouAntes.saiu;
+    const saiuAntes = subsSet.find(x => x.saiu === a.nome);
+    if (saiuAntes) return saiuAntes.entrou === saiuNome;
+    return !subsSet.some(x => x.entrou === a.nome);
+  });
+}
+function preencherEntrouSub_() {
+  const equipe = document.getElementById('ss-equipe').value;
+  const saiuVal = document.getElementById('ss-saiu').value;
+  const saiuNome = saiuVal ? saiuVal.slice(saiuVal.indexOf('|') + 1) : '';
+  const lista = sumulaReservasPermitidas_(sumulaLiveState, equipe, saiuNome);
+  document.getElementById('ss-entrou').innerHTML = lista.length ? opcoesJogadores_(lista) : '<option value="">— nenhum reserva disponível pelas regras CBV —</option>';
+}
 function preencherJogadoresSub_() {
   const equipe = document.getElementById('ss-equipe').value;
   const rotacao = equipe === 'A' ? sumulaLiveState.rotacaoCasa : sumulaLiveState.rotacaoVisitante;
-  const squad = equipe === 'A' ? sumulaAtletasCasa : sumulaAtletasVisitante;
-  const emQuadraNomes = new Set((rotacao || []).map(p => p.nome).filter(Boolean));
-  document.getElementById('ss-saiu').innerHTML = opcoesJogadores_((rotacao || []).filter(p => p.nome));
-  document.getElementById('ss-entrou').innerHTML = opcoesJogadores_(squad.filter(a => !emQuadraNomes.has(a.nome)));
+  document.getElementById('ss-saiu').innerHTML = opcoesJogadores_((rotacao || []).filter(p => p && p.nome));
+  document.getElementById('ss-saiu').onchange = preencherEntrouSub_;
+  preencherEntrouSub_();
 }
 // Regras CBV de substituição: máx. 6 por set por equipe; quem entrou só
 // pode sair pra dar lugar a quem ele substituiu, e quem saiu só pode voltar
