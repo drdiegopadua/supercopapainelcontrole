@@ -1695,6 +1695,7 @@ function renderQuadraAoVivo_(rotacao, capitaoNumero) {
     return `<div style="position:relative;background:${ehSaque ? '#fff8e1' : '#fff'};border:2px solid ${ehSaque ? 'var(--gold,#c8960c)' : '#dcdcdc'};border-radius:8px;padding:6px 2px;text-align:center;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center">
       ${ehCapitao ? '<span style="position:absolute;top:1px;right:3px;font-size:8px;font-weight:800;color:#1565C0">C</span>' : ''}
       <div style="font-weight:800;font-size:15px;color:${ehSaque ? '#c8960c' : '#1A1A2E'}">${p.numero || '—'}</div>
+      ${p.nome ? `<div title="${String(p.nome).replace(/"/g, '&quot;')}" style="font-size:9px;font-weight:600;color:#374151;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px">${String(p.nome).replace(/</g, '&lt;')}</div>` : ''}
       ${ehSaque ? '<div style="font-size:7px;color:#c8960c;font-weight:700">SAQUE</div>' : `<div style="font-size:7px;color:#6b7280">P${pos}</div>`}
     </div>`;
   };
