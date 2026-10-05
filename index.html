@@ -1436,7 +1436,6 @@ body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); border-color: #3d4
             <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('atletas')"><i class='bx bx-group'></i> Atletas por equipe</button>
             <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('resultados')"><i class='bx bx-trophy'></i> Resultados</button>
             <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('cartoes')"><i class='bx bxs-flag-alt'></i> Cartões da rodada</button>
-            <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('acumulados')"><i class='bx bx-error'></i> Cartões acumulados (suspensões)</button>
             <button class="btn btn-secondary btn-sm" onclick="baixarRelatorio('presencas')"><i class='bx bx-check-double'></i> Presenças</button>
           </div>
         </div>
@@ -3848,25 +3847,6 @@ function mostrarOffline_() { const b = document.getElementById('sumulaOfflineBan
 function esconderOffline_() { const b = document.getElementById('sumulaOfflineBanner'); if (b) b.style.display = 'none'; }
 let _pollFalhasSeguidas = 0;
 
-function nomeDoCartao_(jogador) { const s = String(jogador || ''); const i = s.indexOf(' - '); return i >= 0 ? s.slice(i + 3) : s; }
-// ── Suspensão / cartões anteriores no elenco ──
-let _cartoesCache = { em: 0, mapa: {} };
-async function carregarCartoesResumo_() {
-  if (Date.now() - _cartoesCache.em < 60000) return;
-  try {
-    const r = await fetch(SUMULA_SCRIPT_URL + '?action=relatorioCartoes').then(x => x.json());
-    const mapa = {};
-    ((r && r.cartoes) || []).forEach(c => {
-      const k = String(c.equipe).toLowerCase() + '|' + nomeDoCartao_(c.jogador).toLowerCase();
-      const o = mapa[k] = mapa[k] || { am: 0, vm: 0 };
-      if (c.tipo === 'Vermelho') o.vm++; else o.am++;
-    });
-    _cartoesCache = { em: Date.now(), mapa: mapa };
-  } catch (ex) { /* sem o aviso, segue */ }
-}
-function cartoesAtleta_(equipe, nome) {
-  return _cartoesCache.mapa[String(equipe).toLowerCase() + '|' + String(nome).toLowerCase()] || null;
-}
 
 
 // ════════ Resumo dos jogos, conferência por QR, relatórios, senha ════════
@@ -4015,17 +3995,6 @@ async function baixarRelatorio(tipo) {
       const l = [['Jogo', 'Equipe', 'Adversário', 'Set', 'Jogador', 'Cartão', 'Motivo']];
       ((r && r.cartoes) || []).forEach(c => l.push([c.jogo, c.equipe, c.adversario, c.set, c.jogador, c.tipo, c.motivo]));
       baixarCsv_('cartoes.csv', l);
-    } else if (tipo === 'acumulados') {
-      const r = await fetch(SUMULA_SCRIPT_URL + '?action=relatorioCartoes').then(x => x.json());
-      const mapa = {};
-      ((r && r.cartoes) || []).forEach(c => {
-        const k = c.equipe + '|' + nomeDoCartao_(c.jogador);
-        const o = mapa[k] = mapa[k] || { equipe: c.equipe, nome: nomeDoCartao_(c.jogador), am: 0, vm: 0 };
-        if (c.tipo === 'Vermelho') o.vm++; else o.am++;
-      });
-      const l = [['Equipe', 'Atleta', 'Amarelos', 'Vermelhos', 'Atenção']];
-      Object.values(mapa).sort((a, b) => b.vm - a.vm || b.am - a.am).forEach(o => l.push([o.equipe, o.nome, o.am, o.vm, (o.vm >= 1 || o.am >= 3) ? 'Verificar suspensão no regulamento' : '']));
-      baixarCsv_('cartoes-acumulados.csv', l);
     } else if (tipo === 'presencas') {
       const r = await fetch(SUMULA_SCRIPT_URL + '?action=listarPresencas').then(x => x.json());
       const l = [['Registrado em', 'Jogo', 'Equipe', 'Número', 'Nome', 'Tipo']];
@@ -4118,7 +4087,6 @@ async function wizardCarregarElencos_() {
   const boxA = document.getElementById('wz-elenco-A');
   const boxB = document.getElementById('wz-elenco-B');
   boxA.innerHTML = boxB.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Carregando...</p>';
-  await carregarCartoesResumo_();
   const buscar = (eq) => eq
     ? fetch(SUMULA_SCRIPT_URL + '?action=atletasEquipe&equipe=' + encodeURIComponent(eq)).then(r => r.json()).then(r => (r && r.atletas) || []).catch(() => null)
     : Promise.resolve([]);
@@ -4137,7 +4105,7 @@ function wizardElencoHtml_(atletas, equipe) {
   const aviso = jog.length < 6 ? `<div style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:8px"><i class='bx bx-error'></i> ${jog.length ? 'Só ' + jog.length + ' atleta(s) — precisa de pelo menos 6 pra escalar.' : 'Nenhum atleta cadastrado — cadastre pelo menos 6.'}</div>` : '';
   const linha = (a) => `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--grey);border-radius:10px;margin-bottom:6px">
       <div style="width:30px;height:30px;border-radius:50%;background:${(a.tipo || 'Atleta') === 'Atleta' ? 'var(--blue)' : '#c8960c'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">${escHtmlS_(a.numero) || '·'}</div>
-      <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtmlS_(a.nome)}${(() => { const c = cartoesAtleta_(equipe, a.nome); return c ? ` <span title="Cartões em jogos anteriores" style="font-size:10px;color:${(c.vm >= 1 || c.am >= 3) ? 'var(--red)' : '#92400e'}">${c.vm ? '🟥×' + c.vm + ' ' : ''}${c.am ? '🟨×' + c.am : ''}${(c.vm >= 1 || c.am >= 3) ? ' ⚠️ ver suspensão' : ''}</span>` : ''; })()}</div><div style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.tipo === 'Comissão Técnica' ? 'Técnico' : (a.tipo || 'Atleta'))}</div></div>
+      <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtmlS_(a.nome)}</div><div style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.tipo === 'Comissão Técnica' ? 'Técnico' : (a.tipo || 'Atleta'))}</div></div>
     </div>`;
   return cab + aviso + jog.map(linha).join('') + com.map(linha).join('');
 }
