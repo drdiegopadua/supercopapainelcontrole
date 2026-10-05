@@ -1569,18 +1569,85 @@ function assinaturaValida_(s) {
   return '';
 }
 
-// Aplica vários eventos (ponto, tempo, cartão...) numa única chamada,
-// sob um único lock, na ordem em que o painel os registrou. O servidor
-// continua sendo o dono das regras do jogo — só mudou que chega tudo
-// junto a cada ~30s em vez de uma chamada por clique.
+// Aplica vários eventos (ponto, tempo, cartão...) numa única chamada:
+// lê a linha da partida UMA vez, aplica tudo em memória na ordem em que
+// o painel registrou e grava UMA vez. O servidor continua dono das regras
+// do jogo (mesmas funções de rotação/fechamento de set).
+function aplicarEventoLote_(estado, log, tipo, dd) {
+  const eq = dd.equipe === 'B' ? 'B' : 'A';
+  if (tipo === 'ponto') {
+    if (estado.status !== 'em_andamento') return { erro: 'Partida não está em andamento.' };
+    if ((estado.rotacaoConfirmadaSet || 1) < estado.setAtual) return { erro: 'Confirme a escalação do set ' + estado.setAtual + ' antes de pontuar.' };
+    empurrarEventoLog_(log, estado);
+    return { setFechado: aplicarPontoNoEstado_(estado, eq) };
+  }
+  if (tipo === 'pontoMenos') {
+    if (estado.status !== 'em_andamento') return { erro: 'Partida não está em andamento.' };
+    empurrarEventoLog_(log, estado);
+    if (eq === 'A') estado.pontosCasa = Math.max(0, estado.pontosCasa - 1);
+    else estado.pontosVisitante = Math.max(0, estado.pontosVisitante - 1);
+    const hist = (estado.historicoPontos || []).slice();
+    for (let i = hist.length - 1; i >= 0; i--) { if (hist[i].equipe === eq) { hist.splice(i, 1); break; } }
+    estado.historicoPontos = hist;
+    return {};
+  }
+  if (tipo === 'timeout') {
+    const jaPedidos = estado.timeouts.filter(t => t.equipe === eq && t.set === estado.setAtual).length;
+    if (jaPedidos >= 2) return { erro: 'Essa equipe já pediu os 2 tempos técnicos permitidos neste set.' };
+    estado.timeouts.push({ equipe: eq, set: estado.setAtual, hora: new Date().toLocaleTimeString('pt-BR') });
+    return {};
+  }
+  if (tipo === 'cartao') {
+    estado.cartoes.push({ equipe: dd.equipe, jogador: dd.jogador || '', tipo: dd.tipo || 'Amarelo', motivo: dd.motivo || '', set: estado.setAtual });
+    if (dd.tipo === 'Vermelho' && estado.status === 'em_andamento') {
+      empurrarEventoLog_(log, estado);
+      return { setFechado: aplicarPontoNoEstado_(estado, dd.equipe === 'A' ? 'B' : 'A') };
+    }
+    return {};
+  }
+  if (tipo === 'substituicao') {
+    estado.substituicoes.push({ equipe: dd.equipe, saiu: dd.saiu || '', entrou: dd.entrou || '', set: estado.setAtual });
+    const rot = dd.equipe === 'A' ? estado.rotacaoCasa : estado.rotacaoVisitante;
+    const idx = rot.findIndex(p => p && (p.nome || '') === dd.saiu);
+    if (idx >= 0) rot[idx] = { numero: dd.numeroEntrou || '', nome: dd.entrou || '' };
+    return {};
+  }
+  if (tipo === 'definirEscalacaoSet') {
+    if (estado.status !== 'em_andamento') return { erro: 'Partida não está em andamento.' };
+    const rotA = (dd.rotacaoCasa || []).slice(0, 6);
+    const rotB = (dd.rotacaoVisitante || []).slice(0, 6);
+    if (rotA.filter(p => p && p.nome).length < 6 || rotB.filter(p => p && p.nome).length < 6) return { erro: 'Preencha as 6 posições de quadra das duas equipes.' };
+    estado.rotacaoCasa = rotA;
+    estado.rotacaoVisitante = rotB;
+    estado.rotacaoConfirmadaSet = estado.setAtual;
+    if (dd.capitaoQuadraCasa) estado.capitaoQuadraCasa = dd.capitaoQuadraCasa;
+    if (dd.capitaoQuadraVisitante) estado.capitaoQuadraVisitante = dd.capitaoQuadraVisitante;
+    estado.escalacoesPorSet = estado.escalacoesPorSet || {};
+    estado.escalacoesPorSet[estado.setAtual] = {
+      rotacaoCasa: rotA, rotacaoVisitante: rotB,
+      capitaoQuadraCasa: estado.capitaoQuadraCasa, capitaoQuadraVisitante: estado.capitaoQuadraVisitante
+    };
+    return {};
+  }
+  if (tipo === 'definirCapitaoQuadra') {
+    if (dd.equipe === 'B') estado.capitaoQuadraVisitante = dd.numero || '';
+    else estado.capitaoQuadraCasa = dd.numero || '';
+    return {};
+  }
+  if (tipo === 'atualizarObservacoes') {
+    estado.observacoes = (dd.observacoes || '').toString();
+    return {};
+  }
+  if (tipo === 'removerEvento') {
+    const chave = { timeout: 'timeouts', cartao: 'cartoes', substituicao: 'substituicoes' }[dd.tipo];
+    if (chave && estado[chave] && dd.index >= 0 && dd.index < estado[chave].length) estado[chave].splice(dd.index, 1);
+    return {};
+  }
+  return { erro: 'tipo inválido: ' + tipo };
+}
+
 function processarEventosLote_(d) {
   const eventos = d.eventos || [];
-  const handlers = {
-    ponto: registrarPonto_, pontoMenos: pontoMenos_, timeout: registrarTimeout_,
-    cartao: registrarCartao_, substituicao: registrarSubstituicao_,
-    definirEscalacaoSet: definirEscalacaoSet_, definirCapitaoQuadra: definirCapitaoQuadra_,
-    atualizarObservacoes: atualizarObservacoes_, removerEvento: removerEvento_
-  };
   // loteId garante que um reenvio (resposta perdida) não aplique os
   // mesmos pontos duas vezes.
   const cache = CacheService.getScriptCache();
@@ -1589,23 +1656,30 @@ function processarEventosLote_(d) {
     const atualDup = carregarPartida_(d.id);
     return atualDup.ok ? { ok: true, estado: atualDup.estado, erros: [], processados: 0, duplicado: true } : atualDup;
   }
+  const sh = getPartidasSheet_();
+  const info = acharLinhaPartida_(sh, d.id);
+  if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
+  const estado = linhaParaEstado_(info.dados);
+  const log = parseJson_(info.dados[PC.eventosLog], []);
   const erros = [];
-  let ultimo = null;
+  let setFechado = false;
   eventos.forEach((ev, i) => {
-    const fn = handlers[ev.tipo];
-    if (!fn) { erros.push({ indice: i, erro: 'tipo inválido: ' + ev.tipo }); return; }
-    const dados = Object.assign({}, ev.dados || {}, { id: d.id });
-    const res = fn(dados);
-    if (res && res.ok) ultimo = res.estado;
-    else erros.push({ indice: i, tipo: ev.tipo, erro: (res && res.erro) || 'erro' });
+    try {
+      const r = aplicarEventoLote_(estado, log, ev.tipo, ev.dados || {});
+      if (r && r.erro) erros.push({ indice: i, tipo: ev.tipo, erro: r.erro });
+      else if (r && r.setFechado) setFechado = true;
+    } catch (ex) {
+      erros.push({ indice: i, tipo: ev.tipo, erro: ex.message });
+    }
   });
+  estado._eventosLog = log;
+  salvarLinhaPartida_(sh, info.linha, estado);
+  delete estado._eventosLog;
   if (chaveLote) cache.put(chaveLote, '1', 21600);
-  if (!ultimo) {
-    const atual = carregarPartida_(d.id);
-    if (!atual.ok) return atual;
-    ultimo = atual.estado;
+  if (setFechado) {
+    try { empurrarPlacarParaJogos_(estado); } catch (ex) { /* não interrompe o fluxo */ }
   }
-  return { ok: true, estado: ultimo, erros: erros, processados: eventos.length - erros.length };
+  return { ok: true, estado: estado, erros: erros, processados: eventos.length - erros.length };
 }
 
 function listarJuizes_() {

@@ -2067,6 +2067,7 @@ async function flushFilaSumula_() {
     }
   } catch (ex) {
     mostrarOffline_();
+    showToast('⚠️ Não consegui sincronizar (' + (ex && ex.message ? ex.message : 'erro de rede') + '). Os eventos continuam guardados e serão reenviados.', 'error');
   } finally {
     sumulaSyncEmVoo = false;
     sumulaFilaSalvar_();
