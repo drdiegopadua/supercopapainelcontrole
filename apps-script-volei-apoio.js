@@ -1773,6 +1773,12 @@ function statusCadastroEquipes_() {
   if (shPin.getLastRow() < 2) return [];
   const confirmou = {};
   listarConfirmacoes_().forEach(c => { confirmou[c.equipe.toLowerCase()] = c.confirmadoEm; });
+  const gerado = {};
+  const tz = Session.getScriptTimeZone();
+  shPin.getDataRange().getValues().slice(1).forEach(r => {
+    const n = (r[0] || '').toString().trim().toLowerCase();
+    if (n) gerado[n] = (r[2] instanceof Date) ? Utilities.formatDate(r[2], tz, 'dd/MM/yyyy HH:mm:ss') : (r[2] || '').toString();
+  });
   const porEquipe = {};
   listarTodosAtletas_().forEach(a => {
     const k = (a.equipe || '').toString().trim().toLowerCase();
@@ -1795,6 +1801,8 @@ function statusCadastroEquipes_() {
       return {
         equipe: nome,
         confirmou: !!confirmou[k],
+        geradoEm: gerado[k] || '',
+        confirmadoEm: confirmou[k] || '',
         atletas: lista.filter(a => a.tipo === 'Atleta').length,
         tecnico: lista.some(a => a.tipo === 'Técnico' || a.tipo === 'Comissão Técnica'),
         auxiliar: lista.some(a => a.tipo === 'Auxiliar Técnico'),

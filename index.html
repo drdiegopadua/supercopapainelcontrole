@@ -1779,7 +1779,16 @@ body.dark .btn-secondary:hover { color: #fff; }
 
       <div class="card">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-          <div class="card-title" style="margin-bottom:0"><i class='bx bxs-check-shield'></i> Equipes que confirmaram presença</div>
+          <div class="card-title" style="margin-bottom:0"><i class='bx bx-hourglass'></i> Convites aguardando confirmação</div>
+          <button class="refresh-btn" style="margin-left:auto" onclick="atualizarStatusConvites_()"><i class='bx bx-refresh'></i> Atualizar</button>
+        </div>
+        <p style="font-size:11px;color:var(--dark-grey);margin:0 0 14px">Equipes que receberam o convite e ainda não confirmaram. Cada equipe tem <b>7 dias</b> a partir do envio do convite. Ao confirmar, ela vai para a lista de confirmadas abaixo.</p>
+        <div id="cv-pendentes-lista"><p style="color:var(--dark-grey);font-size:13px">Carregando...</p></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div class="card-title" style="margin-bottom:0"><i class='bx bxs-check-shield'></i> ✅ Equipes confirmadas</div>
           <button class="refresh-btn" style="margin-left:auto" onclick="loadConfirmacoesPresenca(true)"><i class='bx bx-refresh'></i> Atualizar</button>
         </div>
         <p style="font-size:11px;color:var(--dark-grey);margin:0 0 14px">Equipes que receberam o convite e assinaram o termo de compromisso na página de convite.</p>
@@ -3811,6 +3820,89 @@ let sumulaLiveWizardData = null;
 // ════════════════════════════════════════════════════════
 let convideEquipesCache = [];
 
+// ════════ Convites: ícone de situação e prazo de 7 dias ════════
+const PRAZO_CONFIRMACAO_DIAS = 7;
+function normNome_(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
+function parseDataBR_(s) {
+  const m = String(s || '').match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  return m ? new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)) : null;
+}
+function situacaoConvite_(nome) {
+  const st = (window._convitesStatus || {})[normNome_(nome)];
+  if (!st) return { tipo: 'sem' };
+  if (st.confirmou) return { tipo: 'ok', st: st };
+  const g = parseDataBR_(st.geradoEm);
+  if (!g) return { tipo: 'pendente', st: st, dias: null };
+  const limite = new Date(g.getTime() + PRAZO_CONFIRMACAO_DIAS * 86400000);
+  const dias = Math.ceil((limite - new Date()) / 86400000);
+  return { tipo: dias < 0 ? 'vencido' : 'pendente', st: st, dias: dias, limite: limite };
+}
+function textoPrazo_(s) {
+  if (s.dias === null) return 'convite enviado';
+  if (s.tipo === 'vencido') return 'prazo vencido há ' + Math.abs(s.dias) + ' dia(s)';
+  if (s.dias <= 0) return 'último dia hoje';
+  return 'faltam ' + s.dias + ' dia(s)';
+}
+function montarSelectConvites_() {
+  const sel = document.getElementById('cv-equipe-select');
+  if (!sel) return;
+  const atual = sel.value;
+  const lista = convideEquipesCache || [];
+  if (!lista.length) return;
+  const grupos = { pendente: [], vencido: [], ok: [], sem: [] };
+  lista.forEach((i, idx) => {
+    const nome = i['Nome da Equipe'] || '';
+    const s = situacaoConvite_(nome);
+    const resp = i['Nome do Responsável'] || 'sem responsável', tel = i['Telefone/WhatsApp'] || 'sem telefone';
+    const prefixo = s.tipo === 'ok' ? '✅ ' : s.tipo === 'vencido' ? '⚠️ ' : s.tipo === 'pendente' ? '⏳ ' : '';
+    const sufixo = s.tipo === 'sem' ? '' : ' · ' + (s.tipo === 'ok' ? 'confirmou' : textoPrazo_(s));
+    grupos[s.tipo].push(`<option value="${idx}">${prefixo}${escHtmlS_(nome)} — ${escHtmlS_(resp)} (${escHtmlS_(tel)})${sufixo}</option>`);
+  });
+  const og = (rot, arr) => arr.length ? `<optgroup label="${rot}">${arr.join('')}</optgroup>` : '';
+  sel.innerHTML = '<option value="">— selecione a equipe —</option>'
+    + og('⚠️ Prazo de confirmação vencido', grupos.vencido)
+    + og('⏳ Convite enviado — aguardando confirmação', grupos.pendente)
+    + og('Ainda sem convite', grupos.sem)
+    + og('✅ Já confirmaram', grupos.ok);
+  if (atual) sel.value = atual;
+}
+async function atualizarStatusConvites_() {
+  const el = document.getElementById('cv-pendentes-lista');
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL + '?action=statusCadastroEquipes').then(x => x.json());
+    const mapa = {};
+    ((r && r.equipes) || []).forEach(e => { mapa[normNome_(e.equipe)] = e; });
+    window._convitesStatus = mapa;
+  } catch (ex) { if (el) el.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar o status dos convites.</p>'; return; }
+  montarSelectConvites_();
+  if (!el) return;
+  const pend = Object.values(window._convitesStatus).filter(e => !e.confirmou).map(e => ({ e: e, s: situacaoConvite_(e.equipe) }))
+    .sort((a, b) => (a.s.dias === null ? 99 : a.s.dias) - (b.s.dias === null ? 99 : b.s.dias));
+  if (!pend.length) { el.innerHTML = '<p style="color:var(--green);font-size:13px;font-weight:700">✅ Nenhum convite pendente — todas as equipes com convite já confirmaram.</p>'; return; }
+  el.innerHTML = pend.map(({ e, s }, i) => {
+    const cor = s.tipo === 'vencido' ? '#b91c1c' : (s.dias !== null && s.dias <= 2) ? '#92400e' : '#1565c0';
+    const bg = s.tipo === 'vencido' ? '#fee2e2' : (s.dias !== null && s.dias <= 2) ? '#fef3c7' : '#e8f0fb';
+    return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--grey);border-radius:12px;margin-bottom:6px">
+      <div style="font-size:18px">${s.tipo === 'vencido' ? '⚠️' : '⏳'}</div>
+      <div style="flex:1;min-width:170px"><b style="font-size:13px">${escHtmlS_(e.equipe)}</b><div style="font-size:11px;color:var(--dark-grey)">convite enviado em ${escHtmlS_(e.geradoEm || '—')}${s.limite ? ' · prazo até ' + s.limite.toLocaleDateString('pt-BR') : ''}</div></div>
+      <span style="background:${bg};color:${cor};font-size:11px;font-weight:800;padding:4px 12px;border-radius:99px">${escHtmlS_(textoPrazo_(s))}</span>
+      <button class="btn btn-sm" style="background:#25D366;color:#fff" data-i="${escHtmlS_(e.equipe)}" onclick="lembrarConfirmacaoWhats_(this.dataset.i)"><i class='bx bxl-whatsapp'></i> Lembrar</button>
+    </div>`;
+  }).join('');
+}
+function lembrarConfirmacaoWhats_(nomeEquipe) {
+  const insc = (convideEquipesCache || []).find(x => normNome_(x['Nome da Equipe']) === normNome_(nomeEquipe));
+  const numero = insc ? telefoneParaWhats_(insc['Telefone/WhatsApp']) : '';
+  if (!numero) { showToast('⚠️ Não achei o telefone dessa equipe nas inscrições.', 'error'); return; }
+  const s = situacaoConvite_(nomeEquipe);
+  const resp = insc['Nome do Responsável'] || '';
+  const prazo = s.tipo === 'vencido' ? 'O prazo de 7 dias para confirmar já venceu — se ainda tem interesse em participar, confirme o quanto antes.'
+    : s.dias !== null ? (s.dias <= 0 ? 'Hoje é o último dia para confirmar a presença.' : 'Faltam ' + s.dias + ' dia(s) para o fim do prazo de confirmação.') : 'Falta confirmar a presença da equipe.';
+  const link = (document.getElementById('cv-link') && document.getElementById('cv-link').value) || '';
+  const msg = 'Olá' + (resp ? ', ' + resp : '') + '! Aqui é da organização da Supercopa AFC.\n\nA equipe *' + nomeEquipe + '* ainda não confirmou a presença no evento. ' + prazo + '\n\nA confirmação é feita pelo link do convite que enviamos' + (link ? ': ' + link : '.') + '\n\nQualquer dúvida é só chamar!';
+  window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
 async function initConvitePage() {
   const sel = document.getElementById('cv-equipe-select');
   sel.innerHTML = '<option value="">Carregando equipes inscritas...</option>';
@@ -3822,9 +3914,8 @@ async function initConvitePage() {
       sel.innerHTML = '<option value="">Nenhuma equipe inscrita ainda</option>';
       return;
     }
-    sel.innerHTML = '<option value="">— selecione a equipe —</option>' + convideEquipesCache.map((i, idx) =>
-      `<option value="${idx}">${i['Nome da Equipe']} — ${i['Nome do Responsável'] || 'sem responsável'} (${i['Telefone/WhatsApp'] || 'sem telefone'})</option>`
-    ).join('');
+    montarSelectConvites_();
+    atualizarStatusConvites_();
   } catch (ex) {
     sel.innerHTML = '<option value="">Erro ao carregar inscrições</option>';
   }
@@ -3887,6 +3978,9 @@ function cobrarCadastroEquipe_(i) {
   const msg = 'Olá' + (resp ? ', ' + resp : '') + '! Aqui é da organização da Supercopa AFC.\n\nPara a equipe *' + e.equipe + '* ainda falta:\n' + pend + '\n\nFaça pelo app (Cadastro de Atletas, use o PIN da equipe): ' + APP_LINK_CADASTRO_ + '\n\nPrazo: 27/11. Qualquer dúvida é só chamar!';
   window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent(msg), '_blank');
 }
+
+const _gerarConviteOrig_ = gerarConvite;
+gerarConvite = async function () { const r = await _gerarConviteOrig_.apply(this, arguments); atualizarStatusConvites_(); return r; };
 
 async function loadConfirmacoesPresenca(manual) {
   const el = document.getElementById('cv-confirmacoes-list');
