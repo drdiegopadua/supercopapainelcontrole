@@ -1320,7 +1320,7 @@ function cadastrarAtleta_(d) {
     if (totalAtletas >= LIMITE_ATLETAS) return { ok: false, erro: 'Limite de ' + LIMITE_ATLETAS + ' atletas já foi atingido pra essa equipe.' };
   }
 
-  const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  const agora = new Date();
   sh.appendRow([equipe, numero, nome, tipo, agora]);
   return { ok: true };
 }
@@ -1393,13 +1393,14 @@ function verificarPin_(equipe, pin) {
 // Chamado pelo painel: gera (ou substitui) o PIN de 4 dígitos de
 // uma equipe, pra você mandar junto do convite/confirmação.
 function gerarPinEquipe_(d) {
+  migrarDatasConvitesUmaVez_();
   const equipe = (d.equipe || '').toString().trim();
   if (!equipe) return { ok: false, erro: 'Equipe é obrigatória.' };
 
   const pin = (Math.floor(1000 + Math.random() * 9000)).toString();
   const sh = getEquipesPinSheet_();
   const rows = sh.getDataRange().getValues();
-  const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  const agora = new Date();
 
   for (let i = 1; i < rows.length; i++) {
     if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe.toLowerCase()) {
@@ -1474,20 +1475,40 @@ function getConfirmacoesSheet_() {
 }
 
 function confirmarPresenca_(d) {
+  migrarDatasConvitesUmaVez_();
   if (!verificarPin_(d.equipe, d.pin)) return { ok: false, erro: 'PIN incorreto. Confirme o PIN da sua equipe.' };
   const equipe = (d.equipe || '').toString().trim();
   const sh = getConfirmacoesSheet_();
   const rows = sh.getDataRange().getValues();
-  const agora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  const agora = new Date();
   for (let i = 1; i < rows.length; i++) {
     if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe.toLowerCase()) {
       // Já tinha confirmado antes — só atualiza a data (reenvio do mesmo termo).
       sh.getRange(i + 1, 2, 1, 2).setValues([[agora, 'Sim']]);
-      return { ok: true, confirmadoEm: agora };
+      return { ok: true, confirmadoEm: dataBR_(agora) };
     }
   }
   sh.appendRow([equipe, agora, 'Sim']);
-  return { ok: true, confirmadoEm: agora };
+  return { ok: true, confirmadoEm: dataBR_(agora) };
+}
+
+// Convites e confirmações antigos foram gravados como texto dd/MM/yyyy; a planilha
+// (em formato de data dos EUA) leu como MM/dd e trocou dia por mês. Roda uma única
+// vez (e antes de qualquer gravação nova) e desfaz a troca.
+function migrarDatasConvitesUmaVez_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('DATAS_CONVITES_MIGRADAS')) return;
+  const trocar = v => (v instanceof Date && v.getDate() <= 12)
+    ? new Date(v.getFullYear(), v.getDate() - 1, v.getMonth() + 1, v.getHours(), v.getMinutes(), v.getSeconds())
+    : v;
+  const corrige = (sh, col) => {
+    if (sh.getLastRow() < 2) return;
+    const r = sh.getRange(2, col, sh.getLastRow() - 1, 1);
+    r.setValues(r.getValues().map(x => [trocar(x[0])]));
+  };
+  corrige(getEquipesPinSheet_(), 3);
+  corrige(getConfirmacoesSheet_(), 2);
+  props.setProperty('DATAS_CONVITES_MIGRADAS', '1');
 }
 
 // A planilha converte o texto da data em data de verdade; devolve sempre dd/MM/yyyy HH:mm:ss.
@@ -1511,6 +1532,7 @@ function statusConfirmacao_(equipe) {
 }
 
 function listarConfirmacoes_() {
+  migrarDatasConvitesUmaVez_();
   const sh = getConfirmacoesSheet_();
   if (sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1)
@@ -1589,7 +1611,7 @@ function abaOuCria_(nome, headers) {
 }
 
 function agoraStr_() {
-  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  return new Date();
 }
 
 function assinaturaValida_(s) {
@@ -1775,6 +1797,7 @@ function salvarAssinatura_(d) {
 // Painel: situação do cadastro de cada equipe com PIN (atletas, comissão
 // técnica e assinaturas) — pra cobrar quem ainda falta.
 function statusCadastroEquipes_() {
+  migrarDatasConvitesUmaVez_();
   const shPin = getEquipesPinSheet_();
   if (shPin.getLastRow() < 2) return [];
   const confirmou = {};
@@ -1896,7 +1919,7 @@ function listarPresencas_(jogo) {
   if (sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
     .filter(r => !jogo || r[1] === jogo)
-    .map(r => ({ em: r[0], jogo: r[1], equipe: r[2], numero: r[3].toString(), nome: r[4], tipo: r[5] }));
+    .map(r => ({ em: dataBR_(r[0]), jogo: r[1], equipe: r[2], numero: r[3].toString(), nome: r[4], tipo: r[5] }));
 }
 
 // ── Backup diário da planilha ───────────────────────────────────
@@ -2000,7 +2023,7 @@ function listarAvisos_(incluirInativos) {
   const sh = abaOuCria_(ABA_AVISOS, HEADERS_AVISOS);
   if (sh.getLastRow() < 2) return [];
   const l = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
-    .map(r => ({ id: r[0].toString(), criadoEm: r[1].toString(), titulo: r[2].toString(), texto: r[3].toString(), fixado: r[4] === true || r[4] === 'TRUE' || r[4] === 'true', ativo: !(r[5] === false || r[5] === 'FALSE' || r[5] === 'false') }))
+    .map(r => ({ id: r[0].toString(), criadoEm: dataBR_(r[1]), titulo: r[2].toString(), texto: r[3].toString(), fixado: r[4] === true || r[4] === 'TRUE' || r[4] === 'true', ativo: !(r[5] === false || r[5] === 'FALSE' || r[5] === 'false') }))
     .filter(a => a.id && (incluirInativos || a.ativo));
   l.reverse();
   l.sort((a, b) => (b.fixado ? 1 : 0) - (a.fixado ? 1 : 0));
@@ -2054,7 +2077,7 @@ function statusTermoLgpd_(equipe) {
   if (sh.getLastRow() < 2 || !alvo) return { aceito: false };
   const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues();
   for (let i = rows.length - 1; i >= 0; i--) {
-    if ((rows[i][0] || '').toString().trim().toLowerCase() === alvo && rows[i][3] === TERMO_LGPD_VERSAO) return { aceito: true, em: rows[i][2].toString(), responsavel: rows[i][1].toString() };
+    if ((rows[i][0] || '').toString().trim().toLowerCase() === alvo && rows[i][3] === TERMO_LGPD_VERSAO) return { aceito: true, em: dataBR_(rows[i][2]), responsavel: rows[i][1].toString() };
   }
   return { aceito: false };
 }
