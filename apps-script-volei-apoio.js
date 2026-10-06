@@ -336,6 +336,16 @@ function doPost(e) {
     if (acao === 'processarEventosLote') return okJson(comLock_(() => processarEventosLote_(dados)));
     if (acao === 'cadastrarJuiz') return okJson(cadastrarJuiz_(dados));
     if (acao === 'trocarSenhaAdmin') return okJson(trocarSenhaAdmin_(dados));
+    if (acao === 'loginPainel') return okJson(loginPainel_(dados));
+    if (acao === 'listarUsuariosPainel') return okJson(listarUsuariosPainel_(dados));
+    if (acao === 'salvarUsuarioPainel') return okJson(salvarUsuarioPainel_(dados));
+    if (acao === 'removerUsuarioPainel') return okJson(removerUsuarioPainel_(dados));
+    if (acao === 'salvarAviso') return okJson(salvarAviso_(dados));
+    if (acao === 'excluirAviso') return okJson(excluirAviso_(dados));
+    if (acao === 'aceitarTermoLgpd') return okJson(aceitarTermoLgpd_(dados));
+    if (acao === 'registrarWO') return okJson(comLock_(() => registrarWO_(dados)));
+    if (acao === 'uploadFotoJogo') return okJson(uploadFotoJogo_(dados));
+    if (acao === 'saudeSistema') return okJson(saudeSistema_(dados));
     if (acao === 'reabrirPartida') return okJson(comLock_(() => reabrirPartida_(dados)));
     if (acao === 'registrarPresenca') return okJson(registrarPresenca_(dados));
     if (acao === 'removerJuiz') return okJson(removerJuiz_(dados));
@@ -387,6 +397,9 @@ function doGet(e) {
       return okJson({ ok: okPin });
     }
     if (action === 'statusCadastroEquipes') return okJson({ ok: true, equipes: statusCadastroEquipes_() });
+    if (action === 'avisos') return okJson({ ok: true, avisos: listarAvisos_(false) });
+    if (action === 'statusTermo') return okJson(Object.assign({ ok: true, versao: TERMO_LGPD_VERSAO }, statusTermoLgpd_((e.parameter && e.parameter.equipe) || '')));
+    if (action === 'fotosJogo') return okJson({ ok: true, fotos: fotosJogo_((e.parameter && e.parameter.jogo) || '') });
     if (action === 'verificarSenhaAdmin') return okJson({ ok: ((e.parameter && e.parameter.senha) || '') === getSenhaAdmin_() });
     if (action === 'partidasTodas') return okJson({ ok: true, partidas: listarPartidasTodas_() });
     if (action === 'relatorioCartoes') return okJson({ ok: true, cartoes: relatorioCartoes_() });
@@ -1765,6 +1778,11 @@ function statusCadastroEquipes_() {
     const k = (a.equipe || '').toString().trim().toLowerCase();
     (porEquipe[k] = porEquipe[k] || []).push(a);
   });
+  const lgpdOk = {};
+  try {
+    const shL = abaOuCria_(ABA_CONSENTIMENTOS, HEADERS_CONSENTIMENTOS);
+    if (shL.getLastRow() > 1) shL.getRange(2, 1, shL.getLastRow() - 1, 4).getValues().forEach(r => { if (r[3] === TERMO_LGPD_VERSAO) lgpdOk[(r[0] || '').toString().trim().toLowerCase()] = true; });
+  } catch (ex) { /* sem o dado de LGPD segue */ }
   const shAss = abaOuCria_(ABA_ASSINATURAS, ['Equipe', 'Papel', 'Assinatura', 'Atualizado em']);
   const assRows = shAss.getLastRow() > 1 ? shAss.getRange(2, 1, shAss.getLastRow() - 1, 3).getValues() : [];
   const ass = {};
@@ -1781,7 +1799,8 @@ function statusCadastroEquipes_() {
         tecnico: lista.some(a => a.tipo === 'Técnico' || a.tipo === 'Comissão Técnica'),
         auxiliar: lista.some(a => a.tipo === 'Auxiliar Técnico'),
         assTecnico: !!ass[k + '|tecnico'],
-        assCapitao: !!ass[k + '|capitao']
+        assCapitao: !!ass[k + '|capitao'],
+        lgpd: !!lgpdOk[k]
       };
     });
 }
@@ -1889,6 +1908,256 @@ function configurarBackupDiario() {
   ScriptApp.newTrigger('backupDiario').timeBased().everyDays(1).atHour(3).create();
   const nome = backupPlanilha_();
   Logger.log('Backup agendado (todo dia ~3h). Primeira cópia criada agora: ' + nome);
+}
+
+// ============================================================
+//  USUÁRIOS E PAPÉIS DO PAINEL
+//  admin: tudo · organizacao: tudo menos usuários · mesa: só súmula
+//  · juiz: só acompanha (PWA do árbitro 2)
+// ============================================================
+const PAPEIS_PAINEL = ['admin', 'organizacao', 'mesa', 'juiz'];
+function usuariosPainel_() {
+  let l = [];
+  try { l = JSON.parse(PropertiesService.getScriptProperties().getProperty('USUARIOS_PAINEL') || '[]'); } catch (e) { l = []; }
+  if (!l.length) l = [{ usuario: 'Diego', senha: '5912', papel: 'admin' }];
+  return l;
+}
+function salvarUsuariosPainel_(l) {
+  PropertiesService.getScriptProperties().setProperty('USUARIOS_PAINEL', JSON.stringify(l));
+}
+function autenticarPainel_(auth) {
+  if (!auth) return null;
+  const u = (auth.usuario || '').toString().trim().toLowerCase();
+  const s = (auth.senha || '').toString();
+  if (!u || !s) return null;
+  const f = usuariosPainel_().find(x => (x.usuario || '').toString().toLowerCase() === u && (x.senha || '').toString() === s);
+  return f ? { usuario: f.usuario, papel: f.papel } : null;
+}
+function exigirPapel_(auth, papeis) {
+  const u = autenticarPainel_(auth);
+  if (!u) return { erro: 'Login inválido.' };
+  if (papeis.indexOf(u.papel) < 0) return { erro: 'Seu perfil não tem permissão para essa ação.' };
+  return { usuario: u };
+}
+function loginPainel_(d) {
+  const u = autenticarPainel_(d.auth || d);
+  return u ? { ok: true, usuario: u.usuario, papel: u.papel } : { ok: false, erro: 'Usuário ou senha incorretos.' };
+}
+function listarUsuariosPainel_(d) {
+  const c = exigirPapel_(d.auth, ['admin']); if (c.erro) return { ok: false, erro: c.erro };
+  return { ok: true, usuarios: usuariosPainel_().map(u => ({ usuario: u.usuario, papel: u.papel })) };
+}
+function salvarUsuarioPainel_(d) {
+  const c = exigirPapel_(d.auth, ['admin']); if (c.erro) return { ok: false, erro: c.erro };
+  const usuario = (d.usuario || '').toString().trim();
+  const senha = (d.senha || '').toString();
+  if (!usuario || usuario.length < 3) return { ok: false, erro: 'O usuário precisa ter pelo menos 3 caracteres.' };
+  if (PAPEIS_PAINEL.indexOf(d.papel) < 0) return { ok: false, erro: 'Perfil inválido.' };
+  const l = usuariosPainel_();
+  const i = l.findIndex(x => x.usuario.toLowerCase() === usuario.toLowerCase());
+  if (i >= 0) {
+    if (senha) { if (senha.length < 4) return { ok: false, erro: 'A senha precisa ter pelo menos 4 caracteres.' }; l[i].senha = senha; }
+    if (l[i].papel === 'admin' && d.papel !== 'admin' && l.filter(x => x.papel === 'admin').length < 2) return { ok: false, erro: 'Precisa existir pelo menos um administrador.' };
+    l[i].papel = d.papel;
+  } else {
+    if (senha.length < 4) return { ok: false, erro: 'A senha precisa ter pelo menos 4 caracteres.' };
+    l.push({ usuario: usuario, senha: senha, papel: d.papel });
+  }
+  salvarUsuariosPainel_(l);
+  return { ok: true };
+}
+function removerUsuarioPainel_(d) {
+  const c = exigirPapel_(d.auth, ['admin']); if (c.erro) return { ok: false, erro: c.erro };
+  const alvo = (d.usuario || '').toString().trim().toLowerCase();
+  const l = usuariosPainel_();
+  const x = l.find(u => u.usuario.toLowerCase() === alvo);
+  if (!x) return { ok: false, erro: 'Usuário não encontrado.' };
+  if (x.papel === 'admin' && l.filter(u => u.papel === 'admin').length < 2) return { ok: false, erro: 'Precisa existir pelo menos um administrador.' };
+  salvarUsuariosPainel_(l.filter(u => u.usuario.toLowerCase() !== alvo));
+  return { ok: true };
+}
+
+// ============================================================
+//  MURAL DE AVISOS (publicados no painel, exibidos no app)
+// ============================================================
+const ABA_AVISOS = 'Avisos';
+const HEADERS_AVISOS = ['ID', 'Criado em', 'Título', 'Texto', 'Fixado', 'Ativo'];
+function listarAvisos_(incluirInativos) {
+  const sh = abaOuCria_(ABA_AVISOS, HEADERS_AVISOS);
+  if (sh.getLastRow() < 2) return [];
+  const l = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
+    .map(r => ({ id: r[0].toString(), criadoEm: r[1].toString(), titulo: r[2].toString(), texto: r[3].toString(), fixado: r[4] === true || r[4] === 'TRUE' || r[4] === 'true', ativo: !(r[5] === false || r[5] === 'FALSE' || r[5] === 'false') }))
+    .filter(a => a.id && (incluirInativos || a.ativo));
+  l.reverse();
+  l.sort((a, b) => (b.fixado ? 1 : 0) - (a.fixado ? 1 : 0));
+  return l.slice(0, 30);
+}
+function salvarAviso_(d) {
+  const c = exigirPapel_(d.auth, ['admin', 'organizacao']); if (c.erro) return { ok: false, erro: c.erro };
+  const titulo = (d.titulo || '').toString().trim();
+  const texto = (d.texto || '').toString().trim();
+  if (!titulo) return { ok: false, erro: 'Informe o título do aviso.' };
+  const sh = abaOuCria_(ABA_AVISOS, HEADERS_AVISOS);
+  const fixado = d.fixado === true || d.fixado === 'true';
+  if (d.id) {
+    const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues() : [];
+    const i = rows.findIndex(r => r[0].toString() === d.id.toString());
+    if (i < 0) return { ok: false, erro: 'Aviso não encontrado.' };
+    sh.getRange(i + 2, 3, 1, 3).setValues([[titulo, texto, fixado]]);
+    return { ok: true };
+  }
+  sh.appendRow(['A' + Date.now(), agoraStr_(), titulo, texto, fixado, true]);
+  return { ok: true };
+}
+function excluirAviso_(d) {
+  const c = exigirPapel_(d.auth, ['admin', 'organizacao']); if (c.erro) return { ok: false, erro: c.erro };
+  const sh = abaOuCria_(ABA_AVISOS, HEADERS_AVISOS);
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues() : [];
+  const i = rows.findIndex(r => r[0].toString() === (d.id || '').toString());
+  if (i < 0) return { ok: false, erro: 'Aviso não encontrado.' };
+  sh.deleteRow(i + 2);
+  return { ok: true };
+}
+
+// ============================================================
+//  LGPD — termo de consentimento por equipe
+// ============================================================
+const TERMO_LGPD_VERSAO = '2026-1';
+const ABA_CONSENTIMENTOS = 'Consentimentos';
+const HEADERS_CONSENTIMENTOS = ['Equipe', 'Responsável', 'Aceito em', 'Versão'];
+function aceitarTermoLgpd_(d) {
+  const equipe = (d.equipe || '').toString().trim();
+  const nome = (d.nome || '').toString().trim();
+  if (!equipe) return { ok: false, erro: 'Equipe obrigatória.' };
+  if (!verificarPin_(equipe, d.pin)) return { ok: false, erro: 'PIN incorreto.' };
+  if (nome.length < 5) return { ok: false, erro: 'Digite o nome completo do responsável.' };
+  abaOuCria_(ABA_CONSENTIMENTOS, HEADERS_CONSENTIMENTOS).appendRow([equipe, nome, agoraStr_(), TERMO_LGPD_VERSAO]);
+  return { ok: true };
+}
+function statusTermoLgpd_(equipe) {
+  const alvo = (equipe || '').toString().trim().toLowerCase();
+  const sh = abaOuCria_(ABA_CONSENTIMENTOS, HEADERS_CONSENTIMENTOS);
+  if (sh.getLastRow() < 2 || !alvo) return { aceito: false };
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues();
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if ((rows[i][0] || '').toString().trim().toLowerCase() === alvo && rows[i][3] === TERMO_LGPD_VERSAO) return { aceito: true, em: rows[i][2].toString(), responsavel: rows[i][1].toString() };
+  }
+  return { aceito: false };
+}
+
+// ============================================================
+//  W.O. — equipe não compareceu
+// ============================================================
+function registrarWO_(d) {
+  const c = exigirPapel_(d.auth, ['admin', 'organizacao']); if (c.erro) return { ok: false, erro: c.erro };
+  if (!d.id || !d.equipeA || !d.equipeB) return { ok: false, erro: 'Jogo e equipes são obrigatórios.' };
+  const sh = getPartidasSheet_();
+  if (acharLinhaPartida_(sh, d.id)) return { ok: false, erro: 'Esse jogo já tem súmula. Use "Reabrir" se precisar corrigir.' };
+  const faltouB = d.equipeFaltou === 'B';
+  const criada = criarPartida_({
+    id: d.id, equipeA: d.equipeA, equipeB: d.equipeB, arbitro1: '', arbitro2: '', apontador: '', sacaPrimeiro: 'A',
+    elencoCasa: { titulares: [], libero: null }, elencoVisitante: { titulares: [], libero: null }, capitaoCasa: '', capitaoVisitante: ''
+  });
+  if (!criada.ok) return criada;
+  const info = acharLinhaPartida_(sh, d.id);
+  const estado = linhaParaEstado_(info.dados);
+  estado.historicoSets = faltouB ? [{ a: 25, b: 0 }, { a: 25, b: 0 }] : [{ a: 0, b: 25 }, { a: 0, b: 25 }];
+  estado.setsCasa = faltouB ? 2 : 0;
+  estado.setsVisitante = faltouB ? 0 : 2;
+  estado.setAtual = 3; estado.pontosCasa = 0; estado.pontosVisitante = 0;
+  estado.status = 'finalizada';
+  const faltou = faltouB ? d.equipeB : d.equipeA;
+  estado.observacoes = 'W.O. — ' + faltou + ' não compareceu.' + (d.motivo ? ' ' + d.motivo : '');
+  estado._eventosLog = [];
+  salvarLinhaPartida_(sh, info.linha, estado);
+  delete estado._eventosLog;
+  try { empurrarPlacarParaJogos_(estado, true); } catch (ex) { /* não interrompe */ }
+  abaOuCria_('WO', ['Registrado em', 'Jogo', 'Equipe que faltou', 'Adversário', 'Motivo', 'Registrado por'])
+    .appendRow([agoraStr_(), d.id, faltou, faltouB ? d.equipeA : d.equipeB, d.motivo || '', c.usuario.usuario]);
+  return { ok: true, estado: estado };
+}
+
+// ============================================================
+//  FOTOS POR JOGO
+// ============================================================
+function getFotosFolder_() {
+  const id = PropertiesService.getScriptProperties().getProperty('FOTOS_FOLDER_ID');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (ex) { /* recria */ } }
+  const pasta = DriveApp.createFolder('Supercopa Vôlei - Fotos dos jogos');
+  pasta.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  PropertiesService.getScriptProperties().setProperty('FOTOS_FOLDER_ID', pasta.getId());
+  return pasta;
+}
+function uploadFotoJogo_(d) {
+  const c = exigirPapel_(d.auth, ['admin', 'organizacao', 'mesa']); if (c.erro) return { ok: false, erro: c.erro };
+  const jogo = (d.jogo || '').toString().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (!jogo) return { ok: false, erro: 'Jogo obrigatório.' };
+  if (!d.imagemBase64) return { ok: false, erro: 'Imagem vazia.' };
+  const bytes = Utilities.base64Decode(d.imagemBase64.split(',').pop());
+  if (bytes.length > 6 * 1024 * 1024) return { ok: false, erro: 'Imagem muito grande (máx. 6 MB).' };
+  const blob = Utilities.newBlob(bytes, 'image/jpeg', jogo + '__' + Date.now() + '.jpg');
+  const arq = getFotosFolder_().createFile(blob);
+  return { ok: true, id: arq.getId() };
+}
+function fotosJogo_(jogo) {
+  const j = (jogo || '').toString().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (!j) return [];
+  const out = [];
+  const it = getFotosFolder_().searchFiles("title contains '" + j + "__'");
+  while (it.hasNext() && out.length < 60) {
+    const a = it.next();
+    if (a.getName().indexOf(j + '__') !== 0) continue;
+    out.push({ id: a.getId(), em: a.getDateCreated().getTime() });
+  }
+  out.sort((a, b) => a.em - b.em);
+  return out.map(x => ({ id: x.id, thumb: 'https://drive.google.com/thumbnail?id=' + x.id + '&sz=w600', full: 'https://drive.google.com/thumbnail?id=' + x.id + '&sz=w1600' }));
+}
+
+// ============================================================
+//  SAÚDE DO SISTEMA
+// ============================================================
+function saudeSistema_(d) {
+  const c = exigirPapel_(d.auth, ['admin', 'organizacao']); if (c.erro) return { ok: false, erro: c.erro };
+  const t0 = Date.now();
+  const itens = [];
+  const add = (nome, status, detalhe) => itens.push({ nome: nome, status: status, detalhe: detalhe });
+  try {
+    const ss = getSS_();
+    add('Planilha principal', 'ok', ss.getName());
+    ['Partidas', 'Atletas', 'EquipesPin', 'Confirmacoes'].forEach(n => { if (!ss.getSheetByName(n)) add('Aba ' + n, 'erro', 'não encontrada'); });
+  } catch (ex) { add('Planilha principal', 'erro', ex.message); }
+  try {
+    const partidas = listarPartidasTodas_();
+    const aoVivo = partidas.filter(p => p.status === 'em_andamento').length;
+    const faltaFinalizar = partidas.filter(p => p.status === 'sets_completos').length;
+    add('Partidas', faltaFinalizar ? 'aviso' : 'ok', partidas.length + ' súmulas · ' + aoVivo + ' ao vivo' + (faltaFinalizar ? ' · ' + faltaFinalizar + ' esperando finalizar' : ''));
+  } catch (ex) { add('Partidas', 'erro', ex.message); }
+  try {
+    const status = statusCadastroEquipes_();
+    const completas = status.filter(e => e.confirmou && e.atletas >= 6 && e.tecnico && e.assTecnico && e.assCapitao && e.lgpd).length;
+    add('Cadastro das equipes', completas === status.length && status.length ? 'ok' : 'aviso', completas + ' de ' + status.length + ' equipes completas (atletas, técnico, assinaturas e termo)');
+  } catch (ex) { add('Cadastro das equipes', 'erro', ex.message); }
+  try {
+    const gatilho = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'backupDiario');
+    const pastas = DriveApp.getFoldersByName('Supercopa Vôlei - Backups');
+    let ultimo = 0, qtd = 0;
+    if (pastas.hasNext()) { const it = pastas.next().getFiles(); while (it.hasNext()) { const a = it.next(); qtd++; ultimo = Math.max(ultimo, a.getDateCreated().getTime()); } }
+    if (!gatilho) add('Backup diário', 'erro', 'Não agendado — rode configurarBackupDiario no editor do Apps Script');
+    else if (!ultimo) add('Backup diário', 'aviso', 'Agendado, mas ainda sem cópia');
+    else {
+      const horas = Math.round((Date.now() - ultimo) / 3600000);
+      add('Backup diário', horas > 36 ? 'aviso' : 'ok', 'Última cópia há ' + horas + ' h · ' + qtd + ' cópias guardadas');
+    }
+  } catch (ex) { add('Backup diário', 'aviso', 'Não consegui verificar (' + ex.message + ')'); }
+  try {
+    const props = PropertiesService.getScriptProperties();
+    add('Pasta de PDFs', props.getProperty('PDF_FOLDER_ID') ? 'ok' : 'aviso', props.getProperty('PDF_FOLDER_ID') ? 'configurada' : 'será criada no primeiro PDF');
+  } catch (ex) { /* ignora */ }
+  try {
+    const termo = new Date() >= PRAZO_CADASTRO_ATLETAS;
+    add('Prazo de cadastro de atletas', termo ? 'aviso' : 'ok', termo ? 'Encerrado' : 'Aberto até ' + Utilities.formatDate(PRAZO_CADASTRO_ATLETAS, Session.getScriptTimeZone(), 'dd/MM HH:mm'));
+  } catch (ex) { /* ignora */ }
+  return { ok: true, itens: itens, ms: Date.now() - t0 };
 }
 
 // ============================================================

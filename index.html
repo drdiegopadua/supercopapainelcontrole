@@ -837,6 +837,8 @@ body.dark .btn-secondary:hover { color: #fff; }
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('classificacao',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Classificação</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('tvconfig',this); return false;"><i class='bx bx-tv'></i><span>TV Config</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('avisos',this); return false;"><i class='bx bxs-megaphone'></i><span>Avisos</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('sistema',this); return false;"><i class='bx bx-pulse'></i><span>Sistema</span></a></li>
   </ul>
   <div class="side-bottom">
     <a href="javascript:void(0)" style="color:var(--red)" onclick="doLogout(); return false;"><i class='bx bx-power-off'></i><span>Sair</span></a>
@@ -1794,6 +1796,63 @@ body.dark .btn-secondary:hover { color: #fff; }
       </div>
     </div>
 
+    <!-- ─── AVISOS (mural do app) ─── -->
+    <div class="page" id="page-avisos">
+      <div class="page-header">
+        <div>
+          <h1>Avisos</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Avisos</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class='bx bxs-megaphone'></i> <span id="av-form-titulo">Novo aviso para o app</span></div>
+        <div class="form-group"><label>Título</label><input class="form-control" id="av-titulo" placeholder="Ex.: Jogo A3 adiado para 15h30" maxlength="90"></div>
+        <div class="form-group"><label>Texto (opcional)</label><textarea class="form-control" id="av-texto" rows="3" style="resize:vertical" placeholder="Detalhes do aviso"></textarea></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><input type="checkbox" id="av-fixado"> Fixar no topo do app</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="salvarAvisoPainel()"><i class='bx bx-send'></i> Publicar no app</button>
+          <button class="btn btn-secondary" id="av-cancelar" style="display:none" onclick="cancelarEdicaoAviso()">Cancelar edição</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div class="card-title" style="margin:0"><i class='bx bx-list-ul'></i> Avisos publicados</div>
+          <button class="refresh-btn" style="margin-left:auto" onclick="carregarAvisosPainel()"><i class='bx bx-refresh'></i> Atualizar</button>
+        </div>
+        <div id="av-lista"><p style="color:var(--dark-grey);font-size:13px">Carregando...</p></div>
+      </div>
+    </div>
+
+    <!-- ─── SISTEMA (saúde e usuários) ─── -->
+    <div class="page" id="page-sistema">
+      <div class="page-header">
+        <div>
+          <h1>Sistema</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Saúde e usuários</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div class="card-title" style="margin:0"><i class='bx bx-pulse'></i> Saúde do sistema</div>
+          <button class="refresh-btn" style="margin-left:auto" onclick="carregarSaude(true)"><i class='bx bx-refresh'></i> Verificar agora</button>
+        </div>
+        <div id="sis-resumo" style="margin:10px 0"></div>
+        <div id="sis-lista"><p style="color:var(--dark-grey);font-size:13px">Clique em "Verificar agora".</p></div>
+      </div>
+      <div class="card" id="sis-usuarios-card">
+        <div class="card-title"><i class='bx bx-lock-open-alt'></i> Usuários e permissões</div>
+        <p style="font-size:11px;color:var(--dark-grey);margin:-6px 0 14px"><b>Administrador</b>: tudo, inclusive usuários · <b>Organização</b>: tudo menos usuários · <b>Mesa</b>: só a súmula (e fotos) · <b>Juiz</b>: só acompanha o jogo (tela do 2º árbitro, sem editar).</p>
+        <div id="sis-usuarios-lista" style="margin-bottom:14px"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:14px;background:var(--grey);border:1px solid var(--stroke);border-radius:14px">
+          <div class="form-group" style="margin:0;flex:1;min-width:150px"><label>Usuário</label><input class="form-control" id="us-nome" placeholder="Ex.: mesa1" autocomplete="off"></div>
+          <div class="form-group" style="margin:0;flex:1;min-width:150px"><label>Senha</label><input class="form-control" id="us-senha" type="text" placeholder="mín. 4 caracteres" autocomplete="off"></div>
+          <div class="form-group" style="margin:0;width:170px"><label>Perfil</label><select class="form-control" id="us-papel"><option value="mesa">Mesa</option><option value="organizacao">Organização</option><option value="juiz">Juiz</option><option value="admin">Administrador</option></select></div>
+          <button class="btn btn-primary" onclick="salvarUsuarioPainelUI()"><i class='bx bx-user-plus'></i> Salvar usuário</button>
+        </div>
+        <p style="font-size:10px;color:var(--dark-grey);margin-top:8px">Para trocar a senha de alguém, salve o mesmo usuário com a senha nova.</p>
+      </div>
+    </div>
+
     <!-- ─── EDIÇÕES ─── -->
     <div class="page" id="page-edicoes">
       <div class="page-header">
@@ -2177,8 +2236,9 @@ const AUTH_USER = 'Diego';
 const AUTH_PASS = '5912';
 
 function checkAuth() {
-  const isLogged = sessionStorage.getItem('supercopa_logged') === 'true';
+  const isLogged = sessionStorage.getItem('supercopa_logged') === 'true' && !!sessaoAuth_();
   if (!isLogged) {
+    sessionStorage.removeItem('supercopa_logged');
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('sidebar').style.display = 'none';
     document.getElementById('content').style.display = 'none';
@@ -2186,22 +2246,31 @@ function checkAuth() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('sidebar').style.display = '';
     document.getElementById('content').style.display = '';
+    aplicarPapel_();
   }
 }
 
-function doLogin(e) {
+async function doLogin(e) {
   e.preventDefault();
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value.trim();
   const errorEl = document.getElementById('login-error');
-  if (user === AUTH_USER && pass === AUTH_PASS) {
+  let res = null;
+  try {
+    res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'loginPainel', auth: { usuario: user, senha: pass } }) }).then(r => r.json());
+  } catch (ex) {
+    res = await loginOffline_(user, pass);
+  }
+  if (res && res.ok) {
     sessionStorage.setItem('supercopa_logged', 'true');
+    sessionStorage.setItem('supercopa_auth', JSON.stringify({ usuario: res.usuario, senha: pass, papel: res.papel }));
+    if (!res.offline) lembrarLoginOffline_(user, pass, res);
     errorEl.classList.remove('show');
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('sidebar').style.display = '';
     document.getElementById('content').style.display = '';
-    showToast('Bem-vindo, Diego!');
-    // Carregar dados das planilhas após login
+    showToast('Bem-vindo, ' + res.usuario + '!' + (res.offline ? ' (modo offline)' : ''));
+    aplicarPapel_();
     setTimeout(() => {
       loadVoleiFromSheet();
       loadBasqueteFromSheet();
@@ -2221,6 +2290,7 @@ function doLogin(e) {
 
 function doLogout() {
   sessionStorage.removeItem('supercopa_logged');
+  sessionStorage.removeItem('supercopa_auth');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('sidebar').style.display = 'none';
   document.getElementById('content').style.display = 'none';
@@ -2336,6 +2406,69 @@ function navTo(page, el) {
   if (page === 'convite') { initConvitePage(); loadConfirmacoesPresenca(); }
   if (page === 'edicoes') loadEdicoesDashboard();
   return false;
+}
+
+// ════════ Perfis de acesso, avisos, saúde do sistema, W.O. e fotos ════════
+const PAGINAS_POR_PAPEL_ = { admin: '*', organizacao: '*', mesa: ['sumulaLive'], juiz: [] };
+function sessaoAuth_() {
+  try { return JSON.parse(sessionStorage.getItem('supercopa_auth') || 'null'); } catch (e) { return null; }
+}
+function papelAtual_() { const a = sessaoAuth_(); return a ? a.papel : ''; }
+function authApi_() { const a = sessaoAuth_(); return a ? { usuario: a.usuario, senha: a.senha } : null; }
+function paginaPermitida_(pagina) {
+  const p = papelAtual_();
+  if (!p) return true;
+  const perm = PAGINAS_POR_PAPEL_[p];
+  if (perm === '*') return true;
+  return (perm || []).indexOf(pagina) >= 0;
+}
+function aplicarPapel_() {
+  const p = papelAtual_();
+  document.querySelectorAll('#sidebar .side-menu li').forEach(li => {
+    const a = li.querySelector('a'); if (!a) return;
+    const m = (a.getAttribute('onclick') || '').match(/navTo\('(\w+)'/);
+    if (!m) return;
+    li.style.display = paginaPermitida_(m[1]) ? '' : 'none';
+  });
+  const uc = document.getElementById('sis-usuarios-card'); if (uc) uc.style.display = p === 'admin' ? '' : 'none';
+  if (p === 'juiz') { location.href = 'arbitro2.html'; return; }
+  const ativa = document.querySelector('.page.active');
+  if (ativa && !paginaPermitida_(ativa.id.replace('page-', ''))) {
+    const primeira = (PAGINAS_POR_PAPEL_[p] || [])[0];
+    if (primeira) { const a = [...document.querySelectorAll('#sidebar .side-menu li a')].find(x => (x.getAttribute('onclick') || '').includes("'" + primeira + "'")); navTo(primeira, a); }
+  }
+}
+const _navToOriginal_ = navTo;
+navTo = function (page, el) {
+  if (!paginaPermitida_(page)) { showToast('Seu perfil não tem acesso a essa área.', 'error'); return false; }
+  const r = _navToOriginal_(page, el);
+  const rotulos = { avisos: 'Avisos', sistema: 'Sistema' };
+  if (rotulos[page]) document.getElementById('navLabel').textContent = rotulos[page];
+  if (page === 'avisos') carregarAvisosPainel();
+  if (page === 'sistema') { carregarSaude(); if (papelAtual_() === 'admin') carregarUsuariosPainel(); }
+  return r;
+};
+
+async function sha256Hex_(txt) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function loginOffline_(user, pass) {
+  try {
+    const h = await sha256Hex_(user.toLowerCase() + '|' + pass);
+    const cache = JSON.parse(localStorage.getItem('painel_login_cache') || '{}');
+    if (cache[h]) return { ok: true, usuario: cache[h].usuario, papel: cache[h].papel, offline: true };
+  } catch (e) { /* sem cache */ }
+  if (user === AUTH_USER && pass === AUTH_PASS) return { ok: true, usuario: AUTH_USER, papel: 'admin', offline: true };
+  return { ok: false };
+}
+async function lembrarLoginOffline_(user, pass, res) {
+  try {
+    const h = await sha256Hex_(user.toLowerCase() + '|' + pass);
+    const cache = JSON.parse(localStorage.getItem('painel_login_cache') || '{}');
+    cache[h] = { usuario: res.usuario, papel: res.papel };
+    localStorage.setItem('painel_login_cache', JSON.stringify(cache));
+  } catch (e) { /* sem cache */ }
 }
 
 document.getElementById('menuToggle').addEventListener('click', () => {
@@ -3705,6 +3838,7 @@ function pendenciasEquipe_(e) {
   if (!e.tecnico) p.push('cadastrar o técnico');
   if (!e.assTecnico) p.push('assinatura do técnico');
   if (!e.assCapitao) p.push('assinatura do capitão');
+  if (!e.lgpd) p.push('aceitar o termo de uso de dados (LGPD) no app');
   return p;
 }
 
@@ -3728,12 +3862,12 @@ async function loadStatusCadastros(manual) {
     const completas = lista.filter(e => !pendenciasEquipe_(e).length).length;
     el.innerHTML = `<div style="font-size:12px;margin-bottom:10px"><strong>${completas}/${lista.length}</strong> equipes com cadastro completo</div>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="text-align:left;color:var(--dark-grey)"><th style="padding:6px">Equipe</th><th>Presença</th><th>Atletas</th><th>Técnico</th><th>Ass. téc.</th><th>Ass. cap.</th><th></th></tr></thead>
+      <thead><tr style="text-align:left;color:var(--dark-grey)"><th style="padding:6px">Equipe</th><th>Presença</th><th>Atletas</th><th>Técnico</th><th>Ass. téc.</th><th>Ass. cap.</th><th>LGPD</th><th></th></tr></thead>
       <tbody>${lista.map((e, i) => `<tr style="border-top:1px solid #eef0f5">
         <td style="padding:8px 6px;font-weight:700">${escHtmlS_(e.equipe)}</td>
         <td>${ok(e.confirmou)}</td>
         <td style="color:${e.atletas >= 6 ? 'inherit' : 'var(--red)'};font-weight:700">${e.atletas}/14</td>
-        <td>${ok(e.tecnico)}</td><td>${ok(e.assTecnico)}</td><td>${ok(e.assCapitao)}</td>
+        <td>${ok(e.tecnico)}</td><td>${ok(e.assTecnico)}</td><td>${ok(e.assCapitao)}</td><td>${ok(e.lgpd)}</td>
         <td>${pendenciasEquipe_(e).length ? `<button class="btn btn-sm" style="background:#25D366;color:#fff" onclick="cobrarCadastroEquipe_(${i})"><i class='bx bxl-whatsapp'></i> Cobrar</button>` : '<span style="color:var(--green);font-weight:700">completo</span>'}</td>
       </tr>`).join('')}</tbody></table></div>`;
     if (manual) showToast('✅ Status atualizado!');
@@ -4016,8 +4150,10 @@ async function carregarResumoJogos(manual) {
       <div style="flex:1;min-width:180px;font-size:12px;font-weight:600">${escHtmlS_(j.equipeA)} <span style="color:var(--dark-grey);font-weight:400">x</span> ${escHtmlS_(j.equipeB)}</div>
       ${badge(p)}
       <button class="btn btn-secondary btn-sm" data-id="${escHtmlS_(j.sumulaId)}" onclick="resumoAbrir_(this.dataset.id)">${p && p.status !== 'finalizada' ? 'Continuar' : (p ? 'Ver' : 'Abrir')}</button>
-      ${p && p.status === 'finalizada' ? `<button class="btn btn-sm" style="background:#fef3c7;color:#92400e" data-id="${escHtmlS_(j.sumulaId)}" onclick="resumoReabrir_(this.dataset.id)">Reabrir</button>` : ''}
+      ${p && p.status === 'finalizada' && ['admin', 'organizacao'].indexOf(papelAtual_()) >= 0 ? `<button class="btn btn-sm" style="background:#fef3c7;color:#92400e" data-id="${escHtmlS_(j.sumulaId)}" onclick="resumoReabrir_(this.dataset.id)">Reabrir</button>` : ''}
       ${p && p.linkPdf ? `<a class="btn btn-secondary btn-sm" href="${escHtmlS_(p.linkPdf)}" target="_blank" rel="noopener">PDF</a>` : ''}
+      ${!p && ['admin', 'organizacao'].indexOf(papelAtual_()) >= 0 ? `<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c" data-id="${escHtmlS_(j.sumulaId)}" onclick="resumoWO_(this.dataset.id)">W.O.</button>` : ''}
+      ${['admin', 'organizacao', 'mesa'].indexOf(papelAtual_()) >= 0 ? `<button class="btn btn-secondary btn-sm" data-id="${escHtmlS_(j.sumulaId)}" onclick="resumoFotos_(this.dataset.id)">📷 Fotos</button>` : ''}
     </div>`;
   }).join('');
   if (manual) showToast('✅ Resumo atualizado!');
@@ -4165,6 +4301,157 @@ async function cadastrarLote() {
   carregarListaAtletas();
 }
 
+
+
+// ── Avisos ──
+let _avisoEditId = '';
+async function carregarAvisosPainel() {
+  const el = document.getElementById('av-lista');
+  if (!el) return;
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL + '?action=avisos').then(x => x.json());
+    window._avisosPainel = (r && r.avisos) || [];
+    el.innerHTML = window._avisosPainel.length ? window._avisosPainel.map((a, i) => `
+      <div style="padding:12px 14px;background:var(--grey);border:1px solid ${a.fixado ? 'var(--gold)' : 'var(--stroke)'};border-radius:14px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:14px">${a.fixado ? '📌 ' : ''}${escHtmlS_(a.titulo)}</b><span style="font-size:10px;color:var(--dark-grey)">${escHtmlS_(a.criadoEm)}</span></div>
+        ${a.texto ? `<div style="font-size:12px;color:var(--dark-grey);margin-top:4px;white-space:pre-wrap">${escHtmlS_(a.texto)}</div>` : ''}
+        <div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="editarAviso_(${i})"><i class='bx bx-edit'></i> Editar</button><button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c" onclick="excluirAvisoPainel_(${i})"><i class='bx bx-trash'></i> Apagar</button></div>
+      </div>`).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum aviso publicado.</p>';
+  } catch (ex) { el.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar avisos.</p>'; }
+}
+function editarAviso_(i) {
+  const a = (window._avisosPainel || [])[i]; if (!a) return;
+  _avisoEditId = a.id;
+  document.getElementById('av-titulo').value = a.titulo; document.getElementById('av-texto').value = a.texto; document.getElementById('av-fixado').checked = !!a.fixado;
+  document.getElementById('av-form-titulo').textContent = 'Editando aviso'; document.getElementById('av-cancelar').style.display = '';
+  document.getElementById('av-titulo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function cancelarEdicaoAviso() {
+  _avisoEditId = '';
+  document.getElementById('av-titulo').value = ''; document.getElementById('av-texto').value = ''; document.getElementById('av-fixado').checked = false;
+  document.getElementById('av-form-titulo').textContent = 'Novo aviso para o app'; document.getElementById('av-cancelar').style.display = 'none';
+}
+async function salvarAvisoPainel() {
+  const titulo = document.getElementById('av-titulo').value.trim();
+  if (!titulo) { showToast('Informe o título do aviso.', 'error'); return; }
+  showLoading(true);
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'salvarAviso', auth: authApi_(), id: _avisoEditId, titulo: titulo, texto: document.getElementById('av-texto').value.trim(), fixado: document.getElementById('av-fixado').checked }) }).then(r => r.json());
+    if (res.ok) { showToast('✅ Aviso publicado no app!'); cancelarEdicaoAviso(); carregarAvisosPainel(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+  finally { showLoading(false); }
+}
+async function excluirAvisoPainel_(i) {
+  const a = (window._avisosPainel || [])[i]; if (!a || !confirm('Apagar o aviso "' + a.titulo + '"?')) return;
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirAviso', auth: authApi_(), id: a.id }) }).then(r => r.json());
+    if (res.ok) carregarAvisosPainel(); else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+// ── Saúde do sistema ──
+async function carregarSaude(manual) {
+  const lista = document.getElementById('sis-lista'), resumo = document.getElementById('sis-resumo');
+  if (!lista) return;
+  lista.innerHTML = '<p style="color:var(--dark-grey);font-size:13px">Verificando...</p>';
+  const itens = [];
+  itens.push({ nome: 'Internet deste aparelho', status: navigator.onLine ? 'ok' : 'erro', detalhe: navigator.onLine ? 'conectado' : 'sem conexão' });
+  let pendentes = 0;
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('sumula_fila_') === 0) { const o = JSON.parse(localStorage.getItem(k) || '{}'); pendentes += (o.fila || []).length; } } } catch (e) { /* ignora */ }
+  itens.push({ nome: 'Eventos da súmula não enviados', status: pendentes ? 'aviso' : 'ok', detalhe: pendentes ? pendentes + ' aguardando envio neste aparelho' : 'nenhum' });
+  const t0 = Date.now();
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'saudeSistema', auth: authApi_() }) }).then(x => x.json());
+    const ms = Date.now() - t0;
+    if (!r.ok) itens.push({ nome: 'Servidor (Apps Script)', status: 'erro', detalhe: r.erro || 'erro' });
+    else {
+      itens.push({ nome: 'Servidor (Apps Script)', status: ms > 6000 ? 'aviso' : 'ok', detalhe: 'respondeu em ' + (ms / 1000).toFixed(1) + ' s' });
+      r.itens.forEach(i => itens.push(i));
+    }
+  } catch (ex) { itens.push({ nome: 'Servidor (Apps Script)', status: 'erro', detalhe: 'sem resposta — confira a internet' }); }
+  const cor = { ok: '#22c55e', aviso: '#f59e0b', erro: '#ef4444' }, ico = { ok: '🟢', aviso: '🟡', erro: '🔴' };
+  const erros = itens.filter(i => i.status === 'erro').length, avisos = itens.filter(i => i.status === 'aviso').length;
+  resumo.innerHTML = erros ? '<div style="background:#fee2e2;color:#b91c1c;padding:10px 14px;border-radius:12px;font-weight:800">🔴 ' + erros + ' problema(s) precisam de atenção</div>'
+    : avisos ? '<div style="background:#fef3c7;color:#92400e;padding:10px 14px;border-radius:12px;font-weight:800">🟡 Tudo funcionando, com ' + avisos + ' ponto(s) de atenção</div>'
+    : '<div style="background:#dcfce7;color:#166534;padding:10px 14px;border-radius:12px;font-weight:800">🟢 Tudo certo</div>';
+  lista.innerHTML = itens.map(i => `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--grey);border-left:4px solid ${cor[i.status]};border-radius:10px;margin-bottom:6px"><span>${ico[i.status]}</span><b style="font-size:13px;min-width:210px">${escHtmlS_(i.nome)}</b><span style="font-size:12px;color:var(--dark-grey)">${escHtmlS_(i.detalhe)}</span></div>`).join('');
+  if (manual) showToast('✅ Verificação concluída!');
+}
+
+// ── Usuários e perfis (só administrador) ──
+const NOME_PAPEL_ = { admin: 'Administrador', organizacao: 'Organização', mesa: 'Mesa', juiz: 'Juiz' };
+async function carregarUsuariosPainel() {
+  const el = document.getElementById('sis-usuarios-lista');
+  if (!el) return;
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'listarUsuariosPainel', auth: authApi_() }) }).then(x => x.json());
+    if (!r.ok) { el.innerHTML = '<p style="color:var(--red);font-size:13px">' + escHtmlS_(r.erro || 'erro') + '</p>'; return; }
+    el.innerHTML = r.usuarios.map(u => `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--grey);border-radius:10px;margin-bottom:6px"><b style="flex:1;font-size:13px">${escHtmlS_(u.usuario)}</b><span style="font-size:11px;background:var(--light-blue);color:var(--blue);padding:3px 10px;border-radius:99px;font-weight:800">${NOME_PAPEL_[u.papel] || u.papel}</span><button data-u="${escHtmlS_(u.usuario)}" onclick="removerUsuarioPainelUI(this.dataset.u)" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-trash"></i></button></div>`).join('');
+  } catch (ex) { el.innerHTML = '<p style="color:var(--red);font-size:13px">Erro ao carregar usuários.</p>'; }
+}
+async function salvarUsuarioPainelUI() {
+  const usuario = document.getElementById('us-nome').value.trim(), senha = document.getElementById('us-senha').value;
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'salvarUsuarioPainel', auth: authApi_(), usuario: usuario, senha: senha, papel: document.getElementById('us-papel').value }) }).then(x => x.json());
+    if (r.ok) { showToast('✅ Usuário salvo!'); document.getElementById('us-nome').value = ''; document.getElementById('us-senha').value = ''; carregarUsuariosPainel(); } else showToast('❌ ' + (r.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+async function removerUsuarioPainelUI(u) {
+  if (!confirm('Remover o usuário ' + u + '?')) return;
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'removerUsuarioPainel', auth: authApi_(), usuario: u }) }).then(x => x.json());
+    if (r.ok) carregarUsuariosPainel(); else showToast('❌ ' + (r.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+}
+
+// ── W.O. e fotos no resumo dos jogos ──
+async function resumoWO_(id) {
+  const j = (state.jogos.volei || []).find(x => String(x.sumulaId) === String(id)); if (!j) return;
+  const r = prompt('W.O. no jogo ' + id + ': qual equipe NÃO compareceu?\n\n1 = ' + j.equipeA + '\n2 = ' + j.equipeB);
+  if (r === null) return;
+  if (r.trim() !== '1' && r.trim() !== '2') { showToast('Digite 1 ou 2.', 'error'); return; }
+  const faltou = r.trim() === '1' ? 'A' : 'B';
+  const nomeFaltou = faltou === 'A' ? j.equipeA : j.equipeB;
+  const motivo = prompt('Motivo (opcional):') || '';
+  if (!confirm('Confirmar W.O.?\n\n' + nomeFaltou + ' não compareceu.\nResultado: ' + (faltou === 'B' ? j.equipeA : j.equipeB) + ' vence por 2 sets a 0 (25×0).\nO placar é enviado para a chave.')) return;
+  showLoading(true);
+  try {
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'registrarWO', auth: authApi_(), id: id, equipeA: j.equipeA, equipeB: j.equipeB, equipeFaltou: faltou, motivo: motivo }) }).then(x => x.json());
+    if (res.ok) { showToast('✅ W.O. registrado.'); carregarResumoJogos(); } else showToast('❌ ' + (res.erro || 'erro'), 'error');
+  } catch (ex) { showToast('❌ Erro: ' + ex.message, 'error'); }
+  finally { showLoading(false); }
+}
+function reduzirFoto_(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1600, esc = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem inválida')); };
+    img.src = url;
+  });
+}
+function resumoFotos_(id) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+  inp.onchange = async () => {
+    const arqs = [...inp.files]; if (!arqs.length) return;
+    let ok = 0;
+    showLoading(true);
+    for (const f of arqs) {
+      try {
+        const b64 = await reduzirFoto_(f);
+        const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'uploadFotoJogo', auth: authApi_(), jogo: id, imagemBase64: b64 }) }).then(x => x.json());
+        if (res.ok) ok++; else showToast('❌ ' + (res.erro || 'erro'), 'error');
+      } catch (ex) { showToast('❌ ' + ex.message, 'error'); }
+    }
+    showLoading(false);
+    showToast('📷 ' + ok + ' de ' + arqs.length + ' foto(s) enviada(s) para o jogo ' + id + '. Já aparecem no app.');
+  };
+  inp.click();
+}
 
 function escHtmlS_(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
