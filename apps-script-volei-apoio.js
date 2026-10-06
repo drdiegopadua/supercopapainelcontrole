@@ -1490,6 +1490,12 @@ function confirmarPresenca_(d) {
   return { ok: true, confirmadoEm: agora };
 }
 
+// A planilha converte o texto da data em data de verdade; devolve sempre dd/MM/yyyy HH:mm:ss.
+function dataBR_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  return (v || '').toString();
+}
+
 function statusConfirmacao_(equipe) {
   equipe = (equipe || '').toString().trim().toLowerCase();
   if (!equipe) return { ok: true, confirmado: false };
@@ -1498,7 +1504,7 @@ function statusConfirmacao_(equipe) {
   const rows = sh.getDataRange().getValues().slice(1);
   for (let i = 0; i < rows.length; i++) {
     if ((rows[i][0] || '').toString().trim().toLowerCase() === equipe) {
-      return { ok: true, confirmado: true, confirmadoEm: (rows[i][1] || '').toString() };
+      return { ok: true, confirmado: true, confirmadoEm: dataBR_(rows[i][1]) };
     }
   }
   return { ok: true, confirmado: false };
@@ -1508,7 +1514,7 @@ function listarConfirmacoes_() {
   const sh = getConfirmacoesSheet_();
   if (sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1)
-    .map(r => ({ equipe: (r[0] || '').toString(), confirmadoEm: (r[1] || '').toString() }))
+    .map(r => ({ equipe: (r[0] || '').toString(), confirmadoEm: dataBR_(r[1]) }))
     .filter(c => c.equipe)
     .sort((a, b) => a.equipe.localeCompare(b.equipe));
 }
