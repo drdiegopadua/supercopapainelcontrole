@@ -1146,6 +1146,8 @@ function registrarSubstituicao_(d) {
   const info = acharLinhaPartida_(sh, d.id);
   if (!info) return { ok: false, erro: 'Partida não encontrada: ' + d.id };
   const estado = linhaParaEstado_(info.dados);
+  const erroSub = validarSubCbv_(estado, d.equipe, d.saiu, d.entrou);
+  if (erroSub) return { ok: false, erro: erroSub };
   estado.substituicoes.push({ equipe: d.equipe, saiu: d.saiu || '', entrou: d.entrou || '', set: estado.setAtual });
   const rot = d.equipe === 'A' ? estado.rotacaoCasa : estado.rotacaoVisitante;
   const idx = rot.findIndex(p => (p.nome || '') === d.saiu);
@@ -1641,6 +1643,31 @@ function assinaturaValida_(s) {
 // lê a linha da partida UMA vez, aplica tudo em memória na ordem em que
 // o painel registrou e grava UMA vez. O servidor continua dono das regras
 // do jogo (mesmas funções de rotação/fechamento de set).
+// Regras CBV de substituição (conferidas no servidor, valem pra qualquer aparelho):
+//  • máximo de 6 substituições por equipe por set;
+//  • quem entrou só pode sair pra dar lugar a quem ele substituiu;
+//  • quem saiu só pode voltar no lugar de quem o substituiu (uma única vez por set);
+//  • quem sai precisa estar em quadra e quem entra não pode estar em quadra.
+function validarSubCbv_(estado, equipe, saiu, entrou) {
+  const rot = (equipe === 'A' ? estado.rotacaoCasa : estado.rotacaoVisitante) || [];
+  const emQuadra = n => rot.some(p => p && (p.nome || '') === n);
+  if (!saiu || !entrou) return 'Informe quem sai e quem entra.';
+  if (saiu === entrou) return 'Quem sai e quem entra não podem ser a mesma pessoa.';
+  if (!emQuadra(saiu)) return saiu + ' não está em quadra.';
+  if (emQuadra(entrou)) return entrou + ' já está em quadra.';
+  const subsSet = (estado.substituicoes || []).filter(x => x.equipe === equipe && x.set === estado.setAtual);
+  if (subsSet.length >= 6) return 'Limite CBV: máximo de 6 substituições por equipe por set.';
+  const envolvidos = nome => subsSet.filter(x => x.saiu === nome || x.entrou === nome).length;
+  if (envolvidos(saiu) >= 2) return saiu + ' já saiu e voltou neste set — não pode ser substituído(a) de novo.';
+  if (envolvidos(entrou) >= 2) return entrou + ' já saiu e voltou neste set — não pode entrar de novo.';
+  const entrouAntes = subsSet.find(x => x.entrou === saiu);
+  if (entrouAntes && entrouAntes.saiu !== entrou) return saiu + ' entrou no lugar de ' + entrouAntes.saiu + ' — só ' + entrouAntes.saiu + ' pode voltar no lugar dele(a).';
+  const saiuAntes = subsSet.find(x => x.saiu === entrou);
+  if (saiuAntes && saiuAntes.entrou !== saiu) return entrou + ' saiu para ' + saiuAntes.entrou + ' — só pode voltar no lugar de ' + saiuAntes.entrou + '.';
+  if (!entrouAntes && !saiuAntes && subsSet.some(x => x.saiu === saiu || x.entrou === entrou)) return 'Troca inválida pelas regras CBV (jogador já envolvido em outra substituição neste set).';
+  return '';
+}
+
 function aplicarEventoLote_(estado, log, tipo, dd) {
   const eq = dd.equipe === 'B' ? 'B' : 'A';
   if (tipo === 'ponto') {
@@ -1674,6 +1701,8 @@ function aplicarEventoLote_(estado, log, tipo, dd) {
     return {};
   }
   if (tipo === 'substituicao') {
+    const erroSub = validarSubCbv_(estado, dd.equipe, dd.saiu, dd.entrou);
+    if (erroSub) return { erro: erroSub };
     estado.substituicoes.push({ equipe: dd.equipe, saiu: dd.saiu || '', entrou: dd.entrou || '', set: estado.setAtual });
     const rot = dd.equipe === 'A' ? estado.rotacaoCasa : estado.rotacaoVisitante;
     const idx = rot.findIndex(p => p && (p.nome || '') === dd.saiu);
