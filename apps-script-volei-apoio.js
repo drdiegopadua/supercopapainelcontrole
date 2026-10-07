@@ -251,7 +251,7 @@ function configurarPartidas() {
 // pode aparecer no navegador como "Failed to fetch").
 function comLock_(fn) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);   // fila de espera maior: em rajada (muitos aparelhos juntos) 10s não bastava
   try { return fn(); } finally { lock.releaseLock(); }
 }
 
