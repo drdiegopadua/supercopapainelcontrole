@@ -825,6 +825,20 @@ function carregarPartida_(id) {
   return { ok: true, estado: linhaParaEstado_(info.dados) };
 }
 
+// Limite do Google Sheets: 50.000 caracteres por célula. Passar disso derruba a gravação
+// no meio da linha (placar salvo, mas histórico/escalação/hora não) e a resposta vira uma
+// página de erro HTML. Estas travas garantem que nenhuma célula chega perto do limite.
+const LIMITE_CELULA_ = 45000;
+function cabeNaCelula_(valor) {
+  let s = JSON.stringify(valor);
+  if (s.length <= LIMITE_CELULA_) return s;
+  if (Array.isArray(valor)) {
+    const l = valor.slice();
+    while (l.length > 1 && s.length > LIMITE_CELULA_) { l.shift(); s = JSON.stringify(l); }
+  }
+  return s.length <= LIMITE_CELULA_ ? s : '[]';
+}
+
 function salvarLinhaPartida_(sh, linhaNum, estado) {
   const linhaDados = [];
   linhaDados[PC.id] = estado.id;
@@ -850,15 +864,15 @@ function salvarLinhaPartida_(sh, linhaNum, estado) {
   linhaDados[PC.timeouts] = JSON.stringify(estado.timeouts || []);
   linhaDados[PC.cartoes] = JSON.stringify(estado.cartoes || []);
   linhaDados[PC.substituicoes] = JSON.stringify(estado.substituicoes || []);
-  linhaDados[PC.eventosLog] = JSON.stringify(estado._eventosLog || []);
+  linhaDados[PC.eventosLog] = cabeNaCelula_(estado._eventosLog || []);
   linhaDados[PC.status] = estado.status;
   linhaDados[PC.linkPdf] = estado.linkPdf || '';
   linhaDados[PC.criadoEm] = estado.criadoEm;
   linhaDados[PC.atualizadoEm] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
   linhaDados[PC.capitaoCasa] = estado.capitaoCasa || '';
   linhaDados[PC.capitaoVisitante] = estado.capitaoVisitante || '';
-  linhaDados[PC.observacoes] = estado.observacoes || '';
-  linhaDados[PC.historicoPontos] = JSON.stringify(estado.historicoPontos || []);
+  linhaDados[PC.observacoes] = (estado.observacoes || '').toString().slice(0, 40000);
+  linhaDados[PC.historicoPontos] = cabeNaCelula_(estado.historicoPontos || []);
   linhaDados[PC.capitaoQuadraCasa] = estado.capitaoQuadraCasa || '';
   linhaDados[PC.capitaoQuadraVisitante] = estado.capitaoQuadraVisitante || '';
   linhaDados[PC.rotacaoConfirmadaSet] = estado.rotacaoConfirmadaSet || 1;
@@ -931,7 +945,7 @@ function snapshotEstado_(estado) {
     setsCasa: estado.setsCasa, setsVisitante: estado.setsVisitante, sacando: estado.sacando,
     rotacaoCasa: estado.rotacaoCasa, rotacaoVisitante: estado.rotacaoVisitante,
     primeiroSaqueSet: estado.primeiroSaqueSet, historicoSets: estado.historicoSets, status: estado.status,
-    historicoPontos: estado.historicoPontos
+    histN: (estado.historicoPontos || []).length
   };
 }
 
@@ -1053,7 +1067,7 @@ function desfazerPonto_(d) {
   estado.setsCasa = snap.setsCasa; estado.setsVisitante = snap.setsVisitante; estado.sacando = snap.sacando;
   estado.rotacaoCasa = snap.rotacaoCasa; estado.rotacaoVisitante = snap.rotacaoVisitante;
   estado.primeiroSaqueSet = snap.primeiroSaqueSet; estado.historicoSets = snap.historicoSets; estado.status = snap.status;
-  estado.historicoPontos = snap.historicoPontos || [];
+  estado.historicoPontos = snap.historicoPontos ? snap.historicoPontos : (estado.historicoPontos || []).slice(0, snap.histN || 0);
   estado._eventosLog = rawEventos;
   salvarLinhaPartida_(sh, info.linha, estado);
   delete estado._eventosLog;
