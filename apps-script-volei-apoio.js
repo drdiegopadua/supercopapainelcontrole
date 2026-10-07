@@ -908,7 +908,9 @@ function aplicarPontoNoEstado_(estado, equipe) {
 
   let setFechado = false;
   const a = estado.pontosCasa, b = estado.pontosVisitante;
-  if ((a >= 25 || b >= 25) && Math.abs(a - b) >= 2) {
+  // CBV: sets 1 e 2 vão a 25; o 3º set (decisivo) vai a 15. Sempre com 2 pontos de diferença.
+  const alvo = estado.setAtual === 3 ? 15 : 25;
+  if ((a >= alvo || b >= alvo) && Math.abs(a - b) >= 2) {
     setFechado = true;
     estado.historicoSets.push({ a: a, b: b });
     if (a > b) estado.setsCasa++; else estado.setsVisitante++;

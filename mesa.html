@@ -2111,7 +2111,8 @@ function sumulaAplicarPontoLocal_(e, equipe) {
   if (equipe === 'A') e.pontosCasa++; else e.pontosVisitante++;
   e.historicoPontos = (e.historicoPontos || []).concat([{ set: e.setAtual, equipe: equipe, hora: sumulaHoraStr_(), pontosCasa: e.pontosCasa, pontosVisitante: e.pontosVisitante }]);
   const a = e.pontosCasa, b = e.pontosVisitante;
-  if ((a >= 25 || b >= 25) && Math.abs(a - b) >= 2) {
+  const alvo = e.setAtual === 3 ? 15 : 25;   // CBV: set decisivo vai a 15
+  if ((a >= alvo || b >= alvo) && Math.abs(a - b) >= 2) {
     e.historicoSets = (e.historicoSets || []).concat([{ a: a, b: b }]);
     if (a > b) e.setsCasa++; else e.setsVisitante++;
     e.pontosCasa = 0; e.pontosVisitante = 0;
