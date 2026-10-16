@@ -2248,3 +2248,33 @@ function saudeSistema_(d) {
 function okJson(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
+
+// ============================================================
+//  BACKUP DIÁRIO DO SUPABASE (para o Google Drive)
+// ============================================================
+const SUPABASE_API_URL = 'https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+
+// Rode UMA vez no editor (▶): cria o backup diário às ~3h e faz o primeiro agora.
+function configurarBackupSupabase() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'backupSupabase').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('backupSupabase').timeBased().everyDays(1).atHour(3).create();
+  backupSupabase();
+}
+
+function backupSupabase() {
+  const adm = usuariosPainel_().find(u => u.papel === 'admin');
+  const resp = UrlFetchApp.fetch(SUPABASE_API_URL, {
+    method: 'post', contentType: 'text/plain', muteHttpExceptions: true,
+    payload: JSON.stringify({ acao: 'exportarTudo', auth: { usuario: adm.usuario, senha: adm.senha } })
+  });
+  const j = JSON.parse(resp.getContentText());
+  if (!j.ok) throw new Error('Backup Supabase falhou: ' + j.erro);
+  const pastas = DriveApp.getFoldersByName('Supercopa - Backup Supabase');
+  const pasta = pastas.hasNext() ? pastas.next() : DriveApp.createFolder('Supercopa - Backup Supabase');
+  const nome = 'supabase-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmm') + '.json';
+  pasta.createFile(nome, JSON.stringify(j.backup), 'application/json');
+  // mantém só os 30 mais recentes
+  const arqs = []; const it = pasta.getFiles();
+  while (it.hasNext()) arqs.push(it.next());
+  arqs.sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(30).forEach(f => f.setTrashed(true));
+}

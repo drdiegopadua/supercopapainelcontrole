@@ -539,8 +539,27 @@ async function migrarDoSheets(d: Any) {
   return { ok: true, ...rel };
 }
 
+// Exportação completa (backup) — só administrador.
+async function exportarTudo(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]);
+  if (c.erro) return { ok: false, erro: c.erro };
+  const out: Any = { geradoEm: new Date().toISOString() };
+  for (const tab of ["partidas", "partida_eventos", "atletas", "equipes_pin", "confirmacoes", "consentimentos", "assinaturas", "juizes", "avisos"]) {
+    const linhas: Any[] = [];
+    for (let de = 0; ; de += 1000) {
+      const { data, error } = await sb.from(tab).select("*").range(de, de + 999);
+      if (error) return { ok: false, erro: tab + ": " + error.message };
+      linhas.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    out[tab] = linhas;
+  }
+  return { ok: true, backup: out };
+}
+
 async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null> {
   switch (acao) {
+    case "exportarTudo": return await exportarTudo(d);
     case "migrarDoSheets": return await migrarDoSheets(d);
     case "cadastrarAtleta": return await cadastrarAtleta(d);
     case "removerAtleta": return await removerAtleta(d);
