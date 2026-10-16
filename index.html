@@ -2226,29 +2226,16 @@ async function loadClassificacao(force) {
   const sheetUrl = (id, tab, range) =>
     `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent("'"+tab+"'!"+range)}?key=${GOOGLE_API_KEY}`;
 
-  // VÔLEI
+  // VÔLEI (Supabase: classificação calculada pelo regulamento)
   try {
-    const res  = await fetch(sheetUrl(INDEX_VOLEI_SHEET_ID, 'Fase de Grupos', 'A1:Q49'));
-    const json = await res.json();
-    const l    = json.values || [];
-
-    const voleiGrupos = [
-      { title: '🏐 Grupo A', rows: [4,5,6] },
-      { title: '🏐 Grupo B', rows: [16,17,18] },
-      { title: '🏐 Grupo C', rows: [28,29,30] },
-      { title: '🏐 Grupo D', rows: [40,41,42] },
-    ];
-
+    const T = await fetch(SUMULA_SCRIPT_URL + '?action=torneio&modalidade=volei').then(r => r.json());
+    if (!T.ok) throw new Error(T.erro || 'resposta inválida');
     let cards = '';
-    voleiGrupos.forEach(g => {
-      const teams = g.rows.map(r => {
-        const v = parseInt(_ccP(l,r,3)||'0'), d = parseInt(_ccP(l,r,4)||'0');
-        return { name: _ccP(l,r,1), pj: v+d, v, d, sp: parseInt(_ccP(l,r,5)||'0'), pts: parseInt(_ccP(l,r,2)||'0') };
-      }).filter(t => t.name && t.name.length > 1);
-      teams.sort((a,b) => b.pts - a.pts || b.sp - a.sp);
-      cards += _classGrupoCard(g.title, teams, 'var(--blue)');
+    (T.grupos || []).forEach(g => {
+      const teams = g.tabela.map(l => ({ name: l.equipe, pj: l.jogos, v: l.vitorias, d: l.derrotas, sp: l.saldoSets, pts: l.pontos }));
+      cards += _classGrupoCard('🏐 Grupo ' + g.grupo, teams, 'var(--blue)');
     });
-    document.getElementById('classVoleiGrid').innerHTML = cards || '<div style="padding:20px;color:var(--dark-grey);">Nenhum dado</div>';
+    document.getElementById('classVoleiGrid').innerHTML = cards || '<div style="padding:20px;color:var(--dark-grey);">Nenhum dado. Crie a chave na página Torneio.</div>';
   } catch(e) {
     document.getElementById('classVoleiGrid').innerHTML = '<div class="card" style="color:var(--red);padding:20px;">Erro ao carregar vôlei: '+e.message+'</div>';
   }
@@ -2585,72 +2572,25 @@ function showToast(msg, type='success') {
 async function loadVoleiFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead(INDEX_VOLEI_SHEET_ID, "'Fase de Grupos'!A1:Q49");
-    if (!rows || rows.length < 2) throw new Error('Sem dados');
-
+    const T = await fetch(SUMULA_SCRIPT_URL + '?action=torneio&modalidade=volei').then(r => r.json());
+    if (!T.ok) throw new Error(T.erro || 'resposta inválida');
     state.jogos.volei = [];
-    const grupos = [
-      { label: 'Grupo A', rows: [10,11,12], grp: 'A' },
-      { label: 'Grupo B', rows: [22,23,24], grp: 'B' },
-      { label: 'Grupo C', rows: [34,35,36], grp: 'C' },
-      { label: 'Grupo D', rows: [46,47,48], grp: 'D' }
-    ];
-
-    grupos.forEach(g => {
-      g.rows.forEach((rIdx, i) => {
-        const equipeA = _cc(rows, rIdx, 1);
-        const equipeB = _cc(rows, rIdx, 11);
-        if (!equipeA && !equipeB) return;
-        const s1a = _cc(rows, rIdx, 2), s1b = _cc(rows, rIdx, 7);
-        const s2a = _cc(rows, rIdx, 3), s2b = _cc(rows, rIdx, 8);
-        const s3a = _cc(rows, rIdx, 4), s3b = _cc(rows, rIdx, 9);
-        const status = _cc(rows, rIdx, 15) || 'upcoming';
-        const data = _cc(rows, rIdx, 14) || '';
-
-        state.jogos.volei.push({
-          id: 'volei_' + g.grp + '_' + i,
-          sumulaId: g.grp + (i+1),
-          sport: 'volei',
-          equipeA, equipeB,
-          data: data || '28/11', hora: '13:00',
-          rodada: g.label + ' · Rodada ' + (i+1),
-          status: status.toLowerCase().includes('ao vivo') ? 'live' : status.toLowerCase().includes('encerr') ? 'done' : 'upcoming',
-          placar: {
-            sets: [
-              {a: s1a, b: s1b},
-              {a: s2a, b: s2b},
-              {a: s3a, b: s3b}
-            ]
-          }
-        });
+    const dataBR = (d) => d ? d.split('-').reverse().slice(0, 2).join('/') : '';
+    (T.jogos || []).forEach((j, n) => {
+      const nome = (def, x, rot) => def ? x : (rot || 'Aguardando');
+      const par = j.parciais || [];
+      const grupos = j.fase === 'grupos';
+      state.jogos.volei.push({
+        id: grupos ? 'volei_' + j.grupo + '_' + ((j.rodada || 1) - 1) : 'volei_mata_' + j.id,
+        sumulaId: j.id,
+        sport: 'volei',
+        equipeA: nome(j.casaDefinida, j.casa, j.rotuloCasa), equipeB: nome(j.visitanteDefinida, j.visitante, j.rotuloVisitante),
+        data: dataBR(j.data) || '28/11', hora: j.hora || '13:00',
+        rodada: grupos ? ('Grupo ' + j.grupo + ' · Rodada ' + (j.rodada || 1)) : ({ quartas: 'Quartas', semifinal: 'Semi', final: 'Final' }[j.fase] + ' · ' + j.id),
+        status: j.status === 'ao_vivo' ? 'live' : (j.status === 'finalizado' || j.status === 'wo') ? 'done' : 'upcoming',
+        placar: { sets: [0, 1, 2].map(i => ({ a: par[i] ? String(par[i].a) : '', b: par[i] ? String(par[i].b) : '' })) }
       });
     });
-
-    // Quartas
-    const mataRows = await sheetRead(INDEX_VOLEI_SHEET_ID, "'Mata-Mata'!A1:Q21");
-    const mataIds = [['Q1','Q2','Q3','Q4'], ['SF1','SF2'], ['FINAL']];
-    [[5,6,7,8], [12,13], [17]].forEach((round, rIdx) => {
-      const fases = ['Quartas', 'Semi', 'Final'];
-      round.forEach((rIdx2, i) => {
-        const ea = _cc(mataRows, rIdx2, 1) || (rIdx === 0 ? `1º Grupo ${['A','B','C','D'][i]}` : 'Vencedor');
-        const eb = _cc(mataRows, rIdx2, 11) || (rIdx === 0 ? `2º Grupo ${['B','A','D','C'][i]}` : 'Vencedor');
-        const s1a = _cc(mataRows, rIdx2, 2), s1b = _cc(mataRows, rIdx2, 7);
-        const s2a = _cc(mataRows, rIdx2, 3), s2b = _cc(mataRows, rIdx2, 8);
-        const s3a = _cc(mataRows, rIdx2, 4), s3b = _cc(mataRows, rIdx2, 9);
-        if (!ea && !eb) return;
-        state.jogos.volei.push({
-          id: 'volei_mata_' + rIdx + '_' + i,
-          sumulaId: mataIds[rIdx][i],
-          sport: 'volei',
-          equipeA: ea, equipeB: eb,
-          data: '28/11', hora: '13:00',
-          rodada: fases[rIdx] + ' · Jogo ' + (i+1),
-          status: 'upcoming',
-          placar: { sets: [{a:s1a,b:s1b},{a:s2a,b:s2b},{a:s3a,b:s3b}] }
-        });
-      });
-    });
-
     renderJogos('volei');
     updateStats();
     updateDashboard();
@@ -3607,66 +3547,20 @@ function rerenderJogoTotals(id, sport) {
 async function salvarPlacarVolei(id) {
   const j = state.jogos.volei.find(x => x.id === id);
   if (!j) return;
+  const parciais = j.placar.sets
+    .filter(s => String(s.a == null ? '' : s.a).trim() !== '' && String(s.b == null ? '' : s.b).trim() !== '')
+    .map(s => ({ a: parseInt(s.a), b: parseInt(s.b) }));
+  if (!parciais.length) { showToast('❌ Preencha o placar dos sets.', 'error'); return; }
   showLoading(true);
   try {
-    // Mapear ID do jogo para a linha correta na planilha
-    // IDs: volei_A_0, volei_A_1, volei_A_2, volei_B_0, etc.
-    let rowIndex = 11;
-    const match = j.id.match(/volei_([A-D])_(\d)/);
-    if (match) {
-      const grupo = match[1];
-      const jogoIdx = parseInt(match[2]);
-      const grupoBase = { 'A': 11, 'B': 23, 'C': 35, 'D': 47 };
-      rowIndex = grupoBase[grupo] + jogoIdx;
-    }
-
-    // Calcular sets vencidos
-    const sets = j.placar.sets;
-    const sA = parseInt(sets[0].a || 0), sB = parseInt(sets[0].b || 0);
-    const s2A = parseInt(sets[1].a || 0), s2B = parseInt(sets[1].b || 0);
-    const s3A = parseInt(sets[2].a || 0), s3B = parseInt(sets[2].b || 0);
-
-    const setsVencidosA = (sA > sB ? 1 : 0) + (s2A > s2B ? 1 : 0) + (s3A > s3B ? 1 : 0);
-    const setsVencidosB = (sB > sA ? 1 : 0) + (s2B > s2A ? 1 : 0) + (s3B > s3A ? 1 : 0);
-
-    let vencedor = 'EMPATE';
-    if (setsVencidosA > setsVencidosB) vencedor = j.equipeA;
-    else if (setsVencidosB > setsVencidosA) vencedor = j.equipeB;
-
-    // Montar array de dados na ordem exata das colunas da planilha
-    const dados = [
-      (rowIndex - 10).toString(),  // A: # (número do jogo na rodada)
-      j.equipeA,                   // B: EQUIPE CASA
-      sA.toString(),               // C: SET 1 A
-      s2A.toString(),              // D: SET 2 A
-      s3A.toString(),              // E: SET 3 A
-      setsVencidosA.toString(),    // F: TOTPTS A (sets vencidos)
-      'X',                         // G: separador
-      sB.toString(),               // H: SET 1 B
-      s2B.toString(),              // I: SET 2 B
-      s3B.toString(),              // J: SET 3 B
-      setsVencidosB.toString(),    // K: TOTPTS B (sets vencidos)
-      j.equipeB,                   // L: EQUIPE VISIT
-      setsVencidosA.toString(),    // M: SET SC (sets casa)
-      setsVencidosB.toString(),    // N: SET SV (sets visitante)
-      vencedor,                     // O: VENCEDOR
-      j.data || '',                // P: DATA
-      ''                            // Q: LOCAL
-    ];
-
-    // Enviar para o Google Apps Script usando a ação correta
-    const res = await sheetWrite({
-      acao: 'atualizar_placar_volei',
-      aba: 'Fase de Grupos',
-      linha: rowIndex,
-      dados: dados
-    });
-
+    const res = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'lancarResultado', auth: authApi_(), modalidade: 'volei', id: j.sumulaId, parciais: parciais }) }).then(r => r.json());
     if (res && res.ok) {
-      showToast('✅ Placar enviado com sucesso!');
-      enviarPushResultado('volei', j.equipeA, setsVencidosA, j.equipeB, setsVencidosB, match ? `Grupo ${match[1]}` : 'Vôlei');
+      const jg = (res.torneio.jogos || []).find(x => x.id === j.sumulaId) || {};
+      showToast('✅ Resultado lançado — classificação recalculada.');
+      enviarPushResultado('volei', j.equipeA, jg.setsCasa || 0, j.equipeB, jg.setsVisitante || 0, jg.grupo ? 'Grupo ' + jg.grupo : 'Vôlei');
+      loadVoleiFromSheet();
     } else {
-      showToast('❌ Erro ao enviar: ' + (res?.erro || 'Verifique o Apps Script'), 'error');
+      showToast('❌ ' + ((res && res.erro) || 'Erro ao lançar o resultado'), 'error');
     }
   } catch(e) {
     console.error('Erro salvarPlacarVolei:', e);
@@ -7929,21 +7823,10 @@ async function buscarCampeaoDaPlanilha() {
         }
       }
     } else {
-      // Vôlei: linha 17 (0-indexed) = Final; col 1 = equipeA, col 11 = equipeB, cols 12-16 = sets A/B
-      const rows = await sheetRead(INDEX_VOLEI_SHEET_ID, "'Mata-Mata'!A1:Q21");
-      if (!rows || rows.length < 18) throw new Error('Aba Mata-Mata vazia');
-      const finalRow = rows[17] || [];
-      const tA = (finalRow[1] || '').trim(), tB = (finalRow[11] || '').trim();
-      if (tA && tB) {
-        // Conta sets: cols 12=s1A,13=s1B,14=s2A,15=s2B,16=s3A,17=s3B (dentro da linha)
-        let setsA = 0, setsB = 0;
-        [[12,13],[14,15],[16,17]].forEach(([ca,cb]) => {
-          const sa = parseInt(finalRow[ca]) || 0, sb = parseInt(finalRow[cb]) || 0;
-          if (sa > 0 || sb > 0) { if (sa > sb) setsA++; else if (sb > sa) setsB++; }
-        });
-        if (setsA > setsB) { campeao = tA; vice = tB; }
-        else if (setsB > setsA) { campeao = tB; vice = tA; }
-      }
+      // Vôlei: a final vem do torneio (Supabase)
+      const T = await fetch(SUMULA_SCRIPT_URL + '?action=torneio&modalidade=volei').then(r => r.json());
+      const fin = ((T && T.jogos) || []).find(x => x.fase === 'final');
+      if (fin && fin.vencedor) { campeao = fin.vencedor; vice = fin.vencedor === fin.casa ? fin.visitante : fin.casa; }
     }
     if (campeao) {
       document.getElementById('inputPodio1').value = campeao;
