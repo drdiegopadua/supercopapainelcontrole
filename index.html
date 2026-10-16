@@ -4641,7 +4641,7 @@ function tnJogosHtml_(t) {
   const linha = (j) => {
     const sel = (campo, valor, def) => {
       if (j.fase !== 'grupos' || !podeEditar) return `<span style="font-weight:${def ? 700 : 400};color:${def ? 'inherit' : '#9aa0ab'}">${tnEsc_(valor)}</span>`;
-      return `<select class="form-control" style="font-size:12px;padding:3px" data-id="${tnEsc_(j.id)}" data-campo="${campo}" id="tn-${campo}-${tnEsc_(j.id)}">${equipesGrupo(j.grupo).map(n => `<option ${n === valor ? 'selected' : ''}>${tnEsc_(n)}</option>`).join('')}</select>`;
+      return `<select class="form-control" style="font-size:12px;padding:3px" data-id="${tnEsc_(j.id)}" data-campo="${campo}" id="tn-${campo}-${tnEsc_(j.id)}">${def ? '' : '<option value="" selected>— escolher equipe —</option>'}${equipesGrupo(j.grupo).map(n => `<option ${n === valor && def ? 'selected' : ''}>${tnEsc_(n)}</option>`).join('')}</select>`;
     };
     const dis = podeEditar ? '' : 'disabled';
     const st = { agendado: '⚪ agendado', ao_vivo: '🔴 ao vivo', finalizado: '✅ finalizado', wo: '🟠 W.O.' }[j.status] || j.status;
@@ -4662,13 +4662,76 @@ function tnJogosHtml_(t) {
   }).join('');
 }
 
+const TN_EQUIPE_DA_CASA_ = 'CT das Montanhas';
+function tnLinhaEquipe_(nome, nota) {
+  return `<div class="tn-linha-eq" style="display:flex;gap:8px;align-items:center;border:1px solid #e8ebf3;border-radius:10px;padding:6px 10px"><span style="flex:1;font-size:13px">${tnEsc_(nome)}${nota ? ` <span style="font-size:10px;color:#1c2b66;background:#e8f0ff;border-radius:99px;padding:1px 7px;font-weight:800">${tnEsc_(nota)}</span>` : ''}</span><select class="form-control tn-grupo-sel" data-eq="${tnEsc_(nome)}" style="width:90px;font-size:12px;padding:3px"><option value="">—</option>${['A', 'B', 'C', 'D'].map(g => `<option>${g}</option>`).join('')}</select></div>`;
+}
+function tnAdicionarEquipe_() {
+  const inp = document.getElementById('tn-extra-nome'), nome = (inp.value || '').trim();
+  if (!nome) { showToast('Digite o nome da equipe.', 'error'); return; }
+  const ja = [...document.querySelectorAll('.tn-grupo-sel')].some(s => s.dataset.eq.toLowerCase() === nome.toLowerCase());
+  if (ja) { showToast('Essa equipe já está na lista.', 'error'); return; }
+  document.getElementById('tn-lista-eq').insertAdjacentHTML('beforeend', tnLinhaEquipe_(nome, 'adicionada'));
+  inp.value = ''; tnAtualizarContagem_();
+}
+function tnAtualizarContagem_() {
+  const sel = [...document.querySelectorAll('.tn-grupo-sel')], por = {};
+  sel.forEach(s => { if (s.value) por[s.value] = (por[s.value] || 0) + 1; });
+  const el = document.getElementById('tn-contagem'); if (!el) return;
+  el.innerHTML = ['A', 'B', 'C', 'D'].map(g => `<span style="padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;background:${(por[g] || 0) === 3 ? '#dcfce7' : '#fff7e0'};color:${(por[g] || 0) === 3 ? '#166534' : '#8a6100'}">Grupo ${g}: ${por[g] || 0}/3</span>`).join(' ')
+    + ` <span style="font-size:12px;color:#6b7280">· ${sel.filter(s => s.value).length}/${sel.length} equipes distribuídas</span>`;
+}
 async function tnCriarChaveHtml_() {
   let conf = [];
   try { conf = (await fetch(SUMULA_SCRIPT_URL + '?action=equipesComPin').then(r => r.json())).equipes || []; } catch (e) { /* segue sem lista */ }
-  return `<div style="font-size:13px;margin-bottom:10px">Ainda não há chave. Distribua as equipes <b>confirmadas</b> nos grupos (3 por grupo) e crie a chave. Os grupos são editáveis depois.</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-bottom:12px">
-    ${conf.length ? conf.map((e, i) => `<div style="display:flex;gap:8px;align-items:center;border:1px solid #e8ebf3;border-radius:10px;padding:6px 10px"><span style="flex:1;font-size:13px">${tnEsc_(e.equipe)}</span><select class="form-control tn-grupo-sel" data-eq="${tnEsc_(e.equipe)}" style="width:90px;font-size:12px;padding:3px"><option value="">—</option>${['A', 'B', 'C', 'D'].map(g => `<option>${g}</option>`).join('')}</select></div>`).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhuma equipe confirmada encontrada.</p>'}</div>
+  const nomes = conf.map(e => e.equipe);
+  const casaJaEsta = nomes.some(n => n.toLowerCase() === TN_EQUIPE_DA_CASA_.toLowerCase());
+  const linhas = conf.map(e => tnLinhaEquipe_(e.equipe, e.equipe.toLowerCase() === TN_EQUIPE_DA_CASA_.toLowerCase() ? 'equipe da casa' : '')).join('')
+    + (casaJaEsta ? '' : tnLinhaEquipe_(TN_EQUIPE_DA_CASA_, 'equipe da casa'));
+  setTimeout(() => { document.querySelectorAll('.tn-grupo-sel').forEach(s => s.addEventListener('change', tnAtualizarContagem_)); tnAtualizarContagem_(); }, 0);
+  return `<div style="font-size:13px;margin-bottom:10px">Ainda não há chave. Distribua as equipes nos grupos (3 por grupo) e crie a chave. A <b>equipe da casa (${tnEsc_(TN_EQUIPE_DA_CASA_)})</b> já entra na lista; as outras vêm das equipes <b>confirmadas</b>. Se faltar alguma, use "Adicionar equipe" — dá para completar os grupos depois.</div>
+    <div id="tn-lista-eq" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-bottom:10px">${linhas}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <input class="form-control" id="tn-extra-nome" placeholder="Adicionar equipe (nome)..." style="max-width:280px" onkeydown="if(event.key==='Enter')tnAdicionarEquipe_()">
+      <button class="btn btn-secondary btn-sm" onclick="tnAdicionarEquipe_()"><i class='bx bx-plus'></i> Adicionar equipe</button></div>
+    <div id="tn-contagem" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px"></div>
     <button class="btn btn-success" onclick="tnCriarChave_()"><i class='bx bx-sitemap'></i> Criar chave</button>`;
+}
+
+
+function tnEquipesHtml_(t) {
+  const podeEditar = ['admin', 'organizacao'].indexOf(papelAtual_()) >= 0;
+  const grupos = ['A', 'B', 'C', 'D'];
+  const col = grupos.map(g => {
+    const eq = t.equipes.filter(e => e.grupo === g).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    return `<div style="border:1px solid #e8ebf3;border-radius:12px;padding:10px 12px;background:#fff"><div style="font-weight:800;margin-bottom:6px">Grupo ${g} <span style="font-size:11px;font-weight:700;color:${eq.length === 3 ? '#16a34a' : '#b45309'}">${eq.length}/3</span></div>
+      ${eq.map(e => `<div style="display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0"><span style="flex:1">${tnEsc_(e.nome)}</span>${podeEditar ? `<button title="Remover do torneio" style="background:none;border:none;color:#ef4444;cursor:pointer" data-eq="${tnEsc_(e.nome)}" onclick="tnRemoverEquipe_(this.dataset.eq)"><i class='bx bx-x'></i></button>` : ''}</div>`).join('') || '<div style="font-size:12px;color:#9aa0ab">sem equipes</div>'}</div>`;
+  }).join('');
+  const form = podeEditar ? `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">
+      <input class="form-control" id="tn-novaeq-nome" placeholder="Nome da equipe..." style="max-width:260px">
+      <select class="form-control" id="tn-novaeq-grupo" style="width:110px"><option value="">Grupo...</option>${grupos.map(g => `<option>${g}</option>`).join('')}</select>
+      <button class="btn btn-secondary btn-sm" onclick="tnAdicionarEquipeGrupo_()"><i class='bx bx-plus'></i> Adicionar ao grupo</button>
+      <span style="font-size:11px;color:#8a90a2">Depois de adicionar, escolha a equipe nos jogos do grupo (em "Jogos, horários e resultados").</span></div>` : '';
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px">${col}</div>${form}`;
+}
+async function tnAdicionarEquipeGrupo_() {
+  const nome = (document.getElementById('tn-novaeq-nome').value || '').trim(), grupo = document.getElementById('tn-novaeq-grupo').value;
+  if (!nome || !grupo) { showToast('Informe o nome da equipe e o grupo.', 'error'); return; }
+  const ordem = window._torneio.equipes.filter(e => e.grupo === grupo).length;
+  const r = await tnPost_('salvarEquipeTorneio', { modalidade: 'volei', nome: nome, grupo: grupo, ordem: ordem });
+  if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
+  showToast('✅ ' + nome + ' adicionada ao Grupo ' + grupo + '.'); carregarTorneio();
+}
+async function tnRemoverEquipe_(nome) {
+  if (!confirm('Remover "' + nome + '" do torneio? Os jogos dela voltam a "escolher equipe".')) return;
+  const r = await tnPost_('removerEquipeTorneio', { modalidade: 'volei', nome: nome });
+  if (!r.ok) {
+    if (/já tem jogo/.test(r.erro || '') && confirm(r.erro + '\n\nRemover mesmo assim?')) {
+      const r2 = await tnPost_('removerEquipeTorneio', { modalidade: 'volei', nome: nome, forcar: true });
+      if (!r2.ok) { showToast('❌ ' + r2.erro, 'error'); return; }
+    } else { showToast('❌ ' + r.erro, 'error'); return; }
+  }
+  showToast('Equipe removida.'); carregarTorneio();
 }
 
 async function renderTorneio_() {
@@ -4681,6 +4744,7 @@ async function renderTorneio_() {
     + sec('Classificação dos grupos', 'Calculada automaticamente pelo regulamento: vitória 2x0 = 3 pts · 2x1 = 2 (derrota 1x2 = 1) · W.O. = 3 / 0. Desempate: vitórias → saldo de sets → saldo de pontos → sorteio.', tnClassificacaoHtml_(t))
     + sec('Sorteio das quartas de final', 'Pote dos 1ºs colocados × pote dos 2ºs colocados. Escolha um de cada e confirme o enfrentamento.', tnSorteioHtml_(t))
     + sec('Semifinais e final', 'Semifinais: vencedor Q1 × vencedor Q2 e vencedor Q3 × vencedor Q4.', tnMataMataHtml_(t))
+    + sec('Equipes do torneio', 'Grupos de 3 equipes. A equipe da casa e as equipes confirmadas entram aqui; use para completar ou trocar equipes.', tnEquipesHtml_(t))
     + sec('Jogos, horários e resultados', 'Edite equipes, data, hora e quadra. "Resultado" lança o placar à mão (use quando a súmula digital não puder ser usada).', tnJogosHtml_(t));
 }
 
@@ -4718,7 +4782,7 @@ async function tnSalvarJogo_(id) {
   const v = (c) => { const e = document.getElementById('tn-' + c + '-' + id); return e ? e.value : undefined; };
   const dados = { modalidade: 'volei', id: id, data: v('data') || '', hora: v('hora') || '', quadra: v('quadra') || '' };
   const c = v('casa'), vi = v('visitante');
-  if (c !== undefined) { dados.casa = c; dados.visitante = vi; if (c === vi) { showToast('As duas equipes não podem ser iguais.', 'error'); return; } }
+  if (c !== undefined) { dados.casa = c; dados.visitante = vi; if (c && c === vi) { showToast('As duas equipes não podem ser iguais.', 'error'); return; } }
   const r = await tnPost_('salvarJogo', dados);
   if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
   showToast('✅ ' + id + ' salvo.'); carregarTorneio();
