@@ -2148,7 +2148,7 @@ const INDEX_VOLEI_SHEET_ID = "12-yxLsIplLMAj0Y9jCpzl2OGJLKPhy_lWAtvYP-Vvh8";
 const BASQ_SHEET_ID = "1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0";
 const APP_SHEET_ID = "1nC7pAvf9dhXNLtzyXxWo_plrNJjvtLFVssbARBTaxAA";
 const GOOGLE_API_KEY = "AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw";
-const QUIZ_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxfiPItqNbKhXQP7fxCaOiUcmDGNvXQzRzkwisdC6rzoHIEkQftu6IK4NXGefbmYQ2H/exec";
+const QUIZ_SHEETS_URL = "https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api";
 const PUSH_SERVER_URL = "https://supercopa-push-server.onrender.com/api/push/enviar";
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
 const BASQ_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFVmuKrB2eXN9vu7dciYxvaNYjjahPDkHwffQir395C0TUh243wqGsHVdda2fa9ff/exec";
@@ -2158,11 +2158,11 @@ const ATLETA_DESTAQUE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJc
 const VOLEI_APOIO_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";
 const SUMULA_SCRIPT_URL = (function(){try{if(localStorage.getItem("scBackend")==="planilha")return "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";}catch(e){}return "https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api";})();
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
-const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyhmN1mCzUWNpwyQ_AT6SKj1YqodCd2At3rLCu6rAn2cNqFjvwXidnw86wu3z3iTLdt9Q/exec"; // PALPITES — installs/quiz/blocked_games
+const EDICOES_LEGADO_URL = "https://script.google.com/macros/s/AKfycbyhmN1mCzUWNpwyQ_AT6SKj1YqodCd2At3rLCu6rAn2cNqFjvwXidnw86wu3z3iTLdt9Q/exec"; // PALPITES — installs/quiz/blocked_games
 const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUc_Z7wdPEWMQ_WzbQGNiHBVu0yJsxb8AwZC3-eZm_dHT_yk-hhmdToxXUeiTtxV/exec";
 const PUSH_STATUS_URL = "https://supercopa-push-server.onrender.com/api/push/status";
 // Preencha após rodar apps-script-feedback.js e implantar como Web App:
-const FEEDBACK_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwI8SlXs8chIPW9ounZjULMD-z0FdmkYjTZJDjKSQQqjfy8-HcpuXv2Zixw8ZiV16OH/exec";
+const FEEDBACK_SCRIPT_URL = "https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api";
 const FEEDBACK_FORM_URL = "https://www.supercopaafc.com.br/feedback.html"; // formulário bonito no site (feedback.html)
 // Preencha após rodar apps-script-inscricao-equipes.js e implantar como Web App:
 const INSCRICAO_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";
@@ -2789,7 +2789,7 @@ function switchSocialTab(tab) {
 async function loadQuizRanking(manual=false) {
   if (manual) showLoading(true);
   try {
-    const data = await fetch(BOLAO_SHEETS_URL + '?action=ranking_quiz').then(r => r.json());
+    const data = await fetch(SUMULA_SCRIPT_URL + '?action=ranking_quiz').then(r => r.json());
     state.quiz = (data.ranking || []).map((p, i) => ({
       id: 'q' + i, nome: p.nome, acertos: p.acertos, total: p.total,
       pct: parseFloat(p.pct) || 0,
@@ -2877,7 +2877,7 @@ async function loadEdicoesDashboard(manual) {
   const empty = document.getElementById('edicoesEmptyState');
   try {
     const [instalAcessoQuiz, destaquePremiacao, galera, statsBasquete] = await Promise.all([
-      fetch(BOLAO_SHEETS_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false })),
+      fetch(EDICOES_LEGADO_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false })),
       fetch(ATLETA_DESTAQUE_SCRIPT_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false })),
       fetch(GALERA_SCRIPT_URL + '?action=listar_edicoes').then(r => r.json()).catch(() => ({ ok: false })),
       calcularStatsBasquete()
@@ -3125,7 +3125,7 @@ async function loadFeedbackDashboard(manual) {
     return;
   }
   try {
-    const data = await fetch(FEEDBACK_SCRIPT_URL).then(r => r.json());
+    const data = await fetch(FEEDBACK_SCRIPT_URL + '?action=feedback').then(r => r.json());
     if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
     const respostas = data.respostas || [];
     const headers = data.headers || [];
@@ -7325,11 +7325,11 @@ async function renderChartTimesPorCidade() {
 async function loadDashEngajamento() {
   const result = { acessos: 0, instalado: 0, notif: 0, quiz: state.quiz.length, galera: 0 };
   try {
-    const r = await fetch(BOLAO_SHEETS_URL + '?action=count_installs').then(r => r.json());
+    const r = await fetch(SUMULA_SCRIPT_URL + '?action=count_installs').then(r => r.json());
     result.instalado = r.total || 0;
   } catch (e) {}
   try {
-    const r = await fetch(BOLAO_SHEETS_URL + '?action=count_acessos').then(r => r.json());
+    const r = await fetch(SUMULA_SCRIPT_URL + '?action=count_acessos').then(r => r.json());
     result.acessos = r.unicos || 0;
   } catch (e) {}
   try {
@@ -7389,7 +7389,7 @@ let _chartAcessosPeriodo = null, _acessosLogCache = null, _periodoAcessosAtual =
 async function carregarAcessosLog_() {
   if (_acessosLogCache) return _acessosLogCache;
   try {
-    const res = await fetch(BOLAO_SHEETS_URL + '?action=acessos_log').then(r => r.json());
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=acessos_log').then(r => r.json());
     _acessosLogCache = (res && res.log) || [];
   } catch (e) {
     _acessosLogCache = [];

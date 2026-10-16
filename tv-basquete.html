@@ -379,21 +379,21 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
 .fotos-placeholder span:first-child { font-size:48px; }
 .fotos-placeholder span:last-child  { font-size:12px; letter-spacing:3px; }
 
-/* ── CENA BOLÃO ── */
+/* ── RANKING EM BARRAS ── */
 @keyframes barGrow { from{width:0} to{width:var(--bar-target)} }
 
-.bolao-wrap { flex:1; display:flex; flex-direction:column; gap:8px; min-height:0; overflow:hidden; }
-.bolao-title-row { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-.bolao-subtitle { font-size:10px; color:var(--muted); letter-spacing:2px; margin-left:auto; }
-.bolao-bars { flex:1; display:flex; flex-direction:column; gap:8px; overflow:hidden; min-height:0; justify-content:center; }
-.bolao-bar-row { display:flex; align-items:center; gap:8px; }
-.bolao-bar-label { font-size:13px; font-weight:700; min-width:90px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.bolao-bar-track { flex:1; height:22px; background:rgba(255,255,255,.06); border-radius:11px; overflow:hidden; position:relative; }
-.bolao-bar-fill { height:100%; border-radius:11px; position:absolute; left:0; top:0; --bar-target:0%; animation:barGrow .8s ease both; width:var(--bar-target); }
-.bolao-bar-fill.gold   { background:linear-gradient(90deg,var(--gold3),var(--gold2)); }
-.bolao-bar-fill.maroon { background:linear-gradient(90deg,var(--maroon),rgba(107,21,21,.7)); }
-.bolao-bar-meta { font-size:11px; color:var(--muted); min-width:60px; text-align:right; white-space:nowrap; }
-.bolao-total { font-size:10px; color:var(--muted); text-align:center; letter-spacing:2px; margin-top:4px; flex-shrink:0; }
+.rankbar-wrap { flex:1; display:flex; flex-direction:column; gap:8px; min-height:0; overflow:hidden; }
+.rankbar-title-row { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.rankbar-subtitle { font-size:10px; color:var(--muted); letter-spacing:2px; margin-left:auto; }
+.rankbar-bars { flex:1; display:flex; flex-direction:column; gap:8px; overflow:hidden; min-height:0; justify-content:center; }
+.rankbar-bar-row { display:flex; align-items:center; gap:8px; }
+.rankbar-bar-label { font-size:13px; font-weight:700; min-width:90px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rankbar-bar-track { flex:1; height:22px; background:rgba(255,255,255,.06); border-radius:11px; overflow:hidden; position:relative; }
+.rankbar-bar-fill { height:100%; border-radius:11px; position:absolute; left:0; top:0; --bar-target:0%; animation:barGrow .8s ease both; width:var(--bar-target); }
+.rankbar-bar-fill.gold   { background:linear-gradient(90deg,var(--gold3),var(--gold2)); }
+.rankbar-bar-fill.maroon { background:linear-gradient(90deg,var(--maroon),rgba(107,21,21,.7)); }
+.rankbar-bar-meta { font-size:11px; color:var(--muted); min-width:60px; text-align:right; white-space:nowrap; }
+.rankbar-total { font-size:10px; color:var(--muted); text-align:center; letter-spacing:2px; margin-top:4px; flex-shrink:0; }
 
 /* ── TEAM BADGE ── */
 .team-badge{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:23px;letter-spacing:1px;background:linear-gradient(135deg,var(--maroon),#4a0a0a);border:2.5px solid rgba(240,165,0,.35);flex-shrink:0;color:rgba(255,255,255,.9);animation:iconSpin 8s linear infinite;}
@@ -561,14 +561,6 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
       <div class="fotos-counter" id="fotosCounter" style="display:none;">1 / 1</div>
     </div>
 
-    <!-- CENA BOLÃO -->
-    <div class="scene" id="scene-bolao">
-      <div class="panel" style="flex:1;">
-        <div class="panel-head">🎯 BOLÃO BASQUETE — RANKING</div>
-        <div class="panel-body" id="bolaoPanel" style="display:flex;flex-direction:column;gap:6px;"></div>
-      </div>
-    </div>
-
     <!-- CENA QUIZ -->
     <div class="scene" id="scene-quiz">
       <div class="panel" style="flex:1;">
@@ -616,7 +608,6 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--maroon2)
 var SHEET_ID = '1S3rUVU18W64c4okkxGOYnSLtW-aSyo47l3tos7u-8j0';
 var API_KEY  = 'AIzaSyBzIsc4TKy_he2P8PcOgOzs8Eor3EVHBzw';
 var REFRESH  = 30;
-var BOLAO_API_URL = 'https://script.google.com/macros/s/AKfycbyhmN1mCzUWNpwyQ_AT6SKj1YqodCd2At3rLCu6rAn2cNqFjvwXidnw86wu3z3iTLdt9Q/exec';
 
 var HORARIOS = {
   'A-1':'13:00','A-2':'~15:30','A-3':'~18:00',
@@ -624,7 +615,7 @@ var HORARIOS = {
   'SF1':'09:00 (Dom)','SF2':'Após SF1','Final':'Após SF2'
 };
 
-var appData = { grupos:[], matamata:[], config:{}, bolao:[] };
+var appData = { grupos:[], matamata:[], config:{} };
 var fotosInterval = null;
 var fotosIdx = 0;
 var fotosArr = [];
@@ -652,12 +643,12 @@ function getMode(){ return new URLSearchParams(window.location.search).get('modo
 function buildScenes(){
   // Todas as cenas entram sempre no ciclo — mostram estado vazio se sem dados
   if(getMode()==='matamata'){
-    scenes = ['scene-matamata','scene-bolao','scene-quiz'];
+    scenes = ['scene-matamata','scene-quiz'];
     if(appData.config['PODIO_1']) scenes.push('scene-podio');
     if(appData.config['MVP_NOME']) scenes.push('scene-mvp');
     if(fotosArr.length > 0) scenes.push('scene-fotos');
   } else {
-    scenes = ['scene-placar','scene-tabela','scene-bolao','scene-quiz'];
+    scenes = ['scene-placar','scene-tabela','scene-quiz'];
     if(appData.config['PODIO_1']) scenes.push('scene-podio');
     if(appData.config['MVP_NOME']) scenes.push('scene-mvp');
     if(fotosArr.length > 0) scenes.push('scene-fotos');
@@ -697,8 +688,7 @@ function loadData(){
   Promise.all([
     fetch(apiUrl("'Fase de Grupos'!A1:S15")).then(function(r){return r.json();}),
     fetch(apiUrl("'Mata-Mata'!A1:O22")).then(function(r){return r.json();}),
-    fetch(apiUrl("'Config'!A1:B50")).then(function(r){return r.json();}).catch(function(){return {values:[]};}),
-    fetch(apiUrl("'Bolao'!A1:G200")).then(function(r){return r.json();}).catch(function(){return {values:[]};})
+    fetch(apiUrl("'Config'!A1:B50")).then(function(r){return r.json();}).catch(function(){return {values:[]};})
   ]).then(function(res){
     var gRows=res[0].values||[];
     var mRows=res[1].values||[];
@@ -708,20 +698,6 @@ function loadData(){
     appData.config={};
     cfgRows.forEach(function(row){
       if(row[0]&&row[1]) appData.config[row[0].toString().trim()]=row[1].toString().trim();
-    });
-
-    // Parse Bolao — colunas: Nome, Time, Esporte, Data, Resultado, Acerto, % Acerto Geral
-    var bolaoRows=res[3].values||[];
-    appData.bolao=[];
-    bolaoRows.slice(1).forEach(function(row){
-      var nome=(row[0]||'').toString().trim();
-      var time=(row[1]||'').toString().trim();
-      if(nome&&time) appData.bolao.push({
-        nome:nome, time:time,
-        esporte:(row[2]||'').toString().trim(),
-        resultado:(row[4]||'').toString().trim(),
-        acerto:(row[5]||'').toString().trim()
-      });
     });
 
     // Parse fotos IDs
@@ -938,7 +914,6 @@ function renderAll(){
   renderPodio();
   renderMvp();
   renderFotos();
-  renderBolao();
   renderQuiz();
   renderTicker();
   buildScenes();
@@ -1050,37 +1025,10 @@ function renderFotos(){
   }
 }
 
-// ── BOLÃO ──────────────────────────────────────────
-function renderBolao(){
-  var el=document.getElementById('bolaoPanel');
-  el.innerHTML='<div style="text-align:center;padding:18px 16px;"><div style="font-size:32px;margin-bottom:6px;">⏳</div><div style="font-size:13px;font-weight:700;color:var(--muted);">Carregando ranking...</div></div>';
-  var rankUrl=BOLAO_API_URL+'?action=ranking_sabado&sport=basquete';
-  var sheetUrl='https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+encodeURIComponent("'Fase de Grupos'!A1:S15")+'?key='+API_KEY;
-  Promise.all([fetch(rankUrl).then(function(r){return r.json();}),fetch(sheetUrl).then(function(r){return r.json();})])
-    .then(function(res){
-      var data=res[0];var shData=(res[1].values||[]);
-      var venc={};var num=1;
-      function bpv(raw){var m=raw.match(/^[A-Za-z]+:\s*(.+)/);return m?m[1].trim():raw;}
-      function bok(v){return v&&v!=='—'&&v.toLowerCase()!=='empate';}
-      [4,5,6].forEach(function(r){var v=bpv(((shData[r]||[])[8]||'').toString().trim());if(bok(v))venc[num]=v;num++;});
-      [4,5,6].forEach(function(r){var v=bpv(((shData[r]||[])[18]||'').toString().trim());if(bok(v))venc[num]=v;num++;});
-      var apurados=Object.keys(venc).length;
-      var participants=(data.ranking||[]).map(function(p){
-        var a=[];try{a=JSON.parse(p.detalheJSON||'[]');}catch(e){}
-        var acertos=0;
-        a.forEach(function(x){var jn=parseInt(x.jogo);if(venc[jn]&&venc[jn]===x.vencedor)acertos++;});
-        var pct=apurados>0&&a.length>0?Math.round(acertos/6*10000)/100:(p.pctPre!=null?parseFloat(p.pctPre)||0:0);
-        return {nome:p.nome,pct:pct,meta:acertos+' acertos / '+apurados+' apurados'};
-      });
-      participants.sort(function(a,b){return b.pct-a.pct;});
-      renderBolaoChart(el,participants,'🎯 RANKING BOLÃO');
-    })
-    .catch(function(){
-      el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🎯</div><div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div></div>';
-    });
-}
+// ── RANKING EM BARRAS ──────────────────────────
 
-function renderBolaoChart(el,participants,title){
+
+function renderRankingBarras(el,participants,title){
   if(!participants||!participants.length){
     el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">📋</div><div style="font-size:15px;font-weight:700;">Sem participantes ainda.</div></div>';
     return;
@@ -1088,25 +1036,25 @@ function renderBolaoChart(el,participants,title){
   var top=participants.slice(0,8);
   var medals=['🥇','🥈','🥉'];
   var maxPct=top[0].pct||0.01;
-  var html='<div class="bolao-wrap"><div class="bolao-title-row"><span style="font-size:13px;font-weight:800;letter-spacing:1px;">'+title+'</span><span class="bolao-subtitle">'+participants.length+' PARTICIPANTES</span></div><div class="bolao-bars">';
+  var html='<div class="rankbar-wrap"><div class="rankbar-title-row"><span style="font-size:13px;font-weight:800;letter-spacing:1px;">'+title+'</span><span class="rankbar-subtitle">'+participants.length+' PARTICIPANTES</span></div><div class="rankbar-bars">';
   top.forEach(function(p,i){
     var pctVal=p.pct.toFixed(2)+'%';
     var barW=Math.round(p.pct/maxPct*100)||1;
     var medal=i<3?medals[i]:(i+1)+'.';
     var fillCls=i===0?'gold':'maroon';
     var meta=p.meta?'<span style="font-size:9px;color:var(--muted);margin-left:6px;">'+p.meta+'</span>':'';
-    html+='<div class="bolao-bar-row"><div class="bolao-bar-label">'+medal+' '+p.nome+meta+'</div><div class="bolao-bar-track"><div class="bolao-bar-fill '+fillCls+'" style="--bar-target:'+barW+'%"></div></div><div class="bolao-bar-meta">'+pctVal+'</div></div>';
+    html+='<div class="rankbar-bar-row"><div class="rankbar-bar-label">'+medal+' '+p.nome+meta+'</div><div class="rankbar-bar-track"><div class="rankbar-bar-fill '+fillCls+'" style="--bar-target:'+barW+'%"></div></div><div class="rankbar-bar-meta">'+pctVal+'</div></div>';
   });
   html+='</div></div>';
   el.innerHTML=html;
-  setTimeout(function(){el.querySelectorAll('.bolao-bar-fill').forEach(function(b){b.style.animation='none';void b.offsetWidth;b.style.animation='barGrow .9s ease both';});},120);
+  setTimeout(function(){el.querySelectorAll('.rankbar-bar-fill').forEach(function(b){b.style.animation='none';void b.offsetWidth;b.style.animation='barGrow .9s ease both';});},120);
 }
 
 function renderQuiz(){
   var el=document.getElementById('quizPanel');
   if(!el)return;
   el.innerHTML='<div style="text-align:center;padding:18px 16px;"><div style="font-size:32px;margin-bottom:6px;">⏳</div><div style="font-size:13px;font-weight:700;color:var(--muted);">Carregando quiz...</div></div>';
-  fetch(BOLAO_API_URL+'?action=ranking_quiz')
+  fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?action=ranking_quiz')
     .then(function(r){return r.json();})
     .then(function(data){
       var participants=(data.ranking||[]).map(function(p){
@@ -1115,70 +1063,13 @@ function renderQuiz(){
         return {nome:p.nome,pct:pct,meta:p.acertos+'/'+p.total+' · '+p.tempo+'s'};
       });
       participants.sort(function(a,b){return b.pct-a.pct;});
-      renderBolaoChart(el,participants,'🧠 RANKING QUIZ');
+      renderRankingBarras(el,participants,'🧠 RANKING QUIZ');
     })
     .catch(function(){
       el.innerHTML='<div style="text-align:center;padding:24px 16px;"><div style="font-size:40px;margin-bottom:8px;">🧠</div><div style="font-size:15px;font-weight:700;">Sem respostas ainda.</div></div>';
     });
 }
-function renderBolaoLegacy(){
-  var el=document.getElementById('bolaoPanel');
-  var pctGeral=appData.config['BOLAO_PCT_ACERTO']||'';
-  var totalConf=appData.config['BOLAO_TOTAL']||'';
-  var acertosConf=appData.config['BOLAO_ACERTOS']||'';
-  var atualizado=appData.config['BOLAO_ATUALIZADO']||'';
 
-  if(!appData.bolao.length){
-    el.innerHTML='<div style="text-align:center;padding:24px 16px;">'+
-      '<div style="font-size:40px;margin-bottom:8px;">🎯</div>'+
-      '<div style="font-size:15px;font-weight:700;">BOLÃO ABERTO</div>'+
-      '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Faça seu palpite pelo app!</div>'+
-    '</div>';
-    return;
-  }
-
-  // Ordenação: SIM → PARCIAL → AGUARDANDO → NÃO → resto
-  var ordem={'SIM':0,'PARCIAL':1,'AGUARDANDO':2,'NÃO':3};
-  var sorted=appData.bolao.slice().sort(function(a,b){
-    var oa=ordem[a.acerto]!==undefined?ordem[a.acerto]:4;
-    var ob=ordem[b.acerto]!==undefined?ordem[b.acerto]:4;
-    return oa-ob;
-  });
-
-  function chip(acerto){
-    if(acerto==='SIM')    return '<span style="background:#15803d;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:1px;">✓ ACERTO</span>';
-    if(acerto==='PARCIAL')return '<span style="background:#b45309;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:1px;">~ PARCIAL</span>';
-    if(acerto==='NÃO')    return '<span style="background:#991b1b;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:1px;">✗ ERRO</span>';
-    return '<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:1px;">⏳</span>';
-  }
-
-  var visible=sorted.slice(0,12); // mostra até 12 na TV
-  var html='<div style="display:flex;flex-direction:column;gap:5px;flex:1;overflow:hidden;">';
-  visible.forEach(function(b,i){
-    var delay=(i*0.07).toFixed(2);
-    html+='<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:9px;padding:7px 10px;animation:slideRowIn .4s '+delay+'s ease both;">'+
-      '<div style="min-width:22px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:rgba(240,165,0,.5);">'+(i+1)+'</div>'+
-      '<div style="flex:1;min-width:0;">'+
-        '<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+b.nome+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);margin-top:1px;">'+b.time+'</div>'+
-      '</div>'+
-      chip(b.acerto)+
-    '</div>';
-  });
-  html+='</div>';
-
-  // Resumo no rodapé
-  if(pctGeral||totalConf){
-    html+='<div style="display:flex;gap:6px;margin-top:6px;flex-shrink:0;">';
-    if(totalConf) html+='<div style="flex:1;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.2);border-radius:8px;padding:5px 8px;text-align:center;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--gold);">'+totalConf+'</div><div style="font-size:8px;color:var(--muted);letter-spacing:1px;">PARTICIPANTES</div></div>';
-    if(acertosConf) html+='<div style="flex:1;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.3);border-radius:8px;padding:5px 8px;text-align:center;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:#4ade80;">'+acertosConf+'</div><div style="font-size:8px;color:var(--muted);letter-spacing:1px;">ACERTOS</div></div>';
-    if(pctGeral) html+='<div style="flex:1;background:rgba(240,165,0,.12);border:1px solid rgba(240,165,0,.3);border-radius:8px;padding:5px 8px;text-align:center;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--gold2);">'+pctGeral+'</div><div style="font-size:8px;color:var(--muted);letter-spacing:1px;">DE ACERTO</div></div>';
-    html+='</div>';
-    if(atualizado) html+='<div style="text-align:center;font-size:8px;color:rgba(255,255,255,.25);margin-top:3px;">Atualizado '+atualizado+'</div>';
-  }
-
-  el.innerHTML=html;
-}
 
 // ── INIT ───────────────────────────────────────────
 setTimeout(function(){
