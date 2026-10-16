@@ -331,6 +331,7 @@ function doPost(e) {
     if (acao === 'removerEvento') return okJson(comLock_(() => removerEvento_(dados)));
     if (acao === 'finalizarPartida') return okJson(comLock_(() => finalizarPartida_(dados)));
     if (acao === 'uploadPdfSumula') return okJson(uploadPdfSumula_(dados));
+    if (acao === 'uploadEscudo') return okJson(uploadEscudo_(dados));
 
     // SÚMULA 2.0 — lote de eventos, juízes, assinaturas, cadastro com senha
     if (acao === 'processarEventosLote') return okJson(comLock_(() => processarEventosLote_(dados)));
@@ -549,6 +550,18 @@ function inscreverEquipeV_(dados) {
   ]);
 
   return { ok: true, status: 'ok' };
+}
+
+// Chamada pelo Supabase (função "api") quando uma equipe se inscreve: grava o escudo na pasta do Drive e devolve o link.
+function uploadEscudo_(d) {
+  if (!d.escudoBase64) return { ok: false, erro: 'Imagem vazia.' };
+  const partes = d.escudoBase64.split(',');
+  const bytes = Utilities.base64Decode(partes[1] || partes[0]);
+  if (bytes.length > 4 * 1024 * 1024) return { ok: false, erro: 'Imagem muito grande (máx. 4 MB).' };
+  const m = /^data:(image\/[a-z0-9.+-]+);/i.exec(d.escudoBase64);
+  const blob = Utilities.newBlob(bytes, m ? m[1] : 'image/png', d.escudoNome || 'escudo.png');
+  const file = DriveApp.getFolderById(FOLDER_ID_ESCUDOS).createFile(blob);
+  return { ok: true, link: file.getUrl() };
 }
 
 function listarInscricoesV_() {

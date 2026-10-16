@@ -1110,7 +1110,15 @@ async function guardarEscudo(nomeEquipe: string, base64: string): Promise<{ url?
   let bytes: Uint8Array;
   try { bytes = Uint8Array.from(atob((m ? m[2] : base64).replace(/\s/g, "")), (c) => c.charCodeAt(0)); } catch (_) { return { erro: "Imagem do escudo inválida." }; }
   if (bytes.length > 4 * 1024 * 1024) return { erro: "O escudo é muito grande (máximo 4 MB)." };
-  const caminho = Date.now() + "-" + slug(nomeEquipe) + "." + ext;
+  const nomeArq = slug(nomeEquipe) + "." + ext;
+  // 1) Google Drive (pasta de escudos de sempre), pelo Apps Script
+  try {
+    const r = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "uploadEscudo", escudoBase64: base64, escudoNome: nomeArq }), signal: AbortSignal.timeout(40000) });
+    const j = await r.json();
+    if (j && j.ok && j.link) return { url: j.link };
+  } catch (_) { /* cai para a reserva */ }
+  // 2) Reserva: Storage do Supabase (a inscrição nunca se perde se o Drive/Apps Script estiver fora)
+  const caminho = Date.now() + "-" + nomeArq;
   const { error } = await sb.storage.from("escudos").upload(caminho, bytes, { contentType: tipo, upsert: false });
   if (error) return { erro: "Não foi possível guardar o escudo: " + error.message };
   return { url: Deno.env.get("SUPABASE_URL")! + "/storage/v1/object/public/escudos/" + caminho };
