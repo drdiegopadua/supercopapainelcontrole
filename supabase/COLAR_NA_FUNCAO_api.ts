@@ -650,6 +650,23 @@ async function saudeSistema(d: Any) {
   return { ok: true, itens, ms: Date.now() - t0 };
 }
 
+// Apaga somente dados de TESTE (nomes/jogos que começam com "TESTE" ou equipe "ZZ ...") — só administrador.
+async function limparTestes(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]);
+  if (c.erro) return { ok: false, erro: c.erro };
+  const n: Any = {};
+  const del = async (tab: string, col: string, padrao: string) => { const { data } = await sb.from(tab).delete().ilike(col, padrao).select("*"); n[tab + "." + col] = (data || []).length; };
+  await del("galera_votos", "atleta", "TESTE%");
+  await del("presencas", "jogo", "TESTE%");
+  await del("wo_registros", "jogo", "TESTE%");
+  await del("destaques", "jogo", "TESTE%");
+  await del("premiacao", "categoria", "TESTE%");
+  await del("avisos", "titulo", "TESTE%");
+  await del("atletas", "equipe", "ZZ %");
+  await del("partidas", "id", "TESTE%");
+  return { ok: true, removidos: n };
+}
+
 // Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
 // Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
 async function removerEquipe(d: Any) {
@@ -689,6 +706,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "limparTestes": return await limparTestes(d);
     case "salvarAviso": return await salvarAviso(d);
     case "excluirAviso": return await excluirAviso(d);
     case "registrarPresenca": return await registrarPresenca(d);
