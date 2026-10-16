@@ -344,7 +344,242 @@ async function listar(filtro: (e: Any) => boolean, campos: string[]) {
   });
 }
 
+// ════════ Equipes: PIN, confirmação, atletas, LGPD, assinaturas, juízes ════════
+const LIMITE_ATLETAS = 14, LIMITE_COMISSAO = 2;
+const PRAZO_CADASTRO_ATLETAS = new Date("2026-11-27T13:00:00-03:00");
+const TERMO_LGPD_VERSAO = "2026-1";
+const chaveEq = (s: Any) => (s || "").toString().trim().toLowerCase();
+const fmtBR = (v: Any): string => {
+  if (!v) return "";
+  const p = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).formatToParts(new Date(v));
+  const g = (t: string) => p.find((x) => x.type === t)!.value;
+  return `${g("day")}/${g("month")}/${g("year")} ${g("hour") === "24" ? "00" : g("hour")}:${g("minute")}:${g("second")}`;
+};
+const brParaIso = (s: string): string | null => {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}):(\d{2}):(\d{2}))?$/.exec((s || "").trim());
+  return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4] || "00"}:${m[5] || "00"}:${m[6] || "00"}-03:00` : null;
+};
+const SENHA_OK = async (senha: string) => {
+  try { const r = await fetch(APPS_SCRIPT + "?action=verificarSenhaAdmin&senha=" + encodeURIComponent(senha || "")); return !!(await r.json()).ok; } catch (_) { return false; }
+};
+
+function normalizarTipo(t: Any) {
+  t = (t || "").toString().trim();
+  if (t === "Técnico" || t === "Auxiliar Técnico") return t;
+  if (t === "Comissão Técnica") return "Técnico";
+  return "Atleta";
+}
+const ehComissao = (t: string) => t === "Técnico" || t === "Auxiliar Técnico" || t === "Comissão Técnica";
+const atletaOut = (a: Any) => ({ equipe: a.equipe, numero: (a.numero || "").toString(), nome: a.nome, tipo: a.tipo || "Atleta" });
+
+async function atletasDe(equipe: string) {
+  const { data } = await sb.from("atletas").select("equipe,numero,nome,tipo,id").ilike("equipe", equipe.trim().replace(/[%_]/g, (c) => "\\" + c)).order("id");
+  return (data || []).filter((a: Any) => chaveEq(a.equipe) === chaveEq(equipe) && a.nome);
+}
+async function cadastrarAtleta(d: Any) {
+  const equipe = (d.equipe || "").toString().trim(), numero = (d.numero || "").toString().trim(), nome = (d.nome || "").toString().trim();
+  const tipo = normalizarTipo(d.tipo);
+  if (!equipe || !nome) return { ok: false, erro: "Equipe e nome são obrigatórios." };
+  const lista = await atletasDe(equipe);
+  if (numero) {
+    const ex = lista.find((a: Any) => (a.numero || "").toString().trim() === numero);
+    if (ex) { await sb.from("atletas").update({ nome, tipo }).eq("id", ex.id); return { ok: true, atualizado: true }; }
+  }
+  if (ehComissao(tipo)) {
+    if (lista.some((a: Any) => normalizarTipo(a.tipo) === tipo)) return { ok: false, erro: "Essa equipe já tem um(a) " + tipo + " cadastrado(a)." };
+    if (lista.filter((a: Any) => ehComissao(normalizarTipo(a.tipo))).length >= LIMITE_COMISSAO) return { ok: false, erro: "Limite de " + LIMITE_COMISSAO + " membros da comissão técnica já foi atingido pra essa equipe." };
+  } else if (lista.filter((a: Any) => normalizarTipo(a.tipo) === "Atleta").length >= LIMITE_ATLETAS) {
+    return { ok: false, erro: "Limite de " + LIMITE_ATLETAS + " atletas já foi atingido pra essa equipe." };
+  }
+  const { error } = await sb.from("atletas").insert({ equipe, numero, nome, tipo });
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function removerAtleta(d: Any) {
+  const lista = await atletasDe((d.equipe || "").toString());
+  const numero = (d.numero || "").toString().trim(), nome = (d.nome || "").toString().trim();
+  const alvo = [...lista].reverse().find((a: Any) => (numero ? (a.numero || "").toString().trim() === numero : true) && (a.nome || "").toString().trim() === nome);
+  if (!alvo) return { ok: false, erro: "Atleta não encontrado." };
+  await sb.from("atletas").delete().eq("id", alvo.id);
+  return { ok: true };
+}
+
+async function pinDe(equipe: string): Promise<string | null> {
+  const k = chaveEq(equipe); if (!k) return null;
+  const { data } = await sb.from("equipes_pin").select("pin").eq("chave", k).maybeSingle();
+  return data ? data.pin : null;
+}
+async function pinOk(equipe: string, pin: Any) { const r = await pinDe(equipe); return !!r && r === (pin || "").toString().trim(); }
+async function gerarPin(d: Any) {
+  const equipe = (d.equipe || "").toString().trim();
+  if (!equipe) return { ok: false, erro: "Equipe é obrigatória." };
+  const pin = String(1000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 9000));
+  const { error } = await sb.from("equipes_pin").upsert({ chave: chaveEq(equipe), equipe, pin, gerado_em: new Date().toISOString() });
+  return error ? { ok: false, erro: error.message } : { ok: true, equipe, pin };
+}
+async function confirmarPresenca(d: Any) {
+  if (!(await pinOk(d.equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
+  const agora = new Date().toISOString();
+  const { error } = await sb.from("confirmacoes").upsert({ chave: chaveEq(d.equipe), equipe: (d.equipe || "").toString().trim(), confirmado_em: agora, termo: "Sim" });
+  return error ? { ok: false, erro: error.message } : { ok: true, confirmadoEm: fmtBR(agora) };
+}
+async function listarConfirmacoes() {
+  const { data } = await sb.from("confirmacoes").select("equipe,confirmado_em");
+  return (data || []).map((c: Any) => ({ equipe: c.equipe, confirmadoEm: fmtBR(c.confirmado_em) })).sort((a: Any, b: Any) => a.equipe.localeCompare(b.equipe));
+}
+async function equipesComPin() {
+  const conf = new Set((await listarConfirmacoes()).map((c: Any) => chaveEq(c.equipe)));
+  const { data } = await sb.from("equipes_pin").select("equipe");
+  const nomes = (data || []).map((r: Any) => r.equipe).filter((n: string) => n && conf.has(chaveEq(n)));
+  const escudos: Record<string, string> = {};
+  try {
+    const j = await (await fetch(APPS_SCRIPT + "?action=inscricoes")).json();
+    (j.inscricoes || []).forEach((r: Any) => { const n = (r["Nome da Equipe"] || "").toString().trim(); if (n) escudos[n] = (r["Link do Escudo"] || "").toString().trim(); });
+  } catch (_) { /* escudo é opcional */ }
+  return nomes.sort().map((n: string) => ({ equipe: n, escudo: escudos[n] || "" }));
+}
+async function statusCadastro() {
+  const [{ data: pins }, conf, { data: ats }, { data: cons }, { data: ass }] = await Promise.all([
+    sb.from("equipes_pin").select("equipe,gerado_em"), listarConfirmacoes(),
+    sb.from("atletas").select("equipe,tipo,nome"), sb.from("consentimentos").select("chave,versao"), sb.from("assinaturas").select("chave,papel"),
+  ]);
+  const confirmou: Any = {}; conf.forEach((c: Any) => (confirmou[chaveEq(c.equipe)] = c.confirmadoEm));
+  const lgpd = new Set((cons || []).filter((c: Any) => c.versao === TERMO_LGPD_VERSAO).map((c: Any) => c.chave));
+  const assSet = new Set((ass || []).map((a: Any) => a.chave + "|" + a.papel));
+  return (pins || []).map((p: Any) => p).sort((a: Any, b: Any) => a.equipe.localeCompare(b.equipe)).map((p: Any) => {
+    const k = chaveEq(p.equipe);
+    const lista = (ats || []).filter((a: Any) => chaveEq(a.equipe) === k && a.nome);
+    return {
+      equipe: p.equipe, confirmou: !!confirmou[k], geradoEm: fmtBR(p.gerado_em), confirmadoEm: confirmou[k] || "",
+      atletas: lista.filter((a: Any) => (a.tipo || "Atleta") === "Atleta").length,
+      tecnico: lista.some((a: Any) => a.tipo === "Técnico" || a.tipo === "Comissão Técnica"),
+      auxiliar: lista.some((a: Any) => a.tipo === "Auxiliar Técnico"),
+      assTecnico: assSet.has(k + "|tecnico"), assCapitao: assSet.has(k + "|capitao"), lgpd: lgpd.has(k),
+    };
+  });
+}
+async function aceitarTermo(d: Any) {
+  const equipe = (d.equipe || "").toString().trim(), nome = (d.nome || "").toString().trim();
+  if (!equipe) return { ok: false, erro: "Equipe obrigatória." };
+  if (!(await pinOk(equipe, d.pin))) return { ok: false, erro: "PIN incorreto." };
+  if (nome.length < 5) return { ok: false, erro: "Digite o nome completo do responsável." };
+  const { error } = await sb.from("consentimentos").insert({ chave: chaveEq(equipe), equipe, responsavel: nome, versao: TERMO_LGPD_VERSAO });
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function statusTermo(equipe: string) {
+  const { data } = await sb.from("consentimentos").select("responsavel,aceito_em").eq("chave", chaveEq(equipe)).eq("versao", TERMO_LGPD_VERSAO).order("aceito_em", { ascending: false }).limit(1);
+  const c = data && data[0];
+  return c ? { ok: true, versao: TERMO_LGPD_VERSAO, aceito: true, em: fmtBR(c.aceito_em), responsavel: c.responsavel } : { ok: true, versao: TERMO_LGPD_VERSAO, aceito: false };
+}
+const assinaturaInvalida = (s: Any) => {
+  s = (s || "").toString();
+  if (s.indexOf("data:image/png;base64,") !== 0) return "Assinatura inválida.";
+  if (s.length > 45000) return "Assinatura muito grande — desenhe de forma mais simples.";
+  return "";
+};
+async function listarJuizes() {
+  const { data } = await sb.from("juizes").select("nome,assinatura_url");
+  return (data || []).map((j: Any) => ({ nome: j.nome, assinatura: j.assinatura_url || "" })).sort((a: Any, b: Any) => a.nome.localeCompare(b.nome));
+}
+async function cadastrarJuiz(d: Any) {
+  const nome = (d.nome || "").toString().trim();
+  if (!nome) return { ok: false, erro: "Informe o nome do juiz." };
+  const e = assinaturaInvalida(d.assinatura); if (e) return { ok: false, erro: e };
+  const ex = (await listarJuizes()).find((j: Any) => chaveEq(j.nome) === chaveEq(nome));
+  if (ex) { await sb.from("juizes").update({ assinatura_url: d.assinatura }).eq("nome", ex.nome); return { ok: true, atualizado: true }; }
+  const { error } = await sb.from("juizes").insert({ nome, assinatura_url: d.assinatura });
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function removerJuiz(d: Any) {
+  const ex = (await listarJuizes()).find((j: Any) => chaveEq(j.nome) === chaveEq(d.nome));
+  if (!ex) return { ok: false, erro: "Juiz não encontrado." };
+  await sb.from("juizes").delete().eq("nome", ex.nome);
+  return { ok: true };
+}
+async function assinaturasEquipe(equipe: string) {
+  const { data } = await sb.from("assinaturas").select("papel,assinatura").eq("chave", chaveEq(equipe));
+  const o: Any = {}; (data || []).forEach((a: Any) => (o[a.papel] = a.assinatura)); return o;
+}
+async function salvarAssinatura(d: Any) {
+  const equipe = (d.equipe || "").toString().trim();
+  const papel = d.papel === "capitao" ? "capitao" : d.papel === "tecnico" ? "tecnico" : "";
+  if (!equipe || !papel) return { ok: false, erro: "Equipe e papel são obrigatórios." };
+  if (!(await pinOk(equipe, d.pin))) return { ok: false, erro: "PIN incorreto." };
+  const e = assinaturaInvalida(d.assinatura); if (e) return { ok: false, erro: e };
+  const { error } = await sb.from("assinaturas").upsert({ chave: chaveEq(equipe), equipe, papel, assinatura: d.assinatura, atualizado_em: new Date().toISOString() });
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+const PRAZO_MSG = "Prazo de cadastro/edição de atletas encerrado em 27/11/2026 às 13h.";
+
+// Copia o que já existe nas planilhas (somente admin). Pode rodar de novo sem duplicar.
+async function migrarDoSheets(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]);
+  if (c.erro) return { ok: false, erro: c.erro };
+  const get = async (q: string) => (await (await fetch(APPS_SCRIPT + "?" + q)).json());
+  const rel: Any = { pins: 0, confirmacoes: 0, atletas: 0, juizes: 0, assinaturas: 0, termos: 0, avisos: [] };
+  const st = (await get("action=statusCadastroEquipes")).equipes || [];
+  for (const e of st) {
+    const pin = (await get("action=verPinEquipeAdmin&equipe=" + encodeURIComponent(e.equipe))).pin;
+    if (!pin) { rel.avisos.push("sem PIN: " + e.equipe); continue; }
+    await sb.from("equipes_pin").upsert({ chave: chaveEq(e.equipe), equipe: e.equipe, pin, gerado_em: brParaIso(e.geradoEm) || new Date().toISOString() }); rel.pins++;
+    if (e.confirmou) { await sb.from("confirmacoes").upsert({ chave: chaveEq(e.equipe), equipe: e.equipe, confirmado_em: brParaIso(e.confirmadoEm) || new Date().toISOString(), termo: "Sim" }); rel.confirmacoes++; }
+    const ass = (await get("action=assinaturasEquipe&equipe=" + encodeURIComponent(e.equipe))).assinaturas || {};
+    for (const papelA of Object.keys(ass)) if (ass[papelA]) { await sb.from("assinaturas").upsert({ chave: chaveEq(e.equipe), equipe: e.equipe, papel: papelA, assinatura: ass[papelA] }); rel.assinaturas++; }
+    const t = await get("action=statusTermo&equipe=" + encodeURIComponent(e.equipe));
+    if (t.aceito) {
+      const ja = await sb.from("consentimentos").select("id").eq("chave", chaveEq(e.equipe)).eq("versao", TERMO_LGPD_VERSAO).limit(1);
+      if (!ja.data?.length) { await sb.from("consentimentos").insert({ chave: chaveEq(e.equipe), equipe: e.equipe, responsavel: t.responsavel || "", aceito_em: brParaIso(t.em) || new Date().toISOString(), versao: TERMO_LGPD_VERSAO }); rel.termos++; }
+    }
+  }
+  for (const a of (await get("action=atletasTodos")).atletas || []) {
+    const r = await cadastrarAtleta(a); if (r.ok) rel.atletas++; else rel.avisos.push(a.equipe + "/" + a.nome + ": " + r.erro);
+  }
+  for (const j of (await get("action=listarJuizes")).juizes || []) {
+    const r = await cadastrarJuiz({ nome: j.nome, assinatura: j.assinatura }); if (r.ok) rel.juizes++; else rel.avisos.push("juiz " + j.nome + ": " + r.erro);
+  }
+  return { ok: true, ...rel };
+}
+
 async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null> {
+  switch (acao) {
+    case "migrarDoSheets": return await migrarDoSheets(d);
+    case "cadastrarAtleta": return await cadastrarAtleta(d);
+    case "removerAtleta": return await removerAtleta(d);
+    case "cadastrarAtletaApp": case "removerAtletaApp":
+      if (!(await pinOk(d.equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
+      if (new Date() > PRAZO_CADASTRO_ATLETAS) return { ok: false, erro: PRAZO_MSG };
+      return acao === "cadastrarAtletaApp" ? await cadastrarAtleta(d) : await removerAtleta(d);
+    case "cadastrarAtletaAdmin": case "removerAtletaAdmin":
+      if (!(await SENHA_OK(d.senha))) return { ok: false, erro: "Senha incorreta." };
+      return acao === "cadastrarAtletaAdmin" ? await cadastrarAtleta(d) : await removerAtleta(d);
+    case "gerarPinEquipe": return await gerarPin(d);
+    case "confirmarPresenca": return await confirmarPresenca(d);
+    case "aceitarTermoLgpd": return await aceitarTermo(d);
+    case "cadastrarJuiz": return await cadastrarJuiz(d);
+    case "removerJuiz": return await removerJuiz(d);
+    case "salvarAssinatura": return await salvarAssinatura(d);
+  }
+  if (ehGet) {
+    switch (acao) {
+      case "atletasEquipe": return { ok: true, atletas: (await atletasDe(d.equipe || "")).map(atletaOut) };
+      case "atletasTodos": { const { data } = await sb.from("atletas").select("equipe,numero,nome,tipo").order("id"); return { ok: true, atletas: (data || []).filter((a: Any) => a.nome).map(atletaOut) }; }
+      case "atletasEquipeApp":
+        if (!(await pinOk(d.equipe, d.pin))) return { ok: false, erro: "PIN incorreto." };
+        return { ok: true, atletas: (await atletasDe(d.equipe)).map(atletaOut) };
+      case "temPinEquipe": return { ok: true, temPin: !!(await pinDe(d.equipe || "")) };
+      case "verPinEquipeAdmin": return { ok: true, pin: await pinDe(d.equipe || "") };
+      case "verificarPinEquipe": return { ok: await pinOk(d.equipe || "", d.pin) };
+      case "statusConfirmacao": {
+        const { data } = await sb.from("confirmacoes").select("confirmado_em").eq("chave", chaveEq(d.equipe)).maybeSingle();
+        return data ? { ok: true, confirmado: true, confirmadoEm: fmtBR(data.confirmado_em) } : { ok: true, confirmado: false };
+      }
+      case "confirmacoes": return { ok: true, confirmacoes: await listarConfirmacoes() };
+      case "equipesComPin": return { ok: true, equipes: await equipesComPin() };
+      case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
+      case "statusTermo": return await statusTermo(d.equipe || "");
+      case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "assinaturasEquipe": return { ok: true, assinaturas: await assinaturasEquipe(d.equipe || "") };
+    }
+  }
   switch (acao) {
     case "criarPartida": return await criarPartida(d);
     case "ponto": case "pontoMenos": case "timeout": case "cartao": case "substituicao": case "definirEscalacaoSet":
