@@ -902,9 +902,19 @@ async function montarTorneio(mod: string) {
   const base = jogos.map(jogoParaC);
   const clas = calcularClassificacao(eqC, base);
   // mata-mata: equipe efetiva = nome explícito, senão resolvida pela origem (1A, 2B, V:Q1...), senão "Aguardando"
-  const efetivo = (j: Any, lado: "casa" | "visitante") => j[lado] || resolverOrigem(lado === "casa" ? j.origem_casa : j.origem_visitante, clas, base);
+  // Resolve fase por fase (quartas → semifinais → final): as semifinais só têm nomes depois que as quartas definem os vencedores,
+  // e a final depende dos nomes já resolvidos das semifinais.
+  const ordemFase: Any = { grupos: 0, quartas: 1, semifinal: 2, final: 3 };
+  const porId: Any = {}; base.forEach((b) => (porId[b.id] = b));
+  const efet: Any = {};
+  [...jogos].sort((a: Any, b: Any) => (ordemFase[a.fase] ?? 9) - (ordemFase[b.fase] ?? 9) || (a.ordem || 0) - (b.ordem || 0)).forEach((j: Any) => {
+    const r = (lado: "casa" | "visitante") => j[lado] || resolverOrigem(lado === "casa" ? j.origem_casa : j.origem_visitante, clas, Object.values(porId) as JogoC[]);
+    const c = r("casa"), v = r("visitante");
+    efet[j.id] = { casa: c, visitante: v };
+    porId[j.id].casa = c; porId[j.id].visitante = v;
+  });
   const lista = jogos.map((j: Any) => {
-    const casa = efetivo(j, "casa"), visitante = efetivo(j, "visitante");
+    const casa = efet[j.id].casa, visitante = efet[j.id].visitante;
     const rotulo = (o: string | null) => (o ? (/^V:/.test(o) ? "Vencedor " + o.slice(2) : o.replace(/^(\d)([A-Z])$/, "$1º Grupo $2")) : "");
     return {
       id: j.id, fase: j.fase, grupo: j.grupo, rodada: j.rodada, ordem: j.ordem,

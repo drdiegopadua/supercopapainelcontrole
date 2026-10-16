@@ -37,4 +37,8 @@ drop policy if exists "leitura publica torneio_equipes" on torneio_equipes;
 drop policy if exists "leitura publica jogos" on jogos;
 create policy "leitura publica torneio_equipes" on torneio_equipes for select using (true);
 create policy "leitura publica jogos" on jogos for select using (true);
-alter publication supabase_realtime add table jogos;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='jogos') then
+    alter publication supabase_realtime add table jogos;
+  end if;
+end $$;
