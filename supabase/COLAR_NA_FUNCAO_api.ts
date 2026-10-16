@@ -4,7 +4,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";
-const PLACAR_SCRIPT = "https://script.google.com/macros/s/AKfycbznh7KfIJxIEF-aWd2TMIZ8l2XWdFoKrjU5xdo7HCRtRzYBkAL0v3AgucYRRj9b9eQH/exec";
 const TZ = "America/Sao_Paulo";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -201,20 +200,6 @@ async function mutar(id: string, fn: (e: Any, log: Any[]) => Any): Promise<Any> 
   return { ok: false, erro: "Muitos aparelhos gravando ao mesmo tempo — tente de novo." };
 }
 
-async function empurrarPlacar(e: Any, final = false) {
-  const j = resolverJogo(e.id);
-  if (!j || j.aba === "TESTE") return;
-  const hs = e.historicoSets || [];
-  const numero = /^[A-D]\d$/.test(e.id) ? e.id.slice(1) : e.id;
-  let vencedor = "";
-  if (final) vencedor = e.setsCasa > e.setsVisitante ? e.equipeCasa : e.setsVisitante > e.setsCasa ? e.equipeVisitante : "";
-  const s = (x: Any) => (x === undefined || x === null ? "" : String(x));
-  const dados = [numero, e.equipeCasa, s(hs[0]?.a), s(hs[1]?.a), s(hs[2]?.a), s(e.setsCasa), "X", s(hs[0]?.b), s(hs[1]?.b), s(hs[2]?.b), s(e.setsVisitante), e.equipeVisitante, s(e.setsCasa), s(e.setsVisitante), vencedor, "", ""];
-  try {
-    await fetch(PLACAR_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "atualizar_placar_volei", aba: j.aba, linha: j.linha, dados }) });
-  } catch (_) { /* não interrompe o fluxo */ }
-}
-
 // ── ações ──
 async function criarPartida(d: Any) {
   const jogo = resolverJogo(d.id);
@@ -239,6 +224,7 @@ async function criarPartida(d: Any) {
     estado, status: "em_andamento", link_pdf: null, log: [], versao: (ex?.versao || 0) + 1, atualizado_em: new Date().toISOString(),
   });
   if (error) return { ok: false, erro: error.message };
+  await sincronizarJogo({ id: jogo.id, status: "em_andamento", setsCasa: 0, setsVisitante: 0, historicoSets: [] }, null);   // o jogo passa a "ao vivo" no site/app/TV
   return { ok: true, estado: { ...estado, id: jogo.id, status: "em_andamento", equipeCasa: d.equipeA || "", equipeVisitante: d.equipeB || "", linkPdf: "" } };
 }
 
@@ -246,7 +232,7 @@ async function acaoSimples(tipo: string, d: Any) {
   const r = await mutar(d.id, (e, log) => aplicarEvento(e, log, tipo, d));
   if (r.ok) {
     await sb.from("partida_eventos").insert({ partida_id: idNorm(d.id), tipo, dados: d });
-    if (r._setFechado) { await empurrarPlacar(r.estado); await sincronizarJogo(r.estado); }
+    if (r._setFechado) { await sincronizarJogo(r.estado); }
   }
   delete r._setFechado;
   return r;
@@ -279,13 +265,13 @@ async function processarLote(d: Any) {
   });
   if (!r.ok) { if (d.loteId) await sb.from("lotes").delete().eq("partida_id", id).eq("lote_id", String(d.loteId)); return r; }
   if (eventos.length) await sb.from("partida_eventos").insert(eventos.map((ev) => ({ partida_id: id, lote_id: d.loteId ? String(d.loteId) : null, tipo: ev.tipo, dados: ev.dados || {} })));
-  if (r._setFechado) { await empurrarPlacar(r.estado); await sincronizarJogo(r.estado); }
+  if (r._setFechado) { await sincronizarJogo(r.estado); }
   return { ok: true, estado: r.estado, erros, processados: eventos.length - erros.length };
 }
 
 async function finalizar(d: Any) {
   const r = await mutar(d.id, (e) => { e.status = "finalizada"; if (d.linkPdf) e.linkPdf = d.linkPdf; return {}; });
-  if (r.ok) { await empurrarPlacar(r.estado, true); await sincronizarJogo(r.estado); }
+  if (r.ok) { await sincronizarJogo(r.estado); }
   delete r._setFechado;
   return r;
 }
@@ -303,7 +289,7 @@ async function excluir(d: Any) {
   const id = idNorm(d.id);
   if (!(await carregar(id))) return { ok: false, erro: "Partida não encontrada: " + d.id };
   await sb.from("partidas").delete().eq("id", id);   // eventos saem em cascata
-  if (!ehTeste(id)) await sb.from("jogos").update({ status: "agendado", sets_casa: 0, sets_visitante: 0, parciais: [], wo: null }).eq("modalidade", MODALIDADE_PADRAO).eq("id", id).then(() => {}, () => {});
+  { const ref = refJogo(id); if (ref) await sb.from("jogos").update({ status: "agendado", sets_casa: 0, sets_visitante: 0, parciais: [], wo: null }).eq("modalidade", ref.mod).eq("id", ref.jid).then(() => {}, () => {}); }
   await sb.from("lotes").delete().eq("partida_id", id);
   return { ok: true };
 }
@@ -466,7 +452,7 @@ async function registrarWO(d: Any) {
     return {};
   });
   if (r.ok) {
-    await empurrarPlacar(r.estado, true);
+    
     await sincronizarJogo(r.estado, d.equipeFaltou === "B" ? "visitante" : "casa");
     await sb.from("wo_registros").insert({ jogo: idNorm(d.id), equipe_faltou: faltou, adversario: faltouB ? d.equipeA : d.equipeB, motivo: d.motivo || "", registrado_por: c.usuario });
   }
@@ -941,12 +927,17 @@ async function montarTorneio(mod: string) {
     })(),
   };
 }
+function refJogo(id: string): { mod: string; jid: string } | null {
+  id = idNorm(id);
+  if (ehTeste(id)) { const j = id.replace(/^TESTE/, ""); return j ? { mod: "teste", jid: j } : null; }   // TESTEA1 treina o jogo A1 da chave de teste
+  return { mod: MODALIDADE_PADRAO, jid: id };
+}
 async function sincronizarJogo(e: Any, wo?: string | null) {
-  if (!e || ehTeste(e.id)) return;
+  const ref = e && refJogo(e.id); if (!ref) return;
   const status = e.status === "finalizada" ? (wo ? "wo" : "finalizado") : "ao_vivo";
   const upd: Any = { sets_casa: e.setsCasa || 0, sets_visitante: e.setsVisitante || 0, parciais: e.historicoSets || [], status, atualizado_em: new Date().toISOString() };
   if (wo !== undefined) upd.wo = wo || null;
-  try { await sb.from("jogos").update(upd).eq("modalidade", MODALIDADE_PADRAO).eq("id", idNorm(e.id)); } catch (_) { /* a súmula nunca pode falhar por causa disso */ }
+  try { await sb.from("jogos").update(upd).eq("modalidade", ref.mod).eq("id", ref.jid); } catch (_) { /* a súmula nunca pode falhar por causa disso */ }
 }
 async function jogoDaTabela(d: Any) {   // ação "jogo" (dados do jogo para abrir a súmula); cai no Apps Script se a tabela ainda estiver vazia
   const id = idNorm(d.id);
