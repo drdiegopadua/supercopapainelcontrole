@@ -2756,30 +2756,17 @@ async function loadAtletasFromSheet(manual=false) {
 async function loadNoticiasFromSheet(manual=false) {
   if (manual) showLoading(true);
   try {
-    const rows = await sheetRead(APP_SHEET_ID, "'Noticias'!A2:E200");
-    state.noticias = [];
-    if (!rows || rows.length === 0) {
+    const r = await fetch(SUMULA_SCRIPT_URL + '?action=noticias').then(x => x.json());
+    if (!r.ok) throw new Error(r.erro || 'resposta inválida');
+    state.noticias = (r.noticias || []).map(n => ({
+      id: n.id, titulo: n.titulo, corpo: n.corpo || n.titulo, categoria: n.cat || 'Notícia',
+      data: n.data || new Date().toLocaleDateString('pt-BR'), hora: n.hora || '', ic: n.ic || '📰'
+    }));
+    if (!state.noticias.length) {
       renderNoticias(); updateStats();
       if (manual) showToast('Nenhuma notícia encontrada.', 'error');
       return;
     }
-    rows.forEach((row, i) => {
-      const ic = (row[0] || '📰').trim();
-      const cat = (row[1] || 'Notícia').trim();
-      const titulo = (row[2] || '').trim();
-      const dataStr = (row[3] || '').trim();
-      const corpo = (row[4] || '').trim();
-      if (!titulo) return;
-      state.noticias.push({
-        id: 'news_' + i,
-        titulo,
-        corpo: corpo || titulo,
-        categoria: cat,
-        data: dataStr || new Date().toLocaleDateString('pt-BR'),
-        hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}),
-        ic
-      });
-    });
     updateSheetStatus(true);
     renderNoticias(); updateStats();
     if (manual) showToast('Notícias atualizadas! (' + state.noticias.length + ' registros)');
@@ -6966,27 +6953,18 @@ function editNoticia(id) {
 async function excluirNoticia(id) {
   const noticia = state.noticias.find(x => x.id === id);
   if (!noticia) return;
-  if (!confirm('Excluir "' + noticia.titulo + '" da planilha?')) return;
-
+  if (!confirm('Excluir "' + noticia.titulo + '"?')) return;
   showLoading(true);
   try {
-    const res = await fetch(NOTICIAS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ acao: 'deletar', aba: 'Noticias', coluna: 2, valor: noticia.titulo })
-    });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch(e) { result = { ok: true }; }
-
-    if (result.ok === false) {
+    const result = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirNoticia', auth: authApi_(), id: id }) }).then(r => r.json());
+    if (!result.ok) {
       showToast('Erro ao excluir: ' + (result.erro || 'desconhecido'), 'error');
     } else {
-      showToast('Notícia excluída da planilha!');
+      showToast('Notícia excluída!');
       await loadNoticiasFromSheet(false);
     }
   } catch(e) {
-    showToast('Erro de conexão: ' + e.message, 'error');
+    showToast('Falha na conexão: ' + e.message, 'error');
   } finally {
     showLoading(false);
   }
@@ -7480,28 +7458,18 @@ async function salvarNoticia() {
   const titulo = document.getElementById('noticia-titulo').value.trim();
   const data = document.getElementById('noticia-data').value.trim() || new Date().toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
   const corpo = document.getElementById('noticia-corpo').value.trim();
+  const idEdit = (document.getElementById('noticia-edit-id').value || '').trim();
   if (!titulo) { showToast('⚠️ Digite o título da notícia!', 'error'); return; }
 
   showLoading(true);
   try {
-    const res = await fetch(NOTICIAS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        acao: 'adicionar',
-        aba: 'Noticias',
-        linha: [ic, cat, titulo, data, corpo]
-      })
-    });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch(e) { result = { ok: false, erro: 'Resposta inválida' }; }
-
+    const result = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'salvarNoticia', auth: authApi_(), id: idEdit || undefined, ic: ic, cat: cat, titulo: titulo, data: data, corpo: corpo }) }).then(r => r.json());
     if (result.ok) {
-      showToast('✅ Notícia publicada para todos!');
-      enviarPushNoticia(ic, titulo, corpo);
+      showToast(idEdit ? '✅ Notícia atualizada!' : '✅ Notícia publicada para todos!');
+      if (!idEdit) enviarPushNoticia(ic, titulo, corpo);
       document.getElementById('noticia-titulo').value = '';
       document.getElementById('noticia-corpo').value = '';
+      document.getElementById('noticia-edit-id').value = '';
       closeModal('modal-noticia');
       await loadNoticiasFromSheet();
     } else {
