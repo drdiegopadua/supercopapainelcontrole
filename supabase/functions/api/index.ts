@@ -538,6 +538,15 @@ async function gerarPin(d: Any) {
   const { error } = await sb.from("equipes_pin").upsert({ chave: chaveEq(equipe), equipe, pin, gerado_em: new Date().toISOString() });
   return error ? { ok: false, erro: error.message } : { ok: true, equipe, pin };
 }
+// Define um PIN específico para uma equipe (ex.: equipe da casa). Só administrador; PIN = 4 dígitos.
+async function definirPinEquipe(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const equipe = (d.equipe || "").toString().trim(), pin = (d.pin || "").toString().trim();
+  if (!equipe) return { ok: false, erro: "Equipe é obrigatória." };
+  if (!/^\d{4}$/.test(pin)) return { ok: false, erro: "O PIN precisa ter exatamente 4 números." };
+  const { error } = await sb.from("equipes_pin").upsert({ chave: chaveEq(equipe), equipe, pin, gerado_em: new Date().toISOString() });
+  return error ? { ok: false, erro: error.message } : { ok: true, equipe, pin };
+}
 async function confirmarPresenca(d: Any) {
   if (!(await pinOk(d.equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
   const agora = new Date().toISOString();
@@ -1290,6 +1299,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       if (!(await SENHA_OK(d.senha))) return { ok: false, erro: "Senha incorreta." };
       return acao === "cadastrarAtletaAdmin" ? await cadastrarAtleta(d) : await removerAtleta(d);
     case "gerarPinEquipe": return await gerarPin(d);
+    case "definirPinEquipe": return await definirPinEquipe(d);
     case "confirmarPresenca": return await confirmarPresenca(d);
     case "aceitarTermoLgpd": return await aceitarTermo(d);
     case "cadastrarJuiz": return await cadastrarJuiz(d);
