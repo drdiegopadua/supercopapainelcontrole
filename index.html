@@ -831,6 +831,7 @@ body.dark .btn-secondary:hover { color: #fff; }
     <li><a href="javascript:void(0)" onclick="navTo('feedback',this); return false;"><i class='bx bxs-message-square-detail'></i><span>Feedback</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('inscricoes',this); return false;"><i class='bx bxs-id-card'></i><span>Inscrições</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('elencos',this); return false;"><i class='bx bx-group'></i><span>Elencos</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('torneio',this); return false;"><i class='bx bx-sitemap'></i><span>Torneio</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('sumulaLive',this); return false;"><i class='bx bx-clipboard'></i><span>Súmula</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('convite',this); return false;"><i class='bx bxs-envelope'></i><span>Convite</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('edicoes',this); return false;"><i class='bx bxs-layer'></i><span>Edições</span></a></li>
@@ -1826,6 +1827,22 @@ body.dark .btn-secondary:hover { color: #fff; }
       <div id="el-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px"><p style="color:var(--dark-grey);font-size:13px">Carregando...</p></div>
     </div>
 
+    <!-- ─── TORNEIO (grupos, classificação automática, sorteio das quartas, jogos) ─── -->
+    <div class="page" id="page-torneio">
+      <div class="page-header">
+        <div>
+          <h1>Torneio</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Vôlei · grupos, classificação e mata-mata</span></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="tnImprimir_()"><i class='bx bx-printer'></i> Imprimir classificação</button>
+          <button class="refresh-btn" onclick="carregarTorneio(true)"><i class='bx bx-refresh'></i> Atualizar</button>
+        </div>
+      </div>
+      <div id="tn-aviso-offline" style="display:none;background:#fff7e0;border:1px solid #f5d27a;color:#8a6100;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px"></div>
+      <div id="tn-conteudo"><p style="color:var(--dark-grey);font-size:13px">Carregando...</p></div>
+    </div>
+
     <!-- ─── AVISOS (mural do app) ─── -->
     <div class="page" id="page-avisos">
       <div class="page-header">
@@ -2472,10 +2489,11 @@ const _navToOriginal_ = navTo;
 navTo = function (page, el) {
   if (!paginaPermitida_(page)) { showToast('Seu perfil não tem acesso a essa área.', 'error'); return false; }
   const r = _navToOriginal_(page, el);
-  const rotulos = { avisos: 'Avisos', sistema: 'Sistema', elencos: 'Elencos' };
+  const rotulos = { avisos: 'Avisos', sistema: 'Sistema', elencos: 'Elencos', torneio: 'Torneio' };
   if (rotulos[page]) document.getElementById('navLabel').textContent = rotulos[page];
   if (page === 'avisos') carregarAvisosPainel();
   if (page === 'elencos') carregarElencos();
+  if (page === 'torneio') carregarTorneio();
   if (page === 'sistema') { carregarSaude(); if (papelAtual_() === 'admin') carregarUsuariosPainel(); }
   return r;
 };
@@ -4649,6 +4667,215 @@ function baixarElencosCsv_() {
   });
   if (linhas.length === 1) { showToast('Nenhum elenco para baixar.', 'error'); return; }
   baixarCsv_('elencos-volei.csv', linhas);
+}
+
+// ════════ Torneio: classificação automática, sorteio das quartas, jogos e resultados ════════
+window._torneio = null;
+const TN_CACHE_KEY_ = 'sc_torneio_cache';
+async function tnPost_(acao, extra) {
+  return await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify(Object.assign({ acao: acao, auth: authApi_() }, extra || {})) }).then(r => r.json());
+}
+async function carregarTorneio(manual) {
+  const aviso = document.getElementById('tn-aviso-offline');
+  try {
+    const t = await fetch(SUMULA_SCRIPT_URL + '?action=torneio&modalidade=volei').then(r => r.json());
+    if (!t.ok) throw new Error(t.erro || 'erro');
+    window._torneio = t;
+    try { localStorage.setItem(TN_CACHE_KEY_, JSON.stringify({ t: t, em: Date.now() })); } catch (e) { /* sem cache */ }
+    if (aviso) aviso.style.display = 'none';
+    if (manual) showToast('✅ Torneio atualizado!');
+  } catch (ex) {
+    let c = null; try { c = JSON.parse(localStorage.getItem(TN_CACHE_KEY_) || 'null'); } catch (e) { /* ignora */ }
+    if (c && c.t) {
+      window._torneio = c.t;
+      if (aviso) { aviso.style.display = ''; aviso.textContent = '⚠️ Sem conexão — mostrando a última versão salva neste aparelho (' + new Date(c.em).toLocaleString('pt-BR') + '). Não dá para editar até a conexão voltar.'; }
+    } else {
+      document.getElementById('tn-conteudo').innerHTML = '<p style="color:var(--red);font-size:13px">Não foi possível carregar o torneio: ' + escHtmlS_(ex.message) + '</p>'; return;
+    }
+  }
+  renderTorneio_();
+}
+const tnEsc_ = (s) => escHtmlS_(s == null ? '' : s);
+const tnFase_ = { grupos: 'Fase de grupos', quartas: 'Quartas de final', semifinal: 'Semifinais', final: 'Final' };
+
+function tnClassificacaoHtml_(t) {
+  if (!t.grupos.length) return '<p style="color:var(--dark-grey);font-size:13px">Nenhum grupo ainda.</p>';
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px">' + t.grupos.map(g => {
+    const linhas = g.tabela.map(l => {
+      const classif = g.completo && l.pos <= 2;
+      return `<tr style="${classif ? 'background:#ecfdf5' : ''}">
+        <td style="padding:7px 6px;font-weight:800">${l.pos}º</td>
+        <td style="padding:7px 6px;font-weight:700">${tnEsc_(l.equipe)}${classif ? ' <span style="color:#16a34a;font-size:10px;font-weight:800">CLASSIFICADA</span>' : ''}${l.empateSorteio ? ` <span title="Empate em todos os critérios — sorteio" style="color:#b45309;font-size:10px;font-weight:800">⚠ SORTEIO</span> <input type="number" min="1" value="${l.sorteioOrdem == null ? '' : l.sorteioOrdem}" placeholder="ordem" style="width:62px;font-size:11px;padding:2px 4px" data-eq="${tnEsc_(l.equipe)}" onchange="tnSalvarSorteioOrdem_(this)">` : ''}</td>
+        <td style="text-align:center">${l.pontos}</td><td style="text-align:center">${l.jogos}</td><td style="text-align:center">${l.vitorias}</td>
+        <td style="text-align:center">${l.setsPro}-${l.setsContra} <span style="color:#9aa0ab">(${l.saldoSets > 0 ? '+' : ''}${l.saldoSets})</span></td>
+        <td style="text-align:center">${l.pontosPro}-${l.pontosContra} <span style="color:#9aa0ab">(${l.saldoPontos > 0 ? '+' : ''}${l.saldoPontos})</span></td></tr>`;
+    }).join('');
+    return `<div class="card" style="margin:0;padding:14px;overflow-x:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Grupo ${tnEsc_(g.grupo)}</b><span style="font-size:11px;color:var(--dark-grey)">${g.jogosFeitos}/${g.jogosTotal} jogos${g.completo ? ' · completo' : ''}</span></div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:#8a90a2;font-size:10px;text-align:center"><th></th><th style="text-align:left">EQUIPE</th><th>PTS</th><th>J</th><th>V</th><th>SETS</th><th>PONTOS</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+  }).join('') + '</div>';
+}
+
+function tnSorteioHtml_(t) {
+  const p = t.potes, quartas = t.jogos.filter(j => j.fase === 'quartas');
+  const lista = quartas.map(q => {
+    const def = q.casaDefinida && q.visitanteDefinida;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #e8ebf3;border-radius:12px;background:${def ? '#f0fdf4' : '#fafbff'}">
+      <b style="min-width:34px">${tnEsc_(q.id)}</b>
+      <span style="flex:1;font-size:13px">${def ? `<b>${tnEsc_(q.casa)}</b> <span style="color:#9aa0ab">(${tnEsc_(q.rotuloCasa)})</span> × <b>${tnEsc_(q.visitante)}</b> <span style="color:#9aa0ab">(${tnEsc_(q.rotuloVisitante)})</span>` : '<span style="color:#9aa0ab">aguardando sorteio</span>'}</span>
+      ${def && q.status === 'agendado' ? `<button class="btn btn-secondary btn-sm" data-id="${tnEsc_(q.id)}" onclick="tnDesfazerSorteio_(this.dataset.id)">Desfazer</button>` : ''}</div>`;
+  }).join('');
+  let form = '';
+  if (!p.liberado) {
+    form = `<div style="background:#fff7e0;border:1px solid #f5d27a;color:#8a6100;border-radius:12px;padding:12px 14px;font-size:13px">🔒 Sorteio ainda não liberado. ${tnEsc_(p.motivo)}</div>`;
+  } else {
+    const livres = quartas.filter(q => !(q.casaDefinida && q.visitanteDefinida) && q.status === 'agendado');
+    const opt = (arr) => arr.filter(x => !x.sorteada).map(x => `<option value="${tnEsc_(x.equipe)}">${tnEsc_(x.equipe)} — ${x.ref.charAt(0)}º do Grupo ${tnEsc_(x.grupo)}</option>`).join('');
+    form = livres.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end">
+      <div><label style="font-size:11px;font-weight:800;color:#8a90a2">JOGO</label><select class="form-control" id="tn-sort-jogo">${livres.map(q => `<option value="${tnEsc_(q.id)}">${tnEsc_(q.id)}</option>`).join('')}</select></div>
+      <div><label style="font-size:11px;font-weight:800;color:#8a90a2">POTE DOS 1ºs COLOCADOS</label><select class="form-control" id="tn-sort-1"><option value="">— escolha —</option>${opt(p.primeiros)}</select></div>
+      <div><label style="font-size:11px;font-weight:800;color:#8a90a2">POTE DOS 2ºs COLOCADOS</label><select class="form-control" id="tn-sort-2"><option value="">— escolha —</option>${opt(p.segundos)}</select></div>
+      <div><button class="btn btn-success" style="width:100%" onclick="tnConfirmarSorteio_()"><i class='bx bx-check'></i> Confirmar enfrentamento</button></div></div>`
+      : '<div style="color:#16a34a;font-weight:700;font-size:13px">✅ Sorteio das quartas concluído.</div>';
+  }
+  return `<div style="display:flex;flex-direction:column;gap:10px">${form}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:8px;margin-top:6px">${lista}</div></div>`;
+}
+
+function tnMataMataHtml_(t) {
+  const caixa = (j) => {
+    const nome = (n, def, rot) => def ? `<b>${tnEsc_(n)}</b>` : `<span style="color:#9aa0ab">${tnEsc_(rot || 'Aguardando')}</span>`;
+    const placar = (j.status === 'finalizado' || j.status === 'wo') ? (j.wo ? 'W.O.' : j.setsCasa + ' × ' + j.setsVisitante) : (j.status === 'ao_vivo' ? '🔴 ao vivo' : 'x');
+    return `<div style="border:1px solid #e8ebf3;border-radius:12px;padding:10px 12px;background:#fff"><div style="font-size:10px;font-weight:800;color:#8a90a2">${tnEsc_(j.id)}</div>
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-top:2px">${nome(j.casa, j.casaDefinida, j.rotuloCasa)}<span style="color:#6b7280;font-weight:800">${placar}</span>${nome(j.visitante, j.visitanteDefinida, j.rotuloVisitante)}</div></div>`;
+  };
+  const f = (fase) => t.jogos.filter(j => j.fase === fase).map(caixa).join('');
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+    <div><div class="rf-sec" style="margin-bottom:6px">SEMIFINAIS</div><div style="display:flex;flex-direction:column;gap:8px">${f('semifinal')}</div></div>
+    <div><div class="rf-sec" style="margin-bottom:6px">FINAL</div><div style="display:flex;flex-direction:column;gap:8px">${f('final')}</div>
+      <div style="margin-top:10px;padding:12px;border-radius:12px;background:linear-gradient(135deg,#fff8e1,#fff);border:1px solid #f5d27a;font-weight:800;text-align:center">🏆 Campeão: ${t.campeao ? tnEsc_(t.campeao) : '<span style="color:#9aa0ab;font-weight:600">a definir</span>'}</div></div></div>`;
+}
+
+function tnJogosHtml_(t) {
+  const podeEditar = ['admin', 'organizacao'].indexOf(papelAtual_()) >= 0;
+  const equipesGrupo = (g) => t.equipes.filter(e => e.grupo === g).map(e => e.nome);
+  const linha = (j) => {
+    const sel = (campo, valor, def) => {
+      if (j.fase !== 'grupos' || !podeEditar) return `<span style="font-weight:${def ? 700 : 400};color:${def ? 'inherit' : '#9aa0ab'}">${tnEsc_(valor)}</span>`;
+      return `<select class="form-control" style="font-size:12px;padding:3px" data-id="${tnEsc_(j.id)}" data-campo="${campo}" id="tn-${campo}-${tnEsc_(j.id)}">${equipesGrupo(j.grupo).map(n => `<option ${n === valor ? 'selected' : ''}>${tnEsc_(n)}</option>`).join('')}</select>`;
+    };
+    const dis = podeEditar ? '' : 'disabled';
+    const st = { agendado: '⚪ agendado', ao_vivo: '🔴 ao vivo', finalizado: '✅ finalizado', wo: '🟠 W.O.' }[j.status] || j.status;
+    const res = (j.status === 'finalizado' || j.status === 'wo') ? (j.wo ? 'W.O.' : j.parciais.map(p => p.a + '-' + p.b).join(' · ')) : '';
+    return `<tr style="border-top:1px solid #f0f2f8">
+      <td style="padding:8px 6px;font-weight:800">${tnEsc_(j.id)}</td>
+      <td style="padding:8px 6px;min-width:260px">${sel('casa', j.casa, j.casaDefinida)} <span style="color:#9aa0ab">×</span> ${sel('visitante', j.visitante, j.visitanteDefinida)}</td>
+      <td><input type="date" value="${tnEsc_(j.data || '')}" ${dis} style="font-size:12px;padding:3px" id="tn-data-${tnEsc_(j.id)}"></td>
+      <td><input type="time" value="${tnEsc_(j.hora || '')}" ${dis} style="font-size:12px;padding:3px" id="tn-hora-${tnEsc_(j.id)}"></td>
+      <td><input type="text" value="${tnEsc_(j.quadra || '')}" ${dis} placeholder="quadra" style="width:110px;font-size:12px;padding:3px" id="tn-quadra-${tnEsc_(j.id)}"></td>
+      <td style="font-size:11px;white-space:nowrap">${st}<br><span style="color:#6b7280">${tnEsc_(res)}</span></td>
+      <td style="white-space:nowrap">${podeEditar ? `<button class="btn btn-secondary btn-sm" data-id="${tnEsc_(j.id)}" onclick="tnSalvarJogo_(this.dataset.id)">Salvar</button> ` : ''}
+        ${j.casaDefinida && j.visitanteDefinida ? `<button class="btn btn-sm" style="background:#e8f0ff;color:#1c2b66" data-id="${tnEsc_(j.id)}" onclick="tnAbrirResultado_(this.dataset.id)">Resultado</button>` : ''}</td></tr>`;
+  };
+  return ['grupos', 'quartas', 'semifinal', 'final'].map(fase => {
+    const js = t.jogos.filter(j => j.fase === fase); if (!js.length) return '';
+    return `<div style="margin-top:12px"><div class="rf-sec" style="margin-bottom:4px">${tnFase_[fase].toUpperCase()}</div><div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><tbody>${js.map(linha).join('')}</tbody></table></div></div>`;
+  }).join('');
+}
+
+async function tnCriarChaveHtml_() {
+  let conf = [];
+  try { conf = (await fetch(SUMULA_SCRIPT_URL + '?action=equipesComPin').then(r => r.json())).equipes || []; } catch (e) { /* segue sem lista */ }
+  return `<div style="font-size:13px;margin-bottom:10px">Ainda não há chave. Distribua as equipes <b>confirmadas</b> nos grupos (3 por grupo) e crie a chave. Os grupos são editáveis depois.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-bottom:12px">
+    ${conf.length ? conf.map((e, i) => `<div style="display:flex;gap:8px;align-items:center;border:1px solid #e8ebf3;border-radius:10px;padding:6px 10px"><span style="flex:1;font-size:13px">${tnEsc_(e.equipe)}</span><select class="form-control tn-grupo-sel" data-eq="${tnEsc_(e.equipe)}" style="width:90px;font-size:12px;padding:3px"><option value="">—</option>${['A', 'B', 'C', 'D'].map(g => `<option>${g}</option>`).join('')}</select></div>`).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhuma equipe confirmada encontrada.</p>'}</div>
+    <button class="btn btn-success" onclick="tnCriarChave_()"><i class='bx bx-sitemap'></i> Criar chave</button>`;
+}
+
+async function renderTorneio_() {
+  const t = window._torneio, el = document.getElementById('tn-conteudo');
+  if (!t) return;
+  const sec = (titulo, sub, corpo) => `<div class="card" style="margin-bottom:14px"><div class="card-title" style="margin-bottom:2px">${titulo}</div>${sub ? `<div style="font-size:11px;color:var(--dark-grey);margin-bottom:10px">${sub}</div>` : ''}${corpo}</div>`;
+  const alertas = (t.alertas || []).map(a => `<div style="background:#fff7e0;border:1px solid #f5d27a;color:#8a6100;border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px">⚠️ ${tnEsc_(a)}</div>`).join('');
+  if (!t.jogos.length) { el.innerHTML = sec('Criar chave do torneio', '', await tnCriarChaveHtml_()); return; }
+  el.innerHTML = alertas
+    + sec('Classificação dos grupos', 'Calculada automaticamente pelo regulamento: vitória 2x0 = 3 pts · 2x1 = 2 (derrota 1x2 = 1) · W.O. = 3 / 0. Desempate: vitórias → saldo de sets → saldo de pontos → sorteio.', tnClassificacaoHtml_(t))
+    + sec('Sorteio das quartas de final', 'Pote dos 1ºs colocados × pote dos 2ºs colocados. Escolha um de cada e confirme o enfrentamento.', tnSorteioHtml_(t))
+    + sec('Semifinais e final', 'Semifinais: vencedor Q1 × vencedor Q2 e vencedor Q3 × vencedor Q4.', tnMataMataHtml_(t))
+    + sec('Jogos, horários e resultados', 'Edite equipes, data, hora e quadra. "Resultado" lança o placar à mão (use quando a súmula digital não puder ser usada).', tnJogosHtml_(t));
+}
+
+async function tnCriarChave_() {
+  const grupos = {};
+  document.querySelectorAll('.tn-grupo-sel').forEach(s => { if (s.value) (grupos[s.value] = grupos[s.value] || []).push(s.dataset.eq); });
+  const letras = Object.keys(grupos);
+  if (!letras.length) { showToast('Distribua as equipes nos grupos.', 'error'); return; }
+  const ruins = letras.filter(g => grupos[g].length !== 3);
+  if (ruins.length && !confirm('Os grupos ' + ruins.join(', ') + ' não têm 3 equipes. Criar mesmo assim?')) return;
+  const r = await tnPost_('semearTorneio', { modalidade: 'volei', grupos: grupos });
+  if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
+  showToast('✅ Chave criada: ' + r.jogos + ' jogos.'); carregarTorneio();
+}
+async function tnConfirmarSorteio_() {
+  const jogo = document.getElementById('tn-sort-jogo').value, a = document.getElementById('tn-sort-1').value, b = document.getElementById('tn-sort-2').value;
+  if (!a || !b) { showToast('Escolha um 1º e um 2º colocado.', 'error'); return; }
+  const r = await tnPost_('sortearQuarta', { modalidade: 'volei', jogo: jogo, primeiro: a, segundo: b });
+  if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
+  window._torneio = r.torneio; renderTorneio_();
+  showToast(r.aviso ? '⚠️ ' + r.aviso : '✅ ' + jogo + ': ' + a + ' × ' + b);
+}
+async function tnDesfazerSorteio_(id) {
+  if (!confirm('Desfazer o enfrentamento de ' + id + '?')) return;
+  const r = await tnPost_('desfazerSorteioQuarta', { modalidade: 'volei', jogo: id });
+  if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
+  window._torneio = r.torneio; renderTorneio_();
+}
+async function tnSalvarSorteioOrdem_(inp) {
+  const r = await tnPost_('salvarEquipeTorneio', { modalidade: 'volei', nome: inp.dataset.eq, sorteioOrdem: inp.value === '' ? null : Number(inp.value) });
+  if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
+  showToast('Ordem do sorteio salva.'); carregarTorneio();
+}
+async function tnSalvarJogo_(id) {
+  const v = (c) => { const e = document.getElementById('tn-' + c + '-' + id); return e ? e.value : undefined; };
+  const dados = { modalidade: 'volei', id: id, data: v('data') || '', hora: v('hora') || '', quadra: v('quadra') || '' };
+  const c = v('casa'), vi = v('visitante');
+  if (c !== undefined) { dados.casa = c; dados.visitante = vi; if (c === vi) { showToast('As duas equipes não podem ser iguais.', 'error'); return; } }
+  const r = await tnPost_('salvarJogo', dados);
+  if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
+  showToast('✅ ' + id + ' salvo.'); carregarTorneio();
+}
+
+function tnAbrirResultado_(id) {
+  const j = window._torneio.jogos.find(x => x.id === id); if (!j) return;
+  document.getElementById('tn-modal-res') && document.getElementById('tn-modal-res').remove();
+  const par = (i) => { const p = j.parciais[i] || {}; return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><span style="width:44px;font-size:12px;color:#6b7280">Set ${i + 1}</span><input type="number" min="0" id="tn-r-a${i}" value="${p.a == null ? '' : p.a}" style="width:70px"> <b>×</b> <input type="number" min="0" id="tn-r-b${i}" value="${p.b == null ? '' : p.b}" style="width:70px"></div>`; };
+  const m = document.createElement('div'); m.id = 'tn-modal-res';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(10,18,50,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML = `<div style="background:#fff;border-radius:18px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow:auto">
+    <h3 style="margin:0 0 4px">Lançar resultado — ${tnEsc_(id)}</h3><div style="font-size:13px;color:#6b7280;margin-bottom:12px"><b>${tnEsc_(j.casa)}</b> × <b>${tnEsc_(j.visitante)}</b></div>
+    <label style="font-size:12px;font-weight:800">Tipo</label>
+    <select class="form-control" id="tn-r-tipo" onchange="document.getElementById('tn-r-sets').style.display=this.value?'none':'';document.getElementById('tn-r-wo').style.display=this.value?'':'none'">
+      <option value="">Jogo normal (placar dos sets)</option><option value="casa">W.O. — ${tnEsc_(j.casa)} faltou</option><option value="visitante">W.O. — ${tnEsc_(j.visitante)} faltou</option><option value="ambos">W.O. — as duas equipes incompletas</option></select>
+    <div id="tn-r-sets" style="margin-top:12px">${par(0)}${par(1)}${par(2)}<div style="font-size:11px;color:#8a90a2">Sets 1 e 2 vão a 25, o 3º a 15, sempre com 2 de diferença. Deixe o 3º vazio se o jogo acabou 2x0.</div></div>
+    <div id="tn-r-wo" style="display:none;margin-top:10px;font-size:12px;color:#8a6100;background:#fff7e0;border-radius:10px;padding:8px 10px">W.O.: o vencedor ganha 3 pts e 2x0 com 25x0 duplo. Se as duas equipes estiverem incompletas, nenhuma pontua.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn btn-secondary" onclick="document.getElementById('tn-modal-res').remove()">Cancelar</button><button class="btn btn-success" onclick="tnConfirmarResultado_('${tnEsc_(id)}')">Confirmar resultado</button></div></div>`;
+  document.body.appendChild(m);
+  if (j.wo) { const s = document.getElementById('tn-r-tipo'); s.value = j.wo; s.onchange(); }
+}
+async function tnConfirmarResultado_(id) {
+  const wo = document.getElementById('tn-r-tipo').value;
+  const parciais = [];
+  if (!wo) for (let i = 0; i < 3; i++) { const a = document.getElementById('tn-r-a' + i).value, b = document.getElementById('tn-r-b' + i).value; if (a === '' && b === '') continue; parciais.push({ a: Number(a), b: Number(b) }); }
+  const r = await tnPost_('lancarResultado', { modalidade: 'volei', id: id, wo: wo || null, parciais: parciais });
+  if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
+  document.getElementById('tn-modal-res').remove();
+  window._torneio = r.torneio; renderTorneio_(); showToast('✅ Resultado de ' + id + ' lançado. Classificação recalculada.');
+}
+function tnImprimir_() {
+  const t = window._torneio; if (!t) return;
+  const w = window.open('', '_blank'); if (!w) { showToast('Libere pop-ups para imprimir.', 'error'); return; }
+  w.document.write('<html><head><title>Classificação — Supercopa de Voleibol 2026</title><style>body{font-family:Arial,sans-serif;padding:20px}h1{font-size:20px}table{border-collapse:collapse;width:100%;margin-bottom:18px}td,th{border:1px solid #bbb;padding:6px 8px;font-size:13px;text-align:center}td:nth-child(2),th:nth-child(2){text-align:left}</style></head><body><h1>Supercopa de Voleibol 2026 — Classificação</h1><small>Gerado em ' + new Date().toLocaleString('pt-BR') + '</small>'
+    + t.grupos.map(g => '<h3>Grupo ' + tnEsc_(g.grupo) + '</h3><table><tr><th>#</th><th>Equipe</th><th>Pts</th><th>J</th><th>V</th><th>Sets</th><th>Pontos</th></tr>' + g.tabela.map(l => '<tr><td>' + l.pos + '</td><td>' + tnEsc_(l.equipe) + '</td><td>' + l.pontos + '</td><td>' + l.jogos + '</td><td>' + l.vitorias + '</td><td>' + l.setsPro + '-' + l.setsContra + '</td><td>' + l.pontosPro + '-' + l.pontosContra + '</td></tr>').join('') + '</table>').join('')
+    + '</body></html>');
+  w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
 }
 
 function escHtmlS_(s) {

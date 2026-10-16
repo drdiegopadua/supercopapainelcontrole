@@ -852,6 +852,35 @@ function resolverOrigem(origem: string | null | undefined, clas: ReturnType<type
   }
   return null;
 }
+
+// Sorteio das quartas: pote dos 1ºs colocados x pote dos 2ºs colocados (um de cada por enfrentamento).
+type PoteItem = { equipe: string; grupo: string; ref: string };
+function calcularPotes(clas: ReturnType<typeof calcularClassificacao>) {
+  const grupos = clas.length;
+  const incompletos = clas.filter((g) => !g.completo).map((g) => g.grupo);
+  const empates = clas.filter((g) => g.completo && g.tabela.some((l) => l.empateSorteio)).map((g) => g.grupo);
+  let motivo = "";
+  if (!grupos) motivo = "Ainda não há grupos cadastrados.";
+  else if (incompletos.length) motivo = "Faltam jogos nos grupos: " + incompletos.join(", ") + ".";
+  else if (empates.length) motivo = "Há empate que só o sorteio resolve nos grupos: " + empates.join(", ") + ". Informe a ordem do sorteio em Equipes.";
+  const liberado = !motivo;
+  const pote = (pos: number): PoteItem[] => clas.filter((g) => g.tabela[pos - 1]).map((g) => ({ equipe: g.tabela[pos - 1].equipe, grupo: g.grupo, ref: pos + g.grupo }));
+  return { liberado, motivo, primeiros: liberado ? pote(1) : [], segundos: liberado ? pote(2) : [] };
+}
+function validarSorteioQuarta(potes: ReturnType<typeof calcularPotes>, quartas: { id: string; casa?: string | null; visitante?: string | null; status: string }[], jogoId: string, primeiro: string, segundo: string) {
+  if (!potes.liberado) return { erro: potes.motivo };
+  const q = quartas.find((x) => x.id === jogoId);
+  if (!q) return { erro: "Jogo das quartas não encontrado: " + jogoId };
+  if (q.status !== "agendado") return { erro: "Esse jogo já começou ou foi finalizado — não dá para trocar o enfrentamento." };
+  const p1 = potes.primeiros.find((x) => x.equipe === primeiro), p2 = potes.segundos.find((x) => x.equipe === segundo);
+  if (!p1) return { erro: "'" + primeiro + "' não está no pote dos 1ºs colocados." };
+  if (!p2) return { erro: "'" + segundo + "' não está no pote dos 2ºs colocados." };
+  const usados = new Set<string>();
+  quartas.filter((x) => x.id !== jogoId).forEach((x) => { if (x.casa) usados.add(x.casa); if (x.visitante) usados.add(x.visitante); });
+  if (usados.has(primeiro)) return { erro: primeiro + " já foi sorteada em outro jogo das quartas." };
+  if (usados.has(segundo)) return { erro: segundo + " já foi sorteada em outro jogo das quartas." };
+  return { ok: true, p1, p2, aviso: p1.grupo === p2.grupo ? "Atenção: as duas equipes são do mesmo grupo (já se enfrentaram na fase de grupos)." : null };
+}
 // ==CLASS-FIM==
 
 // ════════ Torneio: equipes por grupo, jogos, mata-mata ════════
@@ -894,6 +923,12 @@ async function montarTorneio(mod: string) {
     equipes: equipes.map((e: Any) => ({ nome: e.nome, grupo: e.grupo, ordem: e.ordem, sorteioOrdem: e.sorteio_ordem, escudo: e.escudo })),
     grupos: clas, jogos: lista, campeao: final && final.vencedor ? final.vencedor : null,
     alertas: clas.filter((g) => g.completo && g.tabela.some((l) => l.empateSorteio)).map((g) => "Grupo " + g.grupo + ": empate que só o sorteio resolve — informe a ordem do sorteio."),
+    potes: (() => {
+      const p = calcularPotes(clas);
+      const usados = new Set<string>();
+      lista.filter((j: Any) => j.fase === "quartas").forEach((j: Any) => { if (j.casaDefinida) usados.add(j.casa); if (j.visitanteDefinida) usados.add(j.visitante); });
+      return { ...p, primeiros: p.primeiros.map((x) => ({ ...x, sorteada: usados.has(x.equipe) })), segundos: p.segundos.map((x) => ({ ...x, sorteada: usados.has(x.equipe) })) };
+    })(),
   };
 }
 async function sincronizarJogo(e: Any, wo?: string | null) {
@@ -954,6 +989,27 @@ async function excluirJogoTorneio(d: Any) {
   const { data } = await sb.from("jogos").delete().eq("modalidade", modOf(d)).eq("id", idNorm(d.id)).select("id");
   return data && data.length ? { ok: true } : { ok: false, erro: "Jogo não encontrado." };
 }
+// Sorteio das quartas: a organização escolhe 1 equipe do pote dos 1ºs e 1 do pote dos 2ºs para cada jogo.
+async function sortearQuarta(d: Any) {
+  const c: Any = await papel(d.auth, PODE_EDITAR_TORNEIO); if (c.erro) return { ok: false, erro: c.erro };
+  const mod = modOf(d), jogoId = idNorm(d.jogo);
+  const t = await montarTorneio(mod);
+  const quartas = t.jogos.filter((j: Any) => j.fase === "quartas").map((j: Any) => ({ id: j.id, casa: j.casaDefinida ? j.casa : null, visitante: j.visitanteDefinida ? j.visitante : null, status: j.status }));
+  const v: Any = validarSorteioQuarta(calcularPotes(t.grupos), quartas, jogoId, (d.primeiro || "").toString(), (d.segundo || "").toString());
+  if (v.erro) return { ok: false, erro: v.erro };
+  const { error } = await sb.from("jogos").update({ casa: v.p1.equipe, visitante: v.p2.equipe, origem_casa: v.p1.ref, origem_visitante: v.p2.ref, atualizado_em: new Date().toISOString() }).eq("modalidade", mod).eq("id", jogoId);
+  if (error) return { ok: false, erro: error.message };
+  return { ok: true, aviso: v.aviso, torneio: await montarTorneio(mod) };
+}
+async function desfazerSorteioQuarta(d: Any) {
+  const c: Any = await papel(d.auth, PODE_EDITAR_TORNEIO); if (c.erro) return { ok: false, erro: c.erro };
+  const mod = modOf(d), jogoId = idNorm(d.jogo);
+  const { data: j } = await sb.from("jogos").select("status,fase").eq("modalidade", mod).eq("id", jogoId).maybeSingle();
+  if (!j || j.fase !== "quartas") return { ok: false, erro: "Jogo das quartas não encontrado." };
+  if (j.status !== "agendado") return { ok: false, erro: "Esse jogo já começou ou foi finalizado." };
+  await sb.from("jogos").update({ casa: null, visitante: null, origem_casa: null, origem_visitante: null, atualizado_em: new Date().toISOString() }).eq("modalidade", mod).eq("id", jogoId);
+  return { ok: true, torneio: await montarTorneio(mod) };
+}
 // Resultado lançado à mão (contingência: internet/aparelho da súmula caiu, ou jogo sem súmula digital).
 async function lancarResultado(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao", "mesa"]); if (c.erro) return { ok: false, erro: c.erro };
@@ -976,7 +1032,7 @@ async function lancarResultado(d: Any) {
   await sb.from("partida_eventos").insert({ partida_id: id, tipo: "resultadoManual", dados: { por: c.usuario, parciais, wo } }).then(() => {}, () => {});
   return { ok: true, torneio: await montarTorneio(mod) };
 }
-// Cria a chave: 4 grupos de 3, 12 jogos de grupo, 4 quartas, 2 semifinais e a final (mesmos IDs da súmula). Só administrador.
+// Cria a chave: 4 grupos de 3, 12 jogos de grupo, 4 quartas (sorteadas depois), 2 semifinais (V Q1xQ2, V Q3xQ4) e a final. Só administrador.
 async function semearTorneio(d: Any) {
   const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
   const mod = modOf(d);
@@ -993,10 +1049,10 @@ async function semearTorneio(d: Any) {
     pares.forEach(([a, b], i) => jogos.push({ modalidade: mod, id: g + (i + 1), fase: "grupos", grupo: g, rodada: i + 1, ordem: ++ordem, casa: nomes[a] || null, visitante: nomes[b] || null }));
   }
   const mm = [
-    ["Q1", "quartas", "1A", "2B"], ["Q2", "quartas", "1B", "2A"], ["Q3", "quartas", "1C", "2D"], ["Q4", "quartas", "1D", "2C"],
-    ["SF1", "semifinal", "V:Q1", "V:Q3"], ["SF2", "semifinal", "V:Q2", "V:Q4"], ["FINAL", "final", "V:SF1", "V:SF2"],
+    ["Q1", "quartas", null, null], ["Q2", "quartas", null, null], ["Q3", "quartas", null, null], ["Q4", "quartas", null, null],   // definidas por sorteio (potes de 1ºs e 2ºs)
+    ["SF1", "semifinal", "V:Q1", "V:Q2"], ["SF2", "semifinal", "V:Q3", "V:Q4"], ["FINAL", "final", "V:SF1", "V:SF2"],
   ];
-  mm.forEach(([id, fase, oc, ov]) => jogos.push({ modalidade: mod, id, fase, origem_casa: oc, origem_visitante: ov, ordem: ++ordem }));
+  mm.forEach(([id, fase, oc, ov]: Any) => jogos.push({ modalidade: mod, id, fase, origem_casa: oc, origem_visitante: ov, ordem: ++ordem }));
   if (equipes.length) await sb.from("torneio_equipes").upsert(equipes);
   const { error } = await sb.from("jogos").insert(jogos);
   return error ? { ok: false, erro: error.message } : { ok: true, jogos: jogos.length, equipes: equipes.length };
@@ -1047,6 +1103,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "excluirJogoTorneio": return await excluirJogoTorneio(d);
     case "lancarResultado": return await lancarResultado(d);
     case "semearTorneio": return await semearTorneio(d);
+    case "sortearQuarta": return await sortearQuarta(d);
+    case "desfazerSorteioQuarta": return await desfazerSorteioQuarta(d);
     case "loginPainel": return await loginPainelAcao(d);
     case "listarUsuariosPainel": return await listarUsuariosPainel(d);
     case "salvarUsuarioPainel": return await salvarUsuarioPainel(d);
