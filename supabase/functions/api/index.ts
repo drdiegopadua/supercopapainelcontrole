@@ -1343,7 +1343,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "tipo:app_acesso": return await registrarVisita("app", d.deviceId);
     case "tipo:site_acesso": return await registrarVisita("site", d.deviceId);
     case "tipo:push_subscribe": case "tipo:push_unsubscribe": case "tipo:push_limpar": return { ok: true };   // push usa servidor próprio (Render)
-    case "feedback": return await registrarFeedback(d);
+    case "feedback": return ehGet ? await listarFeedback() : await registrarFeedback(d);
     case "importarLegado": return await importarLegado(d);
     case "excluirInscricao": return await excluirInscricao(d);
     case "inscrever": return await inscrever(d);
