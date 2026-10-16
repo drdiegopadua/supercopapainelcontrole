@@ -331,7 +331,10 @@ async function registrarWO(d: Any) {
     e.observacoes = "W.O. — " + faltou + " não compareceu." + (d.motivo ? " " + d.motivo : "");
     return {};
   });
-  if (r.ok) await empurrarPlacar(r.estado, true);
+  if (r.ok) {
+    await empurrarPlacar(r.estado, true);
+    await sb.from("wo_registros").insert({ jogo: idNorm(d.id), equipe_faltou: faltou, adversario: faltouB ? d.equipeA : d.equipeB, motivo: d.motivo || "", registrado_por: c.usuario });
+  }
   delete r._setFechado;
   return r;
 }
@@ -539,6 +542,93 @@ async function migrarDoSheets(d: Any) {
   return { ok: true, ...rel };
 }
 
+// ════════ Avisos, presenças, premiação, destaques, galera, saúde ════════
+async function listarAvisos() {
+  const { data } = await sb.from("avisos").select("*").eq("ativo", true).order("criado_em", { ascending: false }).limit(60);
+  const l = (data || []).map((a: Any) => ({ id: String(a.id), criadoEm: fmtBR(a.criado_em), titulo: a.titulo || "", texto: a.texto || "", fixado: !!a.fixado, ativo: a.ativo !== false }));
+  l.sort((a: Any, b: Any) => (b.fixado ? 1 : 0) - (a.fixado ? 1 : 0));
+  return l.slice(0, 30);
+}
+async function salvarAviso(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const titulo = (d.titulo || "").toString().trim(), texto = (d.texto || "").toString().trim();
+  if (!titulo) return { ok: false, erro: "Informe o título do aviso." };
+  const fixado = d.fixado === true || d.fixado === "true";
+  if (d.id) {
+    const { data } = await sb.from("avisos").update({ titulo, texto, fixado }).eq("id", d.id).select("id");
+    return data && data.length ? { ok: true } : { ok: false, erro: "Aviso não encontrado." };
+  }
+  const { error } = await sb.from("avisos").insert({ titulo, texto, fixado, ativo: true });
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function excluirAviso(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("avisos").delete().eq("id", d.id || -1).select("id");
+  return data && data.length ? { ok: true } : { ok: false, erro: "Aviso não encontrado." };
+}
+async function registrarPresenca(d: Any) {
+  const equipe = (d.equipe || "").toString().trim(), nome = (d.nome || "").toString().trim();
+  if (!equipe || !nome) return { ok: false, erro: "Equipe e nome são obrigatórios." };
+  const { error } = await sb.from("presencas").insert({ jogo: (d.jogo || "").toString().trim(), equipe, numero: (d.numero || "").toString(), nome, tipo: (d.tipo || "Atleta").toString() });
+  if (error) return error.code === "23505" ? { ok: true, jaRegistrado: true } : { ok: false, erro: error.message };
+  return { ok: true, jaRegistrado: false };
+}
+async function listarPresencas(jogo: string) {
+  let q = sb.from("presencas").select("*").order("id");
+  if (jogo) q = q.eq("jogo", jogo);
+  const { data } = await q;
+  return (data || []).map((r: Any) => ({ em: fmtBR(r.registrado_em), jogo: r.jogo, equipe: r.equipe, numero: r.numero, nome: r.nome, tipo: r.tipo }));
+}
+async function rankingGalera() {
+  const cont: Any = {};
+  for (let de = 0; ; de += 1000) {
+    const { data } = await sb.from("galera_votos").select("atleta,time").order("id").range(de, de + 999);
+    (data || []).forEach((r: Any) => { const k = (r.atleta || "").trim(); if (!k) return; (cont[k] = cont[k] || { atleta: k, time: (r.time || "").trim(), votos: 0 }).votos++; });
+    if (!data || data.length < 1000) break;
+  }
+  return Object.values(cont).sort((a: Any, b: Any) => b.votos - a.votos).slice(0, 10);
+}
+async function atletasTimeDestaque(equipe: string) {
+  const eq = chaveEq(equipe); if (!eq) return { ok: true, atletas: [] };
+  const nomes = new Set<string>();
+  const { data: ds } = await sb.from("destaques").select("nome,equipe");
+  (ds || []).forEach((r: Any) => { if (chaveEq(r.equipe) === eq && (r.nome || "").trim()) nomes.add(r.nome.trim()); });
+  const { data: gs } = await sb.from("galera_votos").select("atleta,time");
+  (gs || []).forEach((r: Any) => { if (chaveEq(r.time) === eq && (r.atleta || "").trim()) nomes.add(r.atleta.trim()); });
+  return { ok: true, atletas: [...nomes].sort() };
+}
+async function saudeSistema(d: Any) {
+  const t0 = Date.now();
+  const itens: Any[] = [];
+  const add = (nome: string, status: string, detalhe: string) => itens.push({ nome, status, detalhe });
+  let extra: Any[] = [];
+  try {   // valida o login e traz os itens que só o Apps Script enxerga (pasta de PDFs)
+    const r = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "saudeSistema", auth: d.auth }) });
+    const j = await r.json();
+    if (!j.ok) return { ok: false, erro: j.erro || "Login inválido." };
+    extra = (j.itens || []).filter((i: Any) => ["Pasta de PDFs"].includes(i.nome));
+  } catch (_) { return { ok: false, erro: "Não foi possível validar o login." }; }
+  try {
+    const tb = Date.now();
+    const { data, error } = await sb.from("partidas").select("id,status");
+    if (error) throw new Error(error.message);
+    add("Banco de dados (Supabase)", "ok", "respondeu em " + (Date.now() - tb) + " ms");
+    const reais = (data || []).filter((p: Any) => !ehTeste(p.id));
+    const aoVivo = reais.filter((p: Any) => p.status === "em_andamento").length, falta = reais.filter((p: Any) => p.status === "sets_completos").length;
+    add("Partidas", falta ? "aviso" : "ok", reais.length + " súmulas · " + aoVivo + " ao vivo" + (falta ? " · " + falta + " esperando finalizar" : ""));
+  } catch (ex) { add("Banco de dados (Supabase)", "erro", (ex as Error).message); }
+  try {
+    const st = await statusCadastro();
+    const ok = st.filter((e: Any) => e.confirmou && e.atletas >= 6 && e.tecnico && e.assTecnico && e.assCapitao && e.lgpd).length;
+    add("Cadastro das equipes", ok === st.length && st.length ? "ok" : "aviso", ok + " de " + st.length + " equipes completas (atletas, técnico, assinaturas e termo)");
+  } catch (ex) { add("Cadastro das equipes", "erro", (ex as Error).message); }
+  add("Backup diário", "aviso", "Confira a pasta 'Supercopa - Backup Supabase' no Drive (gerada às ~3h)");
+  extra.forEach((i) => itens.push(i));
+  const encerrado = new Date() >= PRAZO_CADASTRO_ATLETAS;
+  add("Prazo de cadastro de atletas", encerrado ? "aviso" : "ok", encerrado ? "Encerrado" : "Aberto até 27/11 13:00");
+  return { ok: true, itens, ms: Date.now() - t0 };
+}
+
 // Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
 // Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
 async function removerEquipe(d: Any) {
@@ -578,6 +668,28 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "salvarAviso": return await salvarAviso(d);
+    case "excluirAviso": return await excluirAviso(d);
+    case "registrarPresenca": return await registrarPresenca(d);
+    case "saudeSistema": return await saudeSistema(d);
+    case "salvarPremiacao": {
+      if (!d.categoria || !d.nome) return { ok: false, erro: "Categoria e nome são obrigatórios" };
+      const { error } = await sb.from("premiacao").upsert({ categoria: String(d.categoria).trim(), nome: d.nome, equipe: d.equipe || "", atualizado: fmtBR(new Date()) });
+      return error ? { ok: false, erro: error.message } : { ok: true };
+    }
+    case "excluirPremiacao": await sb.from("premiacao").delete().eq("categoria", String(d.categoria || "").trim()); return { ok: true };
+    case "adicionar": {
+      const l = d.linha || [];
+      const { error } = await sb.from("destaques").insert({ modalidade: String(l[0] ?? ""), jogo: String(l[1] ?? ""), nome: String(l[2] ?? ""), equipe: String(l[3] ?? ""), observacao: String(l[4] ?? ""), data_hora: String(l[5] ?? "") });
+      return error ? { ok: false, erro: error.message } : { ok: true };
+    }
+    case "excluir": { const id = parseInt(d.rowIndex); if (id > 0) await sb.from("destaques").delete().eq("id", id); return { ok: true }; }
+    case "votar": case "votar_atleta": {
+      const atleta = (d.atleta || "").toString().trim(), time = (d.time || "").toString().trim();
+      if (!atleta) return { ok: false, erro: "Nome do atleta obrigatório" };
+      const { error } = await sb.from("galera_votos").insert({ atleta, time });
+      return error ? { ok: false, erro: error.message } : { ok: true };
+    }
     case "migrarDoSheets": return await migrarDoSheets(d);
     case "cadastrarAtleta": return await cadastrarAtleta(d);
     case "removerAtleta": return await removerAtleta(d);
@@ -614,6 +726,12 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
       case "statusTermo": return await statusTermo(d.equipe || "");
       case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "avisos": return { ok: true, avisos: await listarAvisos() };
+      case "listarPresencas": return { ok: true, presencas: await listarPresencas(d.jogo || "") };
+      case "ranking": case "ranking_atleta": return { ok: true, ranking: await rankingGalera() };
+      case "atletasTime": return await atletasTimeDestaque(d.equipe || "");
+      case "premiacao": { const { data } = await sb.from("premiacao").select("*"); return { premiacao: (data || []).map((p: Any) => ({ categoria: p.categoria, nome: p.nome, equipe: p.equipe || "", atualizado: p.atualizado || "" })) }; }
+      case "destaques": { const { data } = await sb.from("destaques").select("*").order("id"); return { ok: true, destaques: (data || []).filter((r: Any) => r.nome).map((r: Any) => ({ _linha: r.id, modalidade: r.modalidade, jogo: r.jogo, nome: r.nome, equipe: r.equipe, observacao: r.observacao, dataHora: r.data_hora })) }; }
       case "assinaturasEquipe": return { ok: true, assinaturas: await assinaturasEquipe(d.equipe || "") };
     }
   }
