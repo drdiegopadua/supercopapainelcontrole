@@ -5405,109 +5405,253 @@ function confirmarEscalacaoSet() {
   if (ok) showToast('✅ Escalação do set confirmada.');
 }
 
+// ════════ Console ao vivo — visual "placar" (inspirado no app de referência "Vôlei em Jogo") ════════
+(function () {
+  if (document.getElementById('rf-css')) return;
+  const st = document.createElement('style'); st.id = 'rf-css';
+  st.textContent = `
+.rf-placar{background:linear-gradient(135deg,#0d1636,#16224f 55%,#1c2b66);color:#fff;border-radius:22px;margin-bottom:14px;overflow:hidden;box-shadow:0 10px 30px rgba(13,22,54,.25)}
+.rf-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.08);font-size:12px;flex-wrap:wrap}
+.rf-top small{color:rgba(255,255,255,.55);font-weight:600}
+.rf-chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border-radius:999px;padding:5px 12px;font-weight:800;font-size:11px;letter-spacing:.5px}
+.rf-dot{width:8px;height:8px;border-radius:50%;background:#2dd4aa;display:inline-block}
+.rf-dot.vm{background:#ff5d6c;animation:rfpulse 1.4s infinite}
+@keyframes rfpulse{50%{opacity:.35}}
+.rf-main{display:grid;grid-template-columns:1fr auto auto auto 1fr;align-items:center;gap:18px;padding:26px 24px}
+.rf-time{display:flex;align-items:center;gap:14px;min-width:0}
+.rf-tB{flex-direction:row-reverse;text-align:right}
+.rf-av{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#fff;flex-shrink:0;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+.rf-lab{font-size:10px;letter-spacing:1.5px;font-weight:800;color:rgba(255,255,255,.55)}
+.rf-nm{font-size:20px;font-weight:700;line-height:1.15;word-break:break-word}
+.rf-pts{font-size:92px;font-weight:900;line-height:1;letter-spacing:-3px;font-variant-numeric:tabular-nums;text-align:center}
+.rf-ce{text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.rf-sets{background:rgba(255,255,255,.08);border-radius:10px;padding:6px 14px;font-size:12px;font-weight:800}
+.rf-vs{font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.5);font-weight:800}
+.rf-dec{font-size:10px;letter-spacing:1.5px;font-weight:900;color:#7ee7d0}
+.rf-hist{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 20px 6px}
+.rf-sp{padding:5px 11px;border-radius:9px;background:rgba(255,255,255,.08);font-size:11px;font-weight:800}
+.rf-regra{text-align:center;font-size:10px;color:rgba(255,255,255,.45);padding-bottom:14px}
+.rf-btns{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 20px 18px}
+.rf-pc{display:flex;gap:6px;align-items:stretch}
+.rf-ponto{flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;border-radius:14px;padding:16px 18px;font-weight:800;letter-spacing:1px;font-size:13px;cursor:pointer;transition:transform .1s,background .15s;text-transform:uppercase}
+.rf-ponto:hover{background:rgba(255,255,255,.12)}.rf-ponto:active{transform:scale(.97)}
+.rf-ponto .pl{font-size:24px;font-weight:300;line-height:1}
+.rf-menos{width:46px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:rgba(255,255,255,.7);border-radius:14px;font-weight:900;font-size:13px;cursor:pointer}
+.rf-menos:active{transform:scale(.92)}
+.rf-foot{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.55);gap:10px;flex-wrap:wrap}
+.rf-foot button{background:none;border:none;color:rgba(255,255,255,.75);cursor:pointer;font-weight:700;font-size:11px}
+.rf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.rf-kpi{background:#fff;border:1px solid #e8ebf3;border-radius:16px;padding:14px 16px;display:flex;gap:12px;align-items:center;min-width:0}
+.rf-kpi .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.rf-kpi .k{font-size:10px;letter-spacing:1px;font-weight:800;color:#8a90a2}
+.rf-kpi .v{font-size:22px;font-weight:800;color:#1a1a2e;line-height:1.2;font-variant-numeric:tabular-nums}
+.rf-kpi .v small{font-size:11px;color:#9aa0ab;font-weight:600}
+.rf-kpi .s{font-size:10px;color:#9aa0ab}
+.rf-2col{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-bottom:14px}
+.rf-box{background:#fff;border:1px solid #e8ebf3;border-radius:18px;padding:16px;min-width:0}
+.rf-sec{font-size:10px;letter-spacing:1.2px;font-weight:800;color:#8a90a2}
+.rf-tit{font-size:16px;font-weight:800;color:#1a1a2e;margin:2px 0 12px}
+.rf-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rf-tool{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid #e8ebf3;background:#fff;border-radius:14px;padding:12px;cursor:pointer;font-family:inherit;min-width:0}
+.rf-tool:hover:not(:disabled){border-color:#c9d2ee;background:#fafbff}.rf-tool:disabled{opacity:.5;cursor:not-allowed}
+.rf-tool .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.rf-tool b{display:block;font-size:13px;color:#1a1a2e}.rf-tool span{font-size:11px;color:#9aa0ab}
+.rf-tool .eq{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.rf-mini{border:1px solid #dfe4f2;background:#f6f8fd;border-radius:8px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;color:#1a1a2e}
+.rf-mini:disabled{opacity:.4;cursor:not-allowed}
+.rf-filtros{display:flex;gap:6px;margin-bottom:8px}
+.rf-fl{border:1px solid #e1e5f0;background:#fff;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer}
+.rf-fl.on{background:#1c2b66;border-color:#1c2b66;color:#fff}
+.rf-reg{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #f0f2f8;font-size:13px}
+.rf-reg:first-of-type{border-top:none}
+.rf-reg .d{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rf-reg .h{font-size:11px;color:#9aa0ab;width:58px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.rf-reg b{display:block;color:#1a1a2e;font-size:13px}.rf-reg span{font-size:11px;color:#9aa0ab}
+.rf-reg button{margin-left:auto;background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px}
+.rf-quadras{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rf-q{border:1px solid #e8ebf3;border-radius:16px;padding:14px;background:#fff;min-width:0}
+.rf-q h4{margin:0 0 2px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rf-q .sq{font-size:9px;letter-spacing:1px;font-weight:900;padding:2px 8px;border-radius:99px;background:#fff6dc;color:#b7791f}
+.rf-qd{margin-top:10px;border-radius:12px;padding:10px 8px 8px;position:relative}
+.rf-rede{text-align:center;font-size:9px;letter-spacing:2px;font-weight:800;color:#8a90a2;border-bottom:1.5px dashed #c9d2ee;padding-bottom:6px;margin-bottom:8px}
+.rf-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 4px}
+.rf-cel{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.rf-num{position:relative;width:40px;height:40px;border-radius:50%;background:#fff;border:2px solid;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#1a1a2e}
+.rf-num.saque{box-shadow:0 0 0 3px rgba(245,185,66,.35)}
+.rf-cap{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:#1c2b66;color:#fff;font-size:9px;font-style:normal;display:flex;align-items:center;justify-content:center;font-weight:900}
+.rf-nome{font-size:10px;color:#4b5263;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rf-lib{margin-top:8px;font-size:11px;color:#6b7280;text-align:center}
+.rf-vazio{text-align:center;color:#9aa0ab;font-size:12px;padding:18px 0}
+@media(max-width:760px){
+ .rf-main{grid-template-columns:1fr 1fr;padding:18px 14px;gap:10px}
+ .rf-time,.rf-tB{flex-direction:column;text-align:center;align-items:center}
+ .rf-tA{grid-area:1/1}.rf-tB{grid-area:1/2}.rf-pA{grid-area:2/1}.rf-pB{grid-area:2/2}.rf-ce{grid-area:3/1/4/3}
+ .rf-pts{font-size:64px}.rf-btns{grid-template-columns:1fr;padding:0 14px 14px}
+ .rf-kpis{grid-template-columns:1fr 1fr}.rf-kpi{padding:10px;gap:8px;min-width:0}.rf-kpi .s{display:none}.rf-kpi .v{font-size:18px}.rf-kpi .ic{width:32px;height:32px;font-size:16px}.rf-2col,.rf-quadras,.rf-tools{grid-template-columns:1fr}
+}`;
+  document.head.appendChild(st);
+})();
+
+const RF_COR_A = '#2dd4aa', RF_COR_B = '#8b7cf6';
+let sumulaFiltroReg_ = 'todos', sumulaRegTudo_ = false, _rfTimer = null;
+const rfEsc_ = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+function rfIni_(nome) { return rfEsc_(String(nome || '?').replace(/[^A-Za-zÀ-ú ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?'); }
+function rfParseDH_(str) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(str || '');
+  return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]) : null;
+}
+function rfDuracao_(s) {
+  const ini = rfParseDH_(s.criadoEm); if (!ini) return '--:--:--';
+  const fim = (s.status === 'finalizada' && rfParseDH_(s.atualizadoEm)) || new Date();
+  const sec = Math.max(0, Math.floor((fim - ini) / 1000)), p = (n) => String(n).padStart(2, '0');
+  return p(Math.floor(sec / 3600)) + ':' + p(Math.floor(sec % 3600 / 60)) + ':' + p(sec % 60);
+}
+function rfSubsSet_(s, eq) { return (s.substituicoes || []).filter(x => x.equipe === eq && x.set === s.setAtual).length; }
+
+function rfQuadra_(rot, capNum, cor, libero) {
+  if (!rot || !rot.length) return '<div class="rf-vazio">sem escalação</div>';
+  const por = { 1: rot[0], 2: rot[1], 3: rot[2], 4: rot[3], 5: rot[4], 6: rot[5] };
+  const cel = (pos) => {
+    const p = por[pos] || {};
+    const cap = capNum && p.numero && String(p.numero) === String(capNum);
+    return `<div class="rf-cel"><span class="rf-num${pos === 1 ? ' saque' : ''}" style="border-color:${cor}">${rfEsc_(p.numero || '—')}${cap ? '<i class="rf-cap">C</i>' : ''}</span><span class="rf-nome" title="${rfEsc_(p.nome || '')}">${rfEsc_(p.nome || '')}</span></div>`;
+  };
+  const lib = libero && (libero.nome || libero.numero) ? `<div class="rf-lib"><b style="color:${cor}">LÍBERO</b> · ${rfEsc_(libero.numero || '')} ${rfEsc_(libero.nome || '')}</div>` : '';
+  return `<div class="rf-qd" style="background:linear-gradient(180deg,${cor}22,${cor}0d)"><div class="rf-rede">REDE</div>
+    <div class="rf-g">${cel(4)}${cel(3)}${cel(2)}${cel(5)}${cel(6)}${cel(1)}</div></div>${lib}`;
+}
+
+function rfRegistroHtml_(s, emAndamento) {
+  const nomeEq = (l) => l === 'A' ? s.equipeCasa : s.equipeVisitante;
+  const cor = (l) => l === 'A' ? RF_COR_A : RF_COR_B;
+  const comHora = [], semHora = [];
+  (s.historicoPontos || []).forEach(p => comHora.push({ k: 'p', hora: p.hora || '', cor: cor(p.equipe), t: 'Ponto ' + nomeEq(p.equipe), sub: 'Set ' + p.set + ' · ' + p.pontosCasa + '–' + p.pontosVisitante }));
+  (s.timeouts || []).forEach((t, i) => comHora.push({ k: 'e', hora: t.hora || '', cor: '#4f7cff', t: 'Tempo ' + nomeEq(t.equipe), sub: 'Set ' + t.set, rem: ['timeout', i] }));
+  (s.cartoes || []).forEach((c, i) => semHora.push({ k: 'e', hora: '', cor: c.tipo === 'Vermelho' ? '#ef4444' : '#f5b942', t: (c.tipo === 'Vermelho' ? 'Cartão vermelho' : 'Cartão amarelo') + (c.jogador ? ' · ' + c.jogador : ''), sub: nomeEq(c.equipe) + ' · Set ' + c.set + (c.motivo ? ' · ' + c.motivo : ''), rem: ['cartao', i] }));
+  (s.substituicoes || []).forEach((x, i) => semHora.push({ k: 'e', hora: '', cor: '#8b7cf6', t: 'Substituição ' + nomeEq(x.equipe), sub: 'Set ' + x.set + ' · ' + x.saiu + ' → ' + x.entrou, rem: ['substituicao', i] }));
+  comHora.sort((a, b) => b.hora.localeCompare(a.hora));
+  let itens = semHora.concat(comHora);
+  if (sumulaFiltroReg_ === 'pontos') itens = itens.filter(x => x.k === 'p');
+  if (sumulaFiltroReg_ === 'eventos') itens = itens.filter(x => x.k === 'e');
+  const total = itens.length;
+  if (!sumulaRegTudo_) itens = itens.slice(0, 30);
+  const fl = (id, rot) => `<button class="rf-fl${sumulaFiltroReg_ === id ? ' on' : ''}" onclick="sumulaFiltroReg_='${id}';sumulaRegTudo_=false;renderSumulaConsole()">${rot}</button>`;
+  return `<div class="rf-filtros">${fl('todos', 'Todos')}${fl('pontos', 'Pontos')}${fl('eventos', 'Eventos')}</div>
+    ${itens.length ? itens.map(x => `<div class="rf-reg"><i class="d" style="background:${x.cor}"></i><span class="h">${rfEsc_(x.hora || '—')}</span><div style="min-width:0"><b>${rfEsc_(x.t)}</b><span>${rfEsc_(x.sub)}</span></div>${x.rem && emAndamento ? `<button title="Remover" onclick="sumulaRemoverEvento('${x.rem[0]}',${x.rem[1]})"><i class='bx bx-x'></i></button>` : ''}</div>`).join('') : '<div class="rf-vazio">Nenhum registro ainda.</div>'}
+    ${total > 30 && !sumulaRegTudo_ ? `<button class="rf-fl" style="margin-top:8px" onclick="sumulaRegTudo_=true;renderSumulaConsole()">Ver histórico completo (${total})</button>` : ''}`;
+}
+
+function rfAbrirObs_() {
+  const el = document.getElementById('acc-obs');
+  if (el && el.style.display === 'none') sumulaToggleAccordion_('acc-obs');
+  const ta = document.getElementById('sumula-obs');
+  if (ta) { ta.scrollIntoView({ behavior: 'smooth', block: 'center' }); ta.focus(); }
+}
+
 function renderSumulaConsole() {
   const s = sumulaLiveState;
   const el = document.getElementById('sumulaConsole');
   const emAndamento = s.status === 'em_andamento';
   const prontaFinalizar = s.status === 'sets_completos';
   const finalizada = s.status === 'finalizada';
-
-  const timelineItens = [];
-  (s.timeouts || []).forEach((t, i) => timelineItens.push({ ordem: 900 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-time-five' style="color:var(--orange)"></i><span style="flex:1">Tempo técnico · ${t.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${t.set}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('timeout',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
-  (s.cartoes || []).forEach((c, i) => timelineItens.push({ ordem: 800 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px">${c.tipo === 'Vermelho' ? '🟥' : '🟨'}<span style="flex:1">${c.jogador} · ${c.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${c.set}${c.motivo ? ' · ' + c.motivo : ''}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('cartao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
-  (s.substituicoes || []).forEach((sub, i) => timelineItens.push({ ordem: 700 + i, html: `<div class="list-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:6px;font-size:12px"><i class='bx bx-transfer' style="color:var(--blue)"></i><span style="flex:1">${sub.equipe === 'A' ? s.equipeCasa : s.equipeVisitante} · Set ${sub.set} · ${sub.saiu} → ${sub.entrou}</span>${emAndamento ? `<button onclick="sumulaRemoverEvento('substituicao',${i})" style="background:none;border:none;color:var(--red);cursor:pointer"><i class="bx bx-x"></i></button>` : ''}</div>` }));
-
-  const corA = 'var(--blue)', corB = 'var(--orange)';
+  const corA = RF_COR_A, corB = RF_COR_B;
   const precisaEscalacaoSet = emAndamento && (s.rotacaoConfirmadaSet || 1) < s.setAtual;
+  const setN = Math.min(s.setAtual, 3);
+  const alvo = s.setAtual === 3 ? 15 : 25;
+  const decisivo = s.setAtual === 3 && !finalizada && !prontaFinalizar;
+  const tA = tempoUsados_(s.timeouts, 'A', s.setAtual), tB = tempoUsados_(s.timeouts, 'B', s.setAtual);
+  const statusTxt = finalizada ? 'FINALIZADA' : prontaFinalizar ? 'PRONTA PRA FINALIZAR' : 'AO VIVO';
+  const hs = (s.historicoSets || []).map((x, i) => `<span class="rf-sp" style="color:${x.a > x.b ? corA : corB}">${i + 1}º ${x.a}–${x.b}</span>`).join('');
+  const libA = (s.elencoCasa || {}).libero, libB = (s.elencoVisitante || {}).libero;
 
   el.innerHTML = `
-    <div class="card" style="padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:11px;font-weight:700;color:${finalizada ? 'var(--dark-grey)' : prontaFinalizar ? 'var(--green)' : 'var(--red)'}">${finalizada ? '🏁 FINALIZADA' : prontaFinalizar ? '✅ PRONTA PRA FINALIZAR' : '🔴 AO VIVO'}</span>
-        <span id="sumula-sync-ind" onclick="flushFilaSumula_()" style="font-size:10px;color:var(--dark-grey);cursor:pointer">${sumulaSyncTexto_()}</span>
-        <span style="font-size:11px;color:var(--dark-grey);font-weight:700">SET ${Math.min(s.setAtual, 3)}</span>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:40px;font-weight:900;color:var(--dark)">${s.pontosCasa}<span style="color:var(--dark-grey);font-size:20px"> × </span>${s.pontosVisitante}</div>
-        <div style="font-size:11px;color:var(--dark-grey)">Sets: <strong>${s.setsCasa}</strong> × <strong>${s.setsVisitante}</strong></div>
-      </div>
-      ${emAndamento && !precisaEscalacaoSet ? `
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px">
-        <button class="btn-ponto-minus" onclick="sumulaPontoMenos('A')" title="Corrigir: -1 ponto ${s.equipeCasa}" style="width:26px;height:26px;background:#fff;color:${corA};border:1.5px solid ${corA};border-radius:8px;font-size:12px;font-weight:900">−1</button>
-        <button class="btn-ponto" onclick="sumulaPonto('A')" style="background:${corA};color:#fff;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:800">+1 · ${s.equipeCasa}</button>
-        <span style="width:1px;height:20px;background:#e5e7eb;margin:0 4px"></span>
-        <button class="btn-ponto" onclick="sumulaPonto('B')" style="background:${corB};color:#fff;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:800">+1 · ${s.equipeVisitante}</button>
-        <button class="btn-ponto-minus" onclick="sumulaPontoMenos('B')" title="Corrigir: -1 ponto ${s.equipeVisitante}" style="width:26px;height:26px;background:#fff;color:${corB};border:1.5px solid ${corB};border-radius:8px;font-size:12px;font-weight:900">−1</button>
-      </div>` : ''}
+  <div class="rf-placar">
+    <div class="rf-top">
+      <span class="rf-chip"><i class="rf-dot ${finalizada || prontaFinalizar ? '' : 'vm'}"></i>${statusTxt}</span>
+      <small>Jogo ${rfEsc_(s.id)} · melhor de 3 sets</small>
+      <span id="sumula-sync-ind" onclick="flushFilaSumula_()" style="cursor:pointer;font-size:11px;color:rgba(255,255,255,.7)">${sumulaSyncTexto_()}</span>
     </div>
-
-    ${precisaEscalacaoSet ? renderEscalacaoSetForm_(s, corA, corB) : `
-    <!-- Área de cada equipe: nome, sets ganhos, tempos e a quadra dela logo abaixo -->
-    <div class="card" style="padding:14px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div style="border:1.5px solid #eef0f5;border-radius:14px;padding:12px;text-align:center">
-          <div style="font-weight:800;font-size:14px;color:${corA}">${s.equipeCasa}</div>
-          ${setChecks_(s.historicoSets, 'a', corA)}
-          ${tempoBadge_(s.timeouts, 'A', s.setAtual, corA)}
-          <div style="margin-top:10px">${renderQuadraAoVivo_(s.rotacaoCasa, capitaoEmQuadra_(s, 'A').numero)}</div>
-          ${emAndamento ? bannerCapitaoFora_(s, 'A', corA) : ''}
-        </div>
-        <div style="border:1.5px solid #eef0f5;border-radius:14px;padding:12px;text-align:center">
-          <div style="font-weight:800;font-size:14px;color:${corB}">${s.equipeVisitante}</div>
-          ${setChecks_(s.historicoSets, 'b', corB)}
-          ${tempoBadge_(s.timeouts, 'B', s.setAtual, corB)}
-          <div style="margin-top:10px">${renderQuadraAoVivo_(s.rotacaoVisitante, capitaoEmQuadra_(s, 'B').numero)}</div>
-          ${emAndamento ? bannerCapitaoFora_(s, 'B', corB) : ''}
-        </div>
-      </div>
+    <div class="rf-main">
+      <div class="rf-time rf-tA"><div class="rf-av" style="background:linear-gradient(135deg,#2dd4aa,#16a085)">${rfIni_(s.equipeCasa)}</div>
+        <div style="min-width:0"><div class="rf-lab">EQUIPE A${s.sacando === 'A' && emAndamento ? ' <span style="color:#f5b942" title="Sacando">●</span>' : ''}</div><div class="rf-nm">${rfEsc_(s.equipeCasa)}</div></div></div>
+      <div class="rf-pts rf-pA">${String(s.pontosCasa).padStart(2, '0')}</div>
+      <div class="rf-ce"><span class="rf-sets">SETS &nbsp;${s.setsCasa} : ${s.setsVisitante}</span><span class="rf-vs">VS</span><span class="rf-dec">${decisivo ? 'SET DECISIVO' : (finalizada || prontaFinalizar ? '' : 'SET ' + setN)}</span></div>
+      <div class="rf-pts rf-pB">${String(s.pontosVisitante).padStart(2, '0')}</div>
+      <div class="rf-time rf-tB"><div class="rf-av" style="background:linear-gradient(135deg,#8b7cf6,#5b4bd6)">${rfIni_(s.equipeVisitante)}</div>
+        <div style="min-width:0"><div class="rf-lab">EQUIPE B${s.sacando === 'B' && emAndamento ? ' <span style="color:#f5b942" title="Sacando">●</span>' : ''}</div><div class="rf-nm">${rfEsc_(s.equipeVisitante)}</div></div></div>
     </div>
-
-    ${emAndamento ? `
-    <div class="card">
-      <div class="card-title"><i class='bx bx-timer'></i> Ações</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn btn-secondary" onclick="sumulaTimeout('A')" ${tempoUsados_(s.timeouts, 'A', s.setAtual) >= 2 ? 'disabled title="Já usou os 2 tempos deste set"' : ''} style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bx-time-five' style="color:${corA};font-size:20px"></i><span style="font-size:11px;font-weight:700;text-align:center">Tempo · ${s.equipeCasa}<br>(${tempoUsados_(s.timeouts, 'A', s.setAtual)}/2)</span></button>
-        <button class="btn btn-secondary" onclick="sumulaTimeout('B')" ${tempoUsados_(s.timeouts, 'B', s.setAtual) >= 2 ? 'disabled title="Já usou os 2 tempos deste set"' : ''} style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bx-time-five' style="color:${corB};font-size:20px"></i><span style="font-size:11px;font-weight:700;text-align:center">Tempo · ${s.equipeVisitante}<br>(${tempoUsados_(s.timeouts, 'B', s.setAtual)}/2)</span></button>
-        <button class="btn btn-secondary" onclick="abrirModalCartao()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bxs-flag-alt' style="font-size:20px"></i><span style="font-size:11px;font-weight:700">Cartão</span></button>
-        <button class="btn btn-secondary" onclick="abrirModalSub()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;min-height:72px"><i class='bx bx-transfer' style="font-size:20px"></i><span style="font-size:11px;font-weight:700">Substituição</span></button>
-      </div>
-      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px" onclick="sumulaDesfazer()"><i class='bx bx-undo'></i> Desfazer último evento</button>
+    ${hs ? `<div class="rf-hist">${hs}</div>` : ''}
+    ${emAndamento ? `<div class="rf-regra">Até ${alvo} · 2 de vantagem</div>` : '<div style="height:10px"></div>'}
+    ${emAndamento && !precisaEscalacaoSet ? `
+    <div class="rf-btns">
+      <div class="rf-pc"><button class="rf-ponto" onclick="sumulaPonto('A')"><span class="pl">+</span><span>Ponto ${rfEsc_(s.equipeCasa)}</span><span style="opacity:.5;font-size:10px">A</span></button><button class="rf-menos" title="Corrigir: −1 ponto ${rfEsc_(s.equipeCasa)}" onclick="sumulaPontoMenos('A')">−1</button></div>
+      <div class="rf-pc"><button class="rf-menos" title="Corrigir: −1 ponto ${rfEsc_(s.equipeVisitante)}" onclick="sumulaPontoMenos('B')">−1</button><button class="rf-ponto" onclick="sumulaPonto('B')"><span style="opacity:.5;font-size:10px">B</span><span>Ponto ${rfEsc_(s.equipeVisitante)}</span><span class="pl">+</span></button></div>
     </div>` : ''}
-    `}
+    <div class="rf-foot"><span>Primeiro a 2 sets vence · tempos e substituições controlados por set</span>${emAndamento ? `<button onclick="sumulaDesfazer()">↶ Desfazer ação</button>` : ''}</div>
+  </div>
 
-    <div class="card">
-      <div class="card-title"><i class='bx bx-line-chart'></i> Histórico de Pontos — Set ${Math.min(s.setAtual, 3)}</div>
-      ${historicoPontosSetAtual_(s, corA, corB)}
-    </div>
+  ${precisaEscalacaoSet ? renderEscalacaoSetForm_(s, corA, corB) : ''}
 
-    ${prontaFinalizar ? `
-    <div class="card" style="text-align:center;background:linear-gradient(135deg,#e8f5e9,#fff)">
-      <p style="margin-bottom:10px;font-weight:700;color:var(--green)">Partida decidida: ${s.setsCasa > s.setsVisitante ? s.equipeCasa : s.equipeVisitante} venceu por ${Math.max(s.setsCasa, s.setsVisitante)} sets a ${Math.min(s.setsCasa, s.setsVisitante)}.</p>
-      <button class="btn btn-success" onclick="sumulaFinalizarPartida()"><i class='bx bxs-file-export'></i> 💾 Salvar e Exportar</button>
-    </div>` : ''}
+  <div class="rf-kpis">
+    <div class="rf-kpi"><div class="ic" style="background:#e6faf4;color:#16a085"><i class='bx bx-trophy'></i></div><div><div class="k">SETS VENCIDOS</div><div class="v">${s.setsCasa} <small>—</small> ${s.setsVisitante}</div><div class="s">${rfEsc_(s.equipeCasa)} · ${rfEsc_(s.equipeVisitante)}</div></div></div>
+    <div class="rf-kpi"><div class="ic" style="background:#e8f0ff;color:#4f7cff"><i class='bx bx-stopwatch'></i></div><div><div class="k">TEMPOS · SET ${setN}</div><div class="v">${tA}<small>/2</small> <small>·</small> ${tB}<small>/2</small></div><div class="s">${rfEsc_(s.equipeCasa)} · ${rfEsc_(s.equipeVisitante)}</div></div></div>
+    <div class="rf-kpi"><div class="ic" style="background:#efeafe;color:#7c6cf2"><i class='bx bx-transfer'></i></div><div><div class="k">SUBSTITUIÇÕES · SET ${setN}</div><div class="v">${rfSubsSet_(s, 'A')}<small>/6</small> <small>·</small> ${rfSubsSet_(s, 'B')}<small>/6</small></div><div class="s">${rfEsc_(s.equipeCasa)} · ${rfEsc_(s.equipeVisitante)}</div></div></div>
+    <div class="rf-kpi"><div class="ic" style="background:#fff1e6;color:#f08a24"><i class='bx bx-pulse'></i></div><div><div class="k">DURAÇÃO</div><div class="v" id="rf-dur">${rfDuracao_(s)}</div><div class="s">Desde o início da súmula</div></div></div>
+  </div>
 
-    ${finalizada ? `
-    <div class="card" style="text-align:center">
-      <p style="font-weight:700;color:var(--green);margin-bottom:10px"><i class='bx bx-check-circle'></i> Súmula finalizada.</p>
-      ${s.linkPdf ? `<a class="btn btn-primary" href="${s.linkPdf}" target="_blank"><i class='bx bxs-file-pdf'></i> Abrir PDF</a>` : ''}
-      <button class="btn btn-secondary" style="margin-left:8px" onclick="initSumulaLive()"><i class='bx bx-left-arrow-alt'></i> Voltar</button>
-    </div>` : ''}
-
-    <div class="card" style="padding:0;overflow:hidden">
-      <div onclick="sumulaToggleAccordion_('acc-timeline')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:16px" class="card-title"><span><i class='bx bx-list-ul'></i> Linha do tempo ${timelineItens.length ? `<span style="font-size:11px;font-weight:700;color:var(--dark-grey)">(${timelineItens.length})</span>` : ''}</span><i class='bx bx-chevron-down' id="acc-timeline-icon"></i></div>
-      <div id="acc-timeline" style="display:none;padding:0 16px 16px">
-        ${timelineItens.length ? timelineItens.sort((a, b) => b.ordem - a.ordem).map(t => t.html).join('') : '<p style="color:var(--dark-grey);font-size:13px">Nenhum evento ainda.</p>'}
+  <div class="rf-2col">
+    <div class="rf-box">
+      <div class="rf-sec">FERRAMENTAS DE APONTAMENTO</div><div class="rf-tit">Ações da partida</div>
+      <div class="rf-tools">
+        <button class="rf-tool" ${emAndamento ? '' : 'disabled'} onclick="abrirModalSub()"><div class="ic" style="background:#e6faf4;color:#16a085"><i class='bx bx-transfer'></i></div><div><b>Substituição</b><span>Registrar entrada e saída</span></div></button>
+        <div class="rf-tool" style="cursor:default"><div class="ic" style="background:#e8f0ff;color:#4f7cff"><i class='bx bx-stopwatch'></i></div><div><b>Tempo</b><span>Até 2 por equipe / set</span>
+          <div class="eq"><button class="rf-mini" ${emAndamento && tA < 2 ? '' : 'disabled'} onclick="sumulaTimeout('A')">${rfEsc_(String(s.equipeCasa).slice(0, 12))} ${tA}/2</button><button class="rf-mini" ${emAndamento && tB < 2 ? '' : 'disabled'} onclick="sumulaTimeout('B')">${rfEsc_(String(s.equipeVisitante).slice(0, 12))} ${tB}/2</button></div></div></div>
+        <button class="rf-tool" ${emAndamento ? '' : 'disabled'} onclick="abrirModalCartao()"><div class="ic" style="background:#fdecec;color:#ef4444"><i class='bx bx-shield-quarter'></i></div><div><b>Sanção</b><span>Cartão conforme decisão arbitral</span></div></button>
+        <button class="rf-tool" ${emAndamento ? '' : 'disabled'} onclick="sumulaDesfazer()"><div class="ic" style="background:#f1f3f9;color:#6b7280"><i class='bx bx-undo'></i></div><div><b>Desfazer</b><span>Reverte o último ponto</span></div></button>
+        <button class="rf-tool" onclick="rfAbrirObs_()"><div class="ic" style="background:#fff1e6;color:#f08a24"><i class='bx bx-clipboard'></i></div><div><b>Ocorrência</b><span>Adicionar observação</span></div></button>
+        <button class="rf-tool" ${prontaFinalizar ? '' : 'disabled'} onclick="sumulaFinalizarPartida()"><div class="ic" style="background:#e6faf4;color:#16a085"><i class='bx bx-check'></i></div><div><b>Encerramento</b><span>${finalizada ? 'Súmula finalizada' : prontaFinalizar ? 'Salvar e exportar a súmula' : 'Aguardando fim da partida'}</span></div></button>
       </div>
+      <div style="margin-top:12px;font-size:11px;color:#8a90a2;line-height:1.4">Decisões continuam com a arbitragem. O sistema registra e aplica as regras da CBV, mas não julga lances nem substitui o apontador.</div>
     </div>
+    <div class="rf-box">
+      <div class="rf-sec">ACOMPANHAMENTO EM TEMPO REAL</div><div class="rf-tit">Registro da partida</div>
+      ${rfRegistroHtml_(s, emAndamento)}
+    </div>
+  </div>
 
-    <div class="card" style="padding:0;overflow:hidden">
-      <div onclick="sumulaToggleAccordion_('acc-obs')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:16px" class="card-title"><span><i class='bx bx-note'></i> Observações da Súmula</span><i class='bx bx-chevron-down' id="acc-obs-icon"></i></div>
-      <div id="acc-obs" style="display:none;padding:0 16px 16px">
-        <textarea id="sumula-obs" rows="3" class="form-control" placeholder="Protestos, incidentes, ocorrências..." ${finalizada ? 'disabled' : ''} style="resize:vertical">${s.observacoes || ''}</textarea>
-        ${emAndamento ? `<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="sumulaSalvarObs()"><i class='bx bx-save'></i> Salvar Observações</button>` : ''}
-      </div>
+  ${prontaFinalizar ? `
+  <div class="card" style="text-align:center;background:linear-gradient(135deg,#e8f5e9,#fff)">
+    <p style="margin-bottom:10px;font-weight:700;color:var(--green)">Partida decidida: ${rfEsc_(s.setsCasa > s.setsVisitante ? s.equipeCasa : s.equipeVisitante)} venceu por ${Math.max(s.setsCasa, s.setsVisitante)} sets a ${Math.min(s.setsCasa, s.setsVisitante)}.</p>
+    <button class="btn btn-success" onclick="sumulaFinalizarPartida()"><i class='bx bxs-file-export'></i> 💾 Salvar e Exportar</button>
+  </div>` : ''}
+
+  ${finalizada ? `
+  <div class="card" style="text-align:center">
+    <p style="font-weight:700;color:var(--green);margin-bottom:10px"><i class='bx bx-check-circle'></i> Súmula finalizada.</p>
+    ${s.linkPdf ? `<a class="btn btn-primary" href="${s.linkPdf}" target="_blank"><i class='bx bxs-file-pdf'></i> Abrir PDF</a>` : ''}
+    <button class="btn btn-secondary" style="margin-left:8px" onclick="initSumulaLive()"><i class='bx bx-left-arrow-alt'></i> Voltar</button>
+  </div>` : ''}
+
+  <div class="rf-box" style="margin-bottom:14px">
+    <div class="rf-sec">ESCALAÇÃO</div><div class="rf-tit">Formações em quadra</div>
+    <div class="rf-quadras">
+      <div class="rf-q"><h4 style="color:${corA}">${rfEsc_(s.equipeCasa)} ${s.sacando === 'A' && emAndamento ? '<span class="sq">SACANDO</span>' : ''}</h4>
+        ${rfQuadra_(s.rotacaoCasa, capitaoEmQuadra_(s, 'A').numero, corA, libA)}${emAndamento ? bannerCapitaoFora_(s, 'A', corA) : ''}</div>
+      <div class="rf-q"><h4 style="color:${corB}">${rfEsc_(s.equipeVisitante)} ${s.sacando === 'B' && emAndamento ? '<span class="sq">SACANDO</span>' : ''}</h4>
+        ${rfQuadra_(s.rotacaoVisitante, capitaoEmQuadra_(s, 'B').numero, corB, libB)}${emAndamento ? bannerCapitaoFora_(s, 'B', corB) : ''}</div>
     </div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div onclick="sumulaToggleAccordion_('acc-obs')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:16px" class="card-title"><span><i class='bx bx-note'></i> Observações da Súmula</span><i class='bx bx-chevron-down' id="acc-obs-icon"></i></div>
+    <div id="acc-obs" style="display:none;padding:0 16px 16px">
+      <textarea id="sumula-obs" rows="3" class="form-control" placeholder="Protestos, incidentes, ocorrências..." ${finalizada ? 'disabled' : ''} style="resize:vertical">${rfEsc_(s.observacoes || '')}</textarea>
+      ${emAndamento ? `<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="sumulaSalvarObs()"><i class='bx bx-save'></i> Salvar Observações</button>` : ''}
+    </div>
+  </div>
   `;
+  clearInterval(_rfTimer);
+  if (!finalizada) _rfTimer = setInterval(() => { const d = document.getElementById('rf-dur'); if (!d) { clearInterval(_rfTimer); return; } d.textContent = rfDuracao_(sumulaLiveState); }, 1000);
 }
 
 function sumulaToggleAccordion_(id) {
