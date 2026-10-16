@@ -306,14 +306,34 @@ async function excluir(d: Any) {
   return { ok: true };
 }
 
+// Login do painel: a lista de usuários mora no Apps Script (lento e às vezes dá 404 do Google).
+// Por isso: cache de 30 min por instância, até 3 tentativas e recusa explícita nunca é repetida.
+const loginCache = new Map<string, { usuario: string; papel: string; ate: number }>();
+async function hashLogin(auth: Any) {
+  const buf = new TextEncoder().encode(String(auth?.usuario || "").toLowerCase() + "\u0000" + String(auth?.senha || ""));
+  return [...new Uint8Array(await crypto.subtle.digest("SHA-256", buf))].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+async function loginPainelAS(auth: Any): Promise<{ ok: boolean; usuario?: string; papel?: string; erro?: string; falha?: boolean }> {
+  if (!auth || !auth.usuario || !auth.senha) return { ok: false, erro: "Login inválido." };
+  const k = await hashLogin(auth);
+  const c = loginCache.get(k);
+  if (c && c.ate > Date.now()) return { ok: true, usuario: c.usuario, papel: c.papel };
+  for (let t = 0; t < 3; t++) {
+    try {
+      const r = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "loginPainel", auth }), signal: AbortSignal.timeout(35000) });
+      const j = await r.json();
+      if (!j.ok) { loginCache.delete(k); return { ok: false, erro: "Login inválido." }; }
+      loginCache.set(k, { usuario: j.usuario, papel: j.papel, ate: Date.now() + 30 * 60 * 1000 });
+      return { ok: true, usuario: j.usuario, papel: j.papel };
+    } catch (_) { await new Promise((res) => setTimeout(res, 600)); }
+  }
+  return { ok: false, erro: "Não foi possível validar o login agora. Tente de novo em instantes.", falha: true };
+}
 async function papel(auth: Any, aceitos: string[]) {
-  try {
-    const r = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "loginPainel", auth }) });
-    const j = await r.json();
-    if (!j.ok) return { erro: "Login inválido." };
-    if (!aceitos.includes(j.papel)) return { erro: "Seu perfil não tem permissão para essa ação." };
-    return { usuario: j.usuario };
-  } catch (_) { return { erro: "Não foi possível validar o login." }; }
+  const j = await loginPainelAS(auth);
+  if (!j.ok) return { erro: j.erro };
+  if (!aceitos.includes(j.papel!)) return { erro: "Seu perfil não tem permissão para essa ação." };
+  return { usuario: j.usuario };
 }
 async function registrarWO(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao"]);
@@ -602,12 +622,13 @@ async function saudeSistema(d: Any) {
   const itens: Any[] = [];
   const add = (nome: string, status: string, detalhe: string) => itens.push({ nome, status, detalhe });
   let extra: Any[] = [];
-  try {   // valida o login e traz os itens que só o Apps Script enxerga (pasta de PDFs)
-    const r = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "saudeSistema", auth: d.auth }) });
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]);
+  if (c.erro) return { ok: false, erro: c.erro };
+  try {   // item que só o Apps Script enxerga (pasta de PDFs); se estiver lento, segue sem ele
+    const r = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "saudeSistema", auth: d.auth }), signal: AbortSignal.timeout(20000) });
     const j = await r.json();
-    if (!j.ok) return { ok: false, erro: j.erro || "Login inválido." };
     extra = (j.itens || []).filter((i: Any) => ["Pasta de PDFs"].includes(i.nome));
-  } catch (_) { return { ok: false, erro: "Não foi possível validar o login." }; }
+  } catch (_) { extra = [{ nome: "Pasta de PDFs", status: "aviso", detalhe: "Apps Script lento — não consegui verificar agora" }]; }
   try {
     const tb = Date.now();
     const { data, error } = await sb.from("partidas").select("id,status");
