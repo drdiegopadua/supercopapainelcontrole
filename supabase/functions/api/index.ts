@@ -765,6 +765,7 @@ async function limparTestes(d: Any) {
   await del("avisos", "titulo", "TESTE%");
   await del("atletas", "equipe", "ZZ %");
   await del("partidas", "id", "TESTE%");
+  { const { data } = await sb.from("votos_destaque").delete().eq("teste", true).select("id"); n["votos_destaque.teste"] = (data || []).length; }
   await del("inscricoes", "nome_equipe", "TESTE%");
   await del("quiz_respostas", "nome", "TESTE%");
   await del("feedback", "time", "TESTE%");
@@ -1299,6 +1300,111 @@ async function excluirInscricao(d: Any) {
   return data && data.length ? { ok: true } : { ok: false, erro: "Inscrição não encontrada." };
 }
 
+// ════════ Votação do Atleta Destaque (1 voto por WhatsApp e por aparelho) ════════
+const normN = (s: Any) => (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+async function configVotacao() {
+  const { data } = await sb.from("config").select("valor").eq("chave", "votacao_destaque").maybeSingle();
+  const v: Any = (data && data.valor) || {};
+  const aberta = v.aberta !== false && !(v.encerraEm && new Date(v.encerraEm) < new Date());
+  return { aberta, encerraEm: v.encerraEm || null, manual: v.aberta === false };
+}
+// Atletas que JOGARAM em partidas já encerradas (titulares, líbero, escalações de cada set e quem entrou por substituição).
+async function elegiveisDestaque(incluirTeste: boolean) {
+  const { data } = await sb.from("partidas").select("id,equipe_casa,equipe_visitante,estado").eq("status", "finalizada");
+  const porEquipe: Record<string, Record<string, { numero: string; nome: string }>> = {};
+  const add = (eq: string, p: Any) => {
+    if (!eq || !p || !(p.nome || "").toString().trim()) return;
+    const k = normN(p.nome), m = (porEquipe[eq] = porEquipe[eq] || {});
+    if (!m[k] || (!m[k].numero && p.numero)) m[k] = { numero: (p.numero || "").toString(), nome: p.nome.toString().trim() };
+  };
+  (data || []).filter((r: Any) => incluirTeste || !ehTeste(r.id)).forEach((r: Any) => {
+    const e = r.estado || {};
+    [["A", r.equipe_casa, e.elencoCasa, "rotacaoCasa"], ["B", r.equipe_visitante, e.elencoVisitante, "rotacaoVisitante"]].forEach(([lado, eq, elenco, rot]: Any) => {
+      ((elenco && elenco.titulares) || []).forEach((p: Any) => add(eq, p));
+      if (elenco && elenco.libero) add(eq, elenco.libero);
+      Object.values(e.escalacoesPorSet || {}).forEach((s: Any) => (s[rot] || []).forEach((p: Any) => add(eq, p)));
+      (e[rot] || []).forEach((p: Any) => add(eq, p));
+    });
+    // quem entrou por substituição só tem o nome (o número vem do cadastro/elenco quando existir)
+    (e.substituicoes || []).forEach((s: Any) => add(s.equipe === "A" ? r.equipe_casa : r.equipe_visitante, { nome: s.entrou, numero: "" }));
+  });
+  // completa o número com o cadastro de atletas
+  const { data: cad } = await sb.from("atletas").select("equipe,numero,nome,tipo");
+  (cad || []).forEach((a: Any) => {
+    if ((a.tipo || "Atleta") !== "Atleta") return;
+    const eq = Object.keys(porEquipe).find((x) => chaveEq(x) === chaveEq(a.equipe));
+    if (eq && porEquipe[eq][normN(a.nome)] && !porEquipe[eq][normN(a.nome)].numero) porEquipe[eq][normN(a.nome)].numero = (a.numero || "").toString();
+  });
+  const num = (x: string) => (parseInt(x) >= 0 ? parseInt(x) : 9999);
+  return Object.keys(porEquipe).sort((a, b) => a.localeCompare(b)).map((eq) => ({
+    equipe: eq, atletas: Object.values(porEquipe[eq]).sort((a, b) => num(a.numero) - num(b.numero) || a.nome.localeCompare(b.nome)),
+  }));
+}
+async function dadosVotacao(d: Any) {
+  const [cfg, equipes, { count }] = await Promise.all([configVotacao(), elegiveisDestaque(d.teste === "1" || d.teste === true), sb.from("votos_destaque").select("id", { count: "exact", head: true }).eq("teste", d.teste === "1" || d.teste === true)]);
+  return { ok: true, aberta: cfg.aberta, encerraEm: cfg.encerraEm, equipes, totalVotos: count || 0 };
+}
+async function rankingDestaque(d: Any) {
+  const teste = d.teste === "1" || d.teste === true;
+  const linhas: Any[] = [];
+  for (let de = 0; ; de += 1000) {
+    const { data } = await sb.from("votos_destaque").select("equipe,atleta_nome,atleta_numero").eq("teste", teste).order("id").range(de, de + 999);
+    linhas.push(...(data || [])); if (!data || data.length < 1000) break;
+  }
+  const mapa: Record<string, Any> = {};
+  linhas.forEach((v) => { const k = chaveEq(v.equipe) + "|" + normN(v.atleta_nome); (mapa[k] = mapa[k] || { equipe: v.equipe, nome: v.atleta_nome, numero: v.atleta_numero, votos: 0 }).votos++; });
+  const total = linhas.length;
+  const ranking = Object.values(mapa).sort((a: Any, b: Any) => b.votos - a.votos || a.nome.localeCompare(b.nome)).slice(0, 20).map((r: Any, i: number) => ({ pos: i + 1, ...r, pct: total ? Math.round((r.votos / total) * 1000) / 10 : 0 }));
+  const cfg = await configVotacao();
+  return { ok: true, ranking, totalVotos: total, aberta: cfg.aberta, atualizadoEm: new Date().toISOString() };
+}
+async function sha256Hex(s: string) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map((x) => x.toString(16).padStart(2, "0")).join(""); }
+function normalizarTelefone(raw: Any): string | null {
+  let n = (raw || "").toString().replace(/\D/g, "");
+  if (n.startsWith("55") && n.length >= 12) n = n.slice(2);
+  if (n.length === 11 && n[2] === "9") return n;       // celular com 9
+  if (n.length === 10) return n;                       // fixo/antigo
+  return null;
+}
+async function votarDestaque(d: Any) {
+  const teste = d.teste === true || d.teste === "1";
+  const cfg = await configVotacao();
+  if (!cfg.aberta) return { ok: false, erro: "A votação está encerrada.", encerrada: true };
+  const nome = (d.nome || "").toString().trim().replace(/\s+/g, " ");
+  if (nome.length < 3 || nome.length > 80) return { ok: false, erro: "Digite seu nome (mínimo 3 letras)." };
+  const tel = normalizarTelefone(d.whatsapp);
+  if (!tel) return { ok: false, erro: "Digite um WhatsApp válido com DDD, ex.: (27) 99999-9999." };
+  if (!d.aceite) return { ok: false, erro: "Marque que concorda com as regras da votação." };
+  const eqs = await elegiveisDestaque(teste);
+  const eq = eqs.find((e) => chaveEq(e.equipe) === chaveEq(d.equipe));
+  const at = eq && eq.atletas.find((a) => normN(a.nome) === normN(d.atletaNome));
+  if (!eq || !at) return { ok: false, erro: "Esse atleta não está disponível para voto (só quem já jogou em partida encerrada)." };
+  const dev = devOk(d.deviceId);
+  const hash = await sha256Hex("sc-destaque|" + tel);
+  const { error } = await sb.from("votos_destaque").insert({ tel_hash: hash, tel_final: tel.slice(-4), device_id: dev || null, nome_votante: nome, equipe: eq.equipe, atleta_numero: at.numero, atleta_nome: at.nome, teste });
+  if (error) {
+    if (error.code === "23505") return { ok: false, erro: "Este WhatsApp ou este aparelho já votou. Cada pessoa vota apenas 1 vez.", jaVotou: true };
+    return { ok: false, erro: error.message };
+  }
+  return { ok: true, voto: { equipe: eq.equipe, nome: at.nome, numero: at.numero }, ...(await rankingDestaque({ teste })) };
+}
+async function definirVotacao(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const valor: Any = { aberta: d.aberta !== false, encerraEm: d.encerraEm || null };
+  await sb.from("config").upsert({ chave: "votacao_destaque", valor, atualizado_em: new Date().toISOString() });
+  return { ok: true, ...(await configVotacao()) };
+}
+async function listarVotosDestaque(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("votos_destaque").select("id,criado_em,nome_votante,tel_final,equipe,atleta_nome,atleta_numero,teste").order("id", { ascending: false }).limit(100);
+  return { ok: true, votos: (data || []).map((v: Any) => ({ ...v, criado_em: fmtBR(v.criado_em) })) };
+}
+async function anularVotoDestaque(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("votos_destaque").delete().eq("id", d.id || -1).select("id");
+  return data && data.length ? { ok: true } : { ok: false, erro: "Voto não encontrado." };
+}
+
 // Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
 // Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
 async function removerEquipe(d: Any) {
@@ -1338,6 +1444,10 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "votarDestaque": return await votarDestaque(d);
+    case "definirVotacao": return await definirVotacao(d);
+    case "listarVotosDestaque": return await listarVotosDestaque(d);
+    case "anularVotoDestaque": return await anularVotoDestaque(d);
     case "tipo:quiz": return await registrarQuiz(d);
     case "tipo:app_install": return await registrarInstalacao(d.deviceId);
     case "tipo:app_acesso": return await registrarVisita("app", d.deviceId);
@@ -1425,6 +1535,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
       case "statusTermo": return await statusTermo(d.equipe || "");
       case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "votacao": return await dadosVotacao(d);
+      case "rankingDestaque": return await rankingDestaque(d);
       case "ranking_quiz": return await rankingQuiz();
       case "count_installs": return await contarInstalacoes();
       case "count_acessos": return await contarAcessos("app");
