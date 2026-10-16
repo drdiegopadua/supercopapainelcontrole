@@ -329,8 +329,120 @@ async function loginPainelAS(auth: Any): Promise<{ ok: boolean; usuario?: string
   }
   return { ok: false, erro: "Não foi possível validar o login agora. Tente de novo em instantes.", falha: true };
 }
+// ════════ Usuários do painel (senhas só como hash PBKDF2) ════════
+const hex = (b: ArrayBuffer | Uint8Array) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+const deHex = (s: string) => new Uint8Array((s.match(/../g) || []).map((h) => parseInt(h, 16)));
+async function derivar(senha: string, sal: string) {
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: deHex(sal), iterations: 100000 }, k, 256));
+}
+const novoSal = () => hex(crypto.getRandomValues(new Uint8Array(16)));
+const PAPEIS_PAINEL = ["admin", "organizacao", "mesa", "juiz"];
+let usuariosMigrados = false;
+async function temUsuarios() {
+  if (usuariosMigrados) return true;
+  const { count } = await sb.from("usuarios_painel").select("chave", { count: "exact", head: true });
+  usuariosMigrados = (count || 0) > 0;
+  return usuariosMigrados;
+}
+async function loginLocal(auth: Any): Promise<{ ok: boolean; usuario?: string; papel?: string; erro?: string }> {
+  const k = chaveEq(auth?.usuario), senha = (auth?.senha || "").toString();
+  if (!k || !senha) return { ok: false, erro: "Login inválido." };
+  const { data: u } = await sb.from("usuarios_painel").select("*").eq("chave", k).maybeSingle();
+  if (!u) { await derivar(senha, novoSal()); return { ok: false, erro: "Usuário ou senha incorretos." }; }   // mesmo tempo de resposta
+  if (u.bloqueado_ate && new Date(u.bloqueado_ate) > new Date()) return { ok: false, erro: "Muitas tentativas erradas. Aguarde alguns minutos e tente de novo." };
+  if ((await derivar(senha, u.sal)) === u.hash) {
+    if (u.falhas) await sb.from("usuarios_painel").update({ falhas: 0, bloqueado_ate: null }).eq("chave", k);
+    return { ok: true, usuario: u.usuario, papel: u.papel };
+  }
+  const falhas = (u.falhas || 0) + 1;
+  await sb.from("usuarios_painel").update(falhas >= 5 ? { falhas: 0, bloqueado_ate: new Date(Date.now() + 10 * 60000).toISOString() } : { falhas }).eq("chave", k);
+  return { ok: false, erro: "Usuário ou senha incorretos." };
+}
+async function autenticar(auth: Any) { return (await temUsuarios()) ? await loginLocal(auth) : await loginPainelAS(auth); }
+async function gravarUsuario(usuario: string, senha: string, papelU: string) {
+  const sal = novoSal();
+  const { error } = await sb.from("usuarios_painel").upsert({ chave: chaveEq(usuario), usuario, papel: papelU, sal, hash: await derivar(senha, sal), falhas: 0, bloqueado_ate: null, atualizado_em: new Date().toISOString() });
+  return error;
+}
+async function listarUsuarios() { const { data } = await sb.from("usuarios_painel").select("usuario,papel").order("usuario"); return data || []; }
+// espelha a mudança no Apps Script (que ainda valida o login do envio de fotos); não bloqueia se ele estiver lento
+async function espelharNoAS(corpo: Any) { try { await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(corpo), signal: AbortSignal.timeout(20000) }); } catch (_) { /* melhor esforço */ } }
+
+async function loginPainelAcao(d: Any) {
+  const j = await autenticar(d.auth || d);
+  return j.ok ? { ok: true, usuario: j.usuario, papel: j.papel } : { ok: false, erro: j.erro === "Login inválido." ? "Usuário ou senha incorretos." : j.erro };
+}
+async function listarUsuariosPainel(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  return { ok: true, usuarios: await listarUsuarios() };
+}
+async function salvarUsuarioPainel(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const usuario = (d.usuario || "").toString().trim(), senha = (d.senha || "").toString();
+  if (usuario.length < 3) return { ok: false, erro: "O usuário precisa ter pelo menos 3 caracteres." };
+  if (!PAPEIS_PAINEL.includes(d.papel)) return { ok: false, erro: "Perfil inválido." };
+  const lista: Any[] = await listarUsuarios();
+  const ex: Any = lista.find((x) => chaveEq(x.usuario) === chaveEq(usuario));
+  if (ex) {
+    if (senha && senha.length < 4) return { ok: false, erro: "A senha precisa ter pelo menos 4 caracteres." };
+    if (ex.papel === "admin" && d.papel !== "admin" && lista.filter((x) => x.papel === "admin").length < 2) return { ok: false, erro: "Precisa existir pelo menos um administrador." };
+    if (senha) { const e = await gravarUsuario(ex.usuario, senha, d.papel); if (e) return { ok: false, erro: e.message }; }
+    else await sb.from("usuarios_painel").update({ papel: d.papel, atualizado_em: new Date().toISOString() }).eq("chave", chaveEq(usuario));
+  } else {
+    if (senha.length < 4) return { ok: false, erro: "A senha precisa ter pelo menos 4 caracteres." };
+    const e = await gravarUsuario(usuario, senha, d.papel); if (e) return { ok: false, erro: e.message };
+  }
+  await espelharNoAS({ acao: "salvarUsuarioPainel", auth: d.auth, usuario, senha, papel: d.papel });
+  return { ok: true };
+}
+async function removerUsuarioPainel(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const alvo = chaveEq(d.usuario);
+  const lista: Any[] = await listarUsuarios();
+  const x: Any = lista.find((u) => chaveEq(u.usuario) === alvo);
+  if (!x) return { ok: false, erro: "Usuário não encontrado." };
+  if (x.papel === "admin" && lista.filter((u) => u.papel === "admin").length < 2) return { ok: false, erro: "Precisa existir pelo menos um administrador." };
+  await sb.from("usuarios_painel").delete().eq("chave", alvo);
+  await espelharNoAS({ acao: "removerUsuarioPainel", auth: d.auth, usuario: d.usuario });
+  return { ok: true };
+}
+// Senha de liberação (cadastro de atleta no painel). Padrão 5912 até alguém trocar.
+async function senhaAdminOk(senha: Any) {
+  senha = (senha || "").toString();
+  if (!(await temUsuarios())) {
+    try { const r = await fetch(APPS_SCRIPT + "?action=verificarSenhaAdmin&senha=" + encodeURIComponent(senha), { signal: AbortSignal.timeout(30000) }); return !!(await r.json()).ok; } catch (_) { return false; }
+  }
+  const { data } = await sb.from("config").select("valor").eq("chave", "senha_admin").maybeSingle();
+  if (!data) return senha === "5912";
+  return (await derivar(senha, data.valor.sal)) === data.valor.hash;
+}
+async function gravarSenhaAdmin(nova: string) {
+  const sal = novoSal();
+  await sb.from("config").upsert({ chave: "senha_admin", valor: { sal, hash: await derivar(nova, sal) }, atualizado_em: new Date().toISOString() });
+}
+async function trocarSenhaAdmin(d: Any) {
+  if (!(await senhaAdminOk(d.senhaAtual))) return { ok: false, erro: "Senha atual incorreta." };
+  const nova = (d.novaSenha || "").toString().trim();
+  if (nova.length < 4) return { ok: false, erro: "A nova senha precisa ter pelo menos 4 caracteres." };
+  await gravarSenhaAdmin(nova);
+  return { ok: true };
+}
+// Importa os usuários do Apps Script (rodado uma vez pelo editor dele). Só administrador. Pode repetir.
+async function importarUsuarios(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  let n = 0;
+  for (const u of d.usuarios || []) {
+    if (!u.usuario || !u.senha || !PAPEIS_PAINEL.includes(u.papel)) continue;
+    const e = await gravarUsuario(String(u.usuario).trim(), String(u.senha), u.papel); if (!e) n++;
+  }
+  if (d.senhaAdmin) await gravarSenhaAdmin(String(d.senhaAdmin));
+  usuariosMigrados = false;
+  return { ok: true, usuarios: n, senhaAdmin: !!d.senhaAdmin };
+}
+
 async function papel(auth: Any, aceitos: string[]) {
-  const j = await loginPainelAS(auth);
+  const j = await autenticar(auth);
   if (!j.ok) return { erro: j.erro };
   if (!aceitos.includes(j.papel!)) return { erro: "Seu perfil não tem permissão para essa ação." };
   return { usuario: j.usuario };
@@ -382,9 +494,7 @@ const brParaIso = (s: string): string | null => {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}):(\d{2}):(\d{2}))?$/.exec((s || "").trim());
   return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4] || "00"}:${m[5] || "00"}:${m[6] || "00"}-03:00` : null;
 };
-const SENHA_OK = async (senha: string) => {
-  try { const r = await fetch(APPS_SCRIPT + "?action=verificarSenhaAdmin&senha=" + encodeURIComponent(senha || "")); return !!(await r.json()).ok; } catch (_) { return false; }
-};
+const SENHA_OK = (senha: string) => senhaAdminOk(senha);
 
 function normalizarTipo(t: Any) {
   t = (t || "").toString().trim();
@@ -624,11 +734,6 @@ async function saudeSistema(d: Any) {
   let extra: Any[] = [];
   const c: Any = await papel(d.auth, ["admin", "organizacao"]);
   if (c.erro) return { ok: false, erro: c.erro };
-  try {   // item que só o Apps Script enxerga (pasta de PDFs); se estiver lento, segue sem ele
-    const r = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "saudeSistema", auth: d.auth }), signal: AbortSignal.timeout(20000) });
-    const j = await r.json();
-    extra = (j.itens || []).filter((i: Any) => ["Pasta de PDFs"].includes(i.nome));
-  } catch (_) { extra = [{ nome: "Pasta de PDFs", status: "aviso", detalhe: "Apps Script lento — não consegui verificar agora" }]; }
   try {
     const tb = Date.now();
     const { data, error } = await sb.from("partidas").select("id,status");
@@ -706,6 +811,12 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "loginPainel": return await loginPainelAcao(d);
+    case "listarUsuariosPainel": return await listarUsuariosPainel(d);
+    case "salvarUsuarioPainel": return await salvarUsuarioPainel(d);
+    case "removerUsuarioPainel": return await removerUsuarioPainel(d);
+    case "trocarSenhaAdmin": return await trocarSenhaAdmin(d);
+    case "importarUsuarios": return await importarUsuarios(d);
     case "limparTestes": return await limparTestes(d);
     case "salvarAviso": return await salvarAviso(d);
     case "excluirAviso": return await excluirAviso(d);
@@ -765,6 +876,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
       case "statusTermo": return await statusTermo(d.equipe || "");
       case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "verificarSenhaAdmin": return { ok: await senhaAdminOk(d.senha) };
       case "avisos": return { ok: true, avisos: await listarAvisos() };
       case "listarPresencas": return { ok: true, presencas: await listarPresencas(d.jogo || "") };
       case "ranking": case "ranking_atleta": return { ok: true, ranking: await rankingGalera() };

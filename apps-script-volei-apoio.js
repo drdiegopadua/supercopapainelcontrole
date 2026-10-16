@@ -2278,3 +2278,18 @@ function backupSupabase() {
   while (it.hasNext()) arqs.push(it.next());
   arqs.sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(30).forEach(f => f.setTrashed(true));
 }
+
+// ============================================================
+//  MIGRAÇÃO DOS USUÁRIOS DO PAINEL PARA O SUPABASE
+// ============================================================
+// Rode UMA vez no editor (▶). Envia usuários, perfis e senhas (que no Supabase ficam só como hash)
+// e a senha de liberação. Pode rodar de novo sem problema.
+function migrarUsuariosParaSupabase() {
+  const lista = usuariosPainel_();
+  const adm = lista.find(u => u.papel === 'admin');
+  const resp = UrlFetchApp.fetch(SUPABASE_API_URL, {
+    method: 'post', contentType: 'text/plain', muteHttpExceptions: true,
+    payload: JSON.stringify({ acao: 'importarUsuarios', auth: { usuario: adm.usuario, senha: adm.senha }, usuarios: lista, senhaAdmin: getSenhaAdmin_() })
+  });
+  Logger.log(resp.getContentText());
+}
