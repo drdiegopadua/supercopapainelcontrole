@@ -539,6 +539,23 @@ async function migrarDoSheets(d: Any) {
   return { ok: true, ...rel };
 }
 
+// Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
+// Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
+async function removerEquipe(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]);
+  if (c.erro) return { ok: false, erro: c.erro };
+  const equipe = (d.equipe || "").toString().trim(), k = chaveEq(equipe);
+  if (!k) return { ok: false, erro: "Equipe é obrigatória." };
+  const { data: pin } = await sb.from("equipes_pin").select("equipe").eq("chave", k).maybeSingle();
+  if (!pin) return { ok: false, erro: "Equipe não está na lista de convites." };
+  const { data: conf } = await sb.from("confirmacoes").select("chave").eq("chave", k).maybeSingle();
+  const atletas = await atletasDe(pin.equipe);
+  if ((conf || atletas.length) && !d.forcar) return { ok: false, erro: "Essa equipe " + (conf ? "já confirmou presença" : "") + (conf && atletas.length ? " e " : "") + (atletas.length ? "tem " + atletas.length + " atleta(s) cadastrado(s)" : "") + ". Confirme com forcar:true para remover mesmo assim." };
+  for (const tab of ["equipes_pin", "confirmacoes", "consentimentos", "assinaturas"]) await sb.from(tab).delete().eq("chave", k);
+  for (const a of atletas) await sb.from("atletas").delete().eq("id", a.id);
+  return { ok: true, removida: pin.equipe, atletasRemovidos: atletas.length };
+}
+
 // Exportação completa (backup) — só administrador.
 async function exportarTudo(d: Any) {
   const c: Any = await papel(d.auth, ["admin"]);
@@ -560,6 +577,7 @@ async function exportarTudo(d: Any) {
 async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null> {
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
+    case "removerEquipe": return await removerEquipe(d);
     case "migrarDoSheets": return await migrarDoSheets(d);
     case "cadastrarAtleta": return await cadastrarAtleta(d);
     case "removerAtleta": return await removerAtleta(d);
