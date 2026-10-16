@@ -553,10 +553,8 @@ async function equipesComPin() {
   const { data } = await sb.from("equipes_pin").select("equipe");
   const nomes = (data || []).map((r: Any) => r.equipe).filter((n: string) => n && conf.has(chaveEq(n)));
   const escudos: Record<string, string> = {};
-  try {
-    const j = await (await fetch(APPS_SCRIPT + "?action=inscricoes")).json();
-    (j.inscricoes || []).forEach((r: Any) => { const n = (r["Nome da Equipe"] || "").toString().trim(); if (n) escudos[n] = (r["Link do Escudo"] || "").toString().trim(); });
-  } catch (_) { /* escudo é opcional */ }
+  const { data: insc } = await sb.from("inscricoes").select("nome_equipe,escudo_url");
+  (insc || []).forEach((r: Any) => { const n = (r.nome_equipe || "").toString().trim(); if (n) escudos[n] = (r.escudo_url || "").toString().trim(); });
   return nomes.sort().map((n: string) => ({ equipe: n, escudo: escudos[n] || "" }));
 }
 async function statusCadastro() {
@@ -1099,6 +1097,99 @@ async function importarNoticias(d: Any) {
   return { ok: true, importadas: n };
 }
 
+// ════════ Inscrições das equipes (escudo no Storage) ════════
+const HEADERS_INSCRICOES = ["Carimbo de data/hora", "Modalidade", "Nome da Equipe", "Nome do Responsável", "Instagram", "Telefone/WhatsApp", "Cidade", "Precisa de Alojamento", "Pessoas no Alojamento", "Como conheceu a Supercopa", "Termo de Alojamento", "Termo de Compromisso", "Link do Escudo", "Status"];
+const TIPOS_IMG: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
+const slug = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "equipe";
+
+async function guardarEscudo(nomeEquipe: string, base64: string): Promise<{ url?: string; erro?: string }> {
+  const m = /^data:([a-z]+\/[a-z0-9.+-]+);base64,(.*)$/is.exec(base64 || "");
+  const tipo = m ? m[1].toLowerCase() : "image/png";
+  const ext = TIPOS_IMG[tipo];
+  if (!ext) return { erro: "O escudo precisa ser uma imagem PNG, JPG, WEBP ou GIF." };
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob((m ? m[2] : base64).replace(/\s/g, "")), (c) => c.charCodeAt(0)); } catch (_) { return { erro: "Imagem do escudo inválida." }; }
+  if (bytes.length > 4 * 1024 * 1024) return { erro: "O escudo é muito grande (máximo 4 MB)." };
+  const caminho = Date.now() + "-" + slug(nomeEquipe) + "." + ext;
+  const { error } = await sb.storage.from("escudos").upload(caminho, bytes, { contentType: tipo, upsert: false });
+  if (error) return { erro: "Não foi possível guardar o escudo: " + error.message };
+  return { url: Deno.env.get("SUPABASE_URL")! + "/storage/v1/object/public/escudos/" + caminho };
+}
+async function inscrever(d: Any) {
+  const nome = (d.nomeEquipe || "").toString().trim();
+  const falha = (msg: string) => ({ ok: false, status: "erro", erro: msg, msg });
+  if (!nome) return falha("Nome da equipe é obrigatório.");
+  const modalidade = (d.modalidade || "").toString().trim();
+  const { data: ja } = await sb.from("inscricoes").select("id").ilike("nome_equipe", nome.replace(/[%_]/g, (c) => "\\" + c)).ilike("modalidade", modalidade.replace(/[%_]/g, (c) => "\\" + c)).limit(1);
+  if (ja && ja.length) return falha("Essa equipe já está inscrita nessa modalidade. Se precisar corrigir algo, fale com a organização.");
+  let escudo = "";
+  if (d.escudoBase64) { const r = await guardarEscudo(nome, d.escudoBase64); if (r.erro) return falha(r.erro); escudo = r.url!; }
+  const alojSim = d.alojamento === "sim";
+  const { error } = await sb.from("inscricoes").insert({
+    modalidade, nome_equipe: nome, responsavel: (d.nomeResp || "").toString(), instagram: (d.instagram || "").toString(), telefone: (d.telefone || "").toString(),
+    cidade: (d.cidade || "").toString(), alojamento: alojSim ? "Sim" : "Não", pessoas_alojamento: alojSim && d.alojQty ? Number(d.alojQty) || null : null,
+    como_conheceu: (d.comoConheceu || "").toString(), termo_aloj: d.termoAloj ? "Assinado" : "", termo_comp: d.termoComp ? "Assinado" : "", escudo_url: escudo,
+  });
+  if (error) return error.code === "23505" ? falha("Essa equipe já está inscrita nessa modalidade. Se precisar corrigir algo, fale com a organização.") : falha(error.message);
+  return { ok: true, status: "ok" };
+}
+async function listarInscricoes() {
+  const { data } = await sb.from("inscricoes").select("*").order("id");
+  const inscricoes = (data || []).filter((r: Any) => r.nome_equipe).map((r: Any) => ({
+    _linha: r.id, "Carimbo de data/hora": r.carimbo, "Modalidade": r.modalidade, "Nome da Equipe": r.nome_equipe, "Nome do Responsável": r.responsavel,
+    "Instagram": r.instagram, "Telefone/WhatsApp": r.telefone, "Cidade": r.cidade, "Precisa de Alojamento": r.alojamento,
+    "Pessoas no Alojamento": r.pessoas_alojamento == null ? "" : r.pessoas_alojamento, "Como conheceu a Supercopa": r.como_conheceu,
+    "Termo de Alojamento": r.termo_aloj, "Termo de Compromisso": r.termo_comp, "Link do Escudo": r.escudo_url, "Status": r.status,
+  }));
+  return { ok: true, headers: HEADERS_INSCRICOES, inscricoes };
+}
+async function equipesConhecidas() {
+  const nomes = new Set<string>();
+  const [{ data: i }, { data: e }] = await Promise.all([sb.from("inscricoes").select("nome_equipe"), sb.from("torneio_equipes").select("nome").eq("modalidade", "volei")]);
+  (i || []).forEach((r: Any) => { const n = (r.nome_equipe || "").trim(); if (n) nomes.add(n); });
+  (e || []).forEach((r: Any) => { const n = (r.nome || "").trim(); if (n) nomes.add(n); });
+  return [...nomes].sort((a, b) => a.localeCompare(b));
+}
+// Importa as inscrições antigas e copia os escudos do Drive para o Storage (só administrador; pode repetir).
+async function importarInscricoes(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const rel: Any = { importadas: 0, jaExistiam: 0, escudosCopiados: 0, escudosMantidosNoDrive: 0, avisos: [] };
+  for (const r of d.inscricoes || []) {
+    const nome = (r["Nome da Equipe"] || "").toString().trim(); if (!nome) continue;
+    const modalidade = (r["Modalidade"] || "").toString().trim();
+    const { data: ja } = await sb.from("inscricoes").select("id,escudo_url").ilike("nome_equipe", nome.replace(/[%_]/g, (x: string) => "\\" + x)).ilike("modalidade", modalidade.replace(/[%_]/g, (x: string) => "\\" + x)).limit(1);
+    let escudo = (r["Link do Escudo"] || "").toString();
+    const drive = /drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)([A-Za-z0-9_-]+)/.exec(escudo);
+    const registro = ja && ja[0];
+    if (drive && d.copiarEscudos && !(registro && !/drive\.google\.com/.test(registro.escudo_url || ""))) {
+      try {
+        const resp = await fetch("https://drive.google.com/uc?export=download&id=" + drive[1], { signal: AbortSignal.timeout(25000) });
+        const tipo = (resp.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+        const buf = new Uint8Array(await resp.arrayBuffer());
+        if (resp.ok && TIPOS_IMG[tipo] && buf.length > 0 && buf.length <= 4 * 1024 * 1024) {
+          const caminho = Date.now() + "-" + slug(nome) + "." + TIPOS_IMG[tipo];
+          const { error } = await sb.storage.from("escudos").upload(caminho, buf, { contentType: tipo, upsert: false });
+          if (!error) { escudo = Deno.env.get("SUPABASE_URL")! + "/storage/v1/object/public/escudos/" + caminho; rel.escudosCopiados++; }
+          else { rel.escudosMantidosNoDrive++; rel.avisos.push(nome + ": " + error.message); }
+        } else { rel.escudosMantidosNoDrive++; rel.avisos.push(nome + ": Drive devolveu " + (tipo || resp.status)); }
+      } catch (ex) { rel.escudosMantidosNoDrive++; rel.avisos.push(nome + ": " + (ex as Error).message); }
+    }
+    if (registro) {
+      rel.jaExistiam++;
+      if (escudo && escudo !== registro.escudo_url) await sb.from("inscricoes").update({ escudo_url: escudo }).eq("id", registro.id);
+      continue;
+    }
+    const aloj = r["Pessoas no Alojamento"];
+    const { error } = await sb.from("inscricoes").insert({
+      carimbo: r["Carimbo de data/hora"] || new Date().toISOString(), modalidade, nome_equipe: nome, responsavel: r["Nome do Responsável"] || "", instagram: r["Instagram"] || "",
+      telefone: r["Telefone/WhatsApp"] || "", cidade: r["Cidade"] || "", alojamento: r["Precisa de Alojamento"] || "Não", pessoas_alojamento: aloj === "" || aloj == null ? null : Number(aloj) || null,
+      como_conheceu: r["Como conheceu a Supercopa"] || "", termo_aloj: r["Termo de Alojamento"] || "", termo_comp: r["Termo de Compromisso"] || "", escudo_url: escudo, status: r["Status"] || "Pendente",
+    });
+    if (error) rel.avisos.push(nome + ": " + error.message); else rel.importadas++;
+  }
+  return { ok: true, ...rel };
+}
+
 // Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
 // Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
 async function removerEquipe(d: Any) {
@@ -1138,6 +1229,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "inscrever": return await inscrever(d);
+    case "importarInscricoes": return await importarInscricoes(d);
     case "salvarNoticia": return await salvarNoticia(d);
     case "excluirNoticia": return await excluirNoticia(d);
     case "importarNoticias": return await importarNoticias(d);
@@ -1214,6 +1307,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
       case "statusTermo": return await statusTermo(d.equipe || "");
       case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "inscricoes": return await listarInscricoes();
+      case "equipesConhecidas": return { ok: true, equipes: await equipesConhecidas() };
       case "noticias": return { ok: true, noticias: await listarNoticias() };
       case "torneio": case "classificacao": return await montarTorneio(modOf(d));
       case "jogo": { const r = await jogoDaTabela(d); if (r) return r; break; }
