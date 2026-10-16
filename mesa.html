@@ -1025,7 +1025,7 @@ body.dark .btn-secondary:hover { color: #fff; }
 
 
 <script>
-const SUMULA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";
+const SUMULA_SCRIPT_URL = (function(){try{if(localStorage.getItem("scBackend")==="planilha")return "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";}catch(e){}return "https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api";})();
 
 let sumulaLiveState = null;
 let sumulaLivePollTimer = null;

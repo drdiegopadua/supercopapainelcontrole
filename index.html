@@ -2139,7 +2139,7 @@ const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2h
 const ATLETA_DESTAQUE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJcF6s2NNYrOtv2WkfBzKSlosU75wpfDopW1T91p0k7IYJvHlFsrh2p-5g78759UQz/exec";
 // Preencha após rodar criarPlanilhaVolei() em apps-script-volei-apoio.js e implantar:
 const VOLEI_APOIO_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";
-const SUMULA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";
+const SUMULA_SCRIPT_URL = (function(){try{if(localStorage.getItem("scBackend")==="planilha")return "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";}catch(e){}return "https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api";})();
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 const BOLAO_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyhmN1mCzUWNpwyQ_AT6SKj1YqodCd2At3rLCu6rAn2cNqFjvwXidnw86wu3z3iTLdt9Q/exec"; // PALPITES — installs/quiz/blocked_games
 const GALERA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUc_Z7wdPEWMQ_WzbQGNiHBVu0yJsxb8AwZC3-eZm_dHT_yk-hhmdToxXUeiTtxV/exec";
