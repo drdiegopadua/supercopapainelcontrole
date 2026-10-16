@@ -765,6 +765,11 @@ async function limparTestes(d: Any) {
   await del("avisos", "titulo", "TESTE%");
   await del("atletas", "equipe", "ZZ %");
   await del("partidas", "id", "TESTE%");
+  await del("inscricoes", "nome_equipe", "TESTE%");
+  await del("quiz_respostas", "nome", "TESTE%");
+  await del("feedback", "time", "TESTE%");
+  await del("acessos", "device_id", "teste-%");
+  await del("instalacoes", "device_id", "teste-%");
   return { ok: true, removidos: n };
 }
 
@@ -1207,6 +1212,93 @@ async function importarInscricoes(d: Any) {
   return { ok: true, ...rel };
 }
 
+// ════════ Quiz, acessos, instalações e feedback ════════
+const FEEDBACK_HEADERS = ["Carimbo de data/hora", "1. Qual sua nota para a organização e infraestrutura?", "2. Qual sua nota para a arbitragem?", "3. O que você achou do app da Supercopa?", "4. Qual sua nota geral para o evento?", "5. Recomendaria a Supercopa?", "6. Pontos positivos", "7. Pontos a melhorar", "8. Seu time"];
+const devOk = (s: Any) => { s = (s || "").toString().trim(); return s && s.length <= 120 ? s : ""; };
+async function paginar(tab: string, cols: string, ordem = "id") {
+  const out: Any[] = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await sb.from(tab).select(cols).order(ordem).range(de, de + 999);
+    if (error) throw new Error(error.message);
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+async function registrarVisita(plataforma: "app" | "site", deviceId: Any) {
+  const id = devOk(deviceId); if (!id) return { ok: false, erro: "deviceId ausente" };
+  const agora = new Date().toISOString();
+  await sb.from("acessos_log").insert({ data: agora.slice(0, 10), plataforma });
+  const { data: ex } = await sb.from("acessos").select("visitas").eq("device_id", id).eq("plataforma", plataforma).maybeSingle();
+  if (ex) { await sb.from("acessos").update({ ultima: agora, visitas: (ex.visitas || 0) + 1 }).eq("device_id", id).eq("plataforma", plataforma); return { ok: true, novo: false }; }
+  await sb.from("acessos").insert({ device_id: id, plataforma, primeira: agora, ultima: agora, visitas: 1 });
+  return { ok: true, novo: true };
+}
+async function registrarInstalacao(deviceId: Any) {
+  const id = devOk(deviceId); if (!id) return { ok: false, erro: "deviceId ausente" };
+  const { data: ex } = await sb.from("instalacoes").select("device_id").eq("device_id", id).maybeSingle();
+  if (ex) { await sb.from("instalacoes").update({ ultima: new Date().toISOString() }).eq("device_id", id); return { ok: true, novo: false }; }
+  await sb.from("instalacoes").insert({ device_id: id });
+  return { ok: true, novo: true };
+}
+async function legado(chave: string) { const { data } = await sb.from("contadores_legados").select("valor").eq("chave", chave).maybeSingle(); return data ? data.valor : 0; }
+async function contarAcessos(plataforma: "app" | "site") {
+  const linhas = await paginar("acessos", "visitas,plataforma,device_id", "device_id");
+  const meus = linhas.filter((r) => r.plataforma === plataforma);
+  return { unicos: meus.length + await legado(plataforma + "_unicos"), total: meus.reduce((s, r) => s + (r.visitas || 0), 0) + await legado(plataforma + "_total") };
+}
+async function contarInstalacoes() {
+  const { count } = await sb.from("instalacoes").select("device_id", { count: "exact", head: true });
+  return { total: (count || 0) + await legado("instalacoes") };
+}
+async function acessosLog() {
+  const l = await paginar("acessos_log", "data,plataforma");
+  return { ok: true, log: l.map((r) => ({ data: r.data, plataforma: r.plataforma })) };
+}
+async function registrarQuiz(d: Any) {
+  const num = (x: Any) => { const n = parseFloat((x ?? "0").toString().replace("%", "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+  const nome = (d.nome || "").toString().trim().slice(0, 120);
+  if (!nome) return { ok: false, erro: "Nome obrigatório" };
+  const { error } = await sb.from("quiz_respostas").insert({ nome, fone: (d.fone || "—").toString().trim().slice(0, 40), acertos: Math.max(0, parseInt(d.acertos) || 0), total: Math.max(0, parseInt(d.total) || 0), pct: num(d.pct ?? d.percentual), tempo: (d.tempo ?? d.tempo_segundos ?? "—").toString().slice(0, 20) });
+  return error ? { ok: false, erro: error.message } : { ok: true, status: "ok" };
+}
+async function rankingQuiz() {
+  const rows = await paginar("quiz_respostas", "*");
+  const porFone: Any = {};
+  rows.forEach((r) => { const fone = (r.fone || "").trim(); if (!fone) return; if (!porFone[fone] || Number(r.pct) > Number(porFone[fone].pct)) porFone[fone] = r; });
+  const ranking = Object.values(porFone).map((r: Any) => { let p = Number(r.pct) || 0; if (p > 0 && p <= 1) p = Math.round(p * 10000) / 100; return { nome: (r.nome || "").trim(), fone: (r.fone || "").trim(), acertos: r.acertos, total: r.total, pct: p.toFixed(2), tempo: (r.tempo || "").trim() }; });
+  ranking.sort((a: Any, b: Any) => (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0) || (parseFloat(a.tempo) || 999) - (parseFloat(b.tempo) || 999));
+  return { ranking };
+}
+async function registrarFeedback(d: Any) {
+  const n = (x: Any) => { const v = parseInt(x); return v >= 1 && v <= 10 ? v : null; };
+  if ([d.organizacao, d.arbitragem, d.app, d.notaGeral, d.recomendaria].every((x) => n(x) === null)) return { ok: false, erro: "Responda pelo menos uma nota." };
+  const { error } = await sb.from("feedback").insert({ organizacao: n(d.organizacao), arbitragem: n(d.arbitragem), app: n(d.app), nota_geral: n(d.notaGeral), recomendaria: n(d.recomendaria), positivos: (d.positivos || "").toString().slice(0, 2000), melhorar: (d.melhorar || "").toString().slice(0, 2000), time: (d.time || "").toString().slice(0, 120) });
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function listarFeedback() {
+  const l = await paginar("feedback", "*");
+  const respostas = l.map((r) => { const o: Any = {}; const v = [r.criado_em, r.organizacao, r.arbitragem, r.app, r.nota_geral, r.recomendaria, r.positivos, r.melhorar, r.time]; FEEDBACK_HEADERS.forEach((h, i) => (o[h] = v[i] ?? "")); return o; });
+  return { ok: true, headers: FEEDBACK_HEADERS, respostas };
+}
+// Importa os números e o log do Apps Script antigo (só administrador; pode repetir).
+async function importarLegado(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  for (const [k, v] of Object.entries(d.contadores || {})) await sb.from("contadores_legados").upsert({ chave: k, valor: Number(v) || 0 });
+  let log = 0;
+  if (Array.isArray(d.acessosLog)) {
+    await sb.from("acessos_log").delete().eq("legado", true);
+    const linhas = d.acessosLog.filter((x: Any) => /^\d{4}-\d{2}-\d{2}$/.test(x.data) && ["app", "site"].includes(x.plataforma)).map((x: Any) => ({ data: x.data, plataforma: x.plataforma, legado: true }));
+    for (let i = 0; i < linhas.length; i += 500) { const { error } = await sb.from("acessos_log").insert(linhas.slice(i, i + 500)); if (error) return { ok: false, erro: error.message }; log += Math.min(500, linhas.length - i); }
+  }
+  return { ok: true, contadores: Object.keys(d.contadores || {}).length, log };
+}
+async function excluirInscricao(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("inscricoes").delete().eq("id", d.id || -1).select("id");
+  return data && data.length ? { ok: true } : { ok: false, erro: "Inscrição não encontrada." };
+}
+
 // Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
 // Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
 async function removerEquipe(d: Any) {
@@ -1246,6 +1338,14 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "tipo:quiz": return await registrarQuiz(d);
+    case "tipo:app_install": return await registrarInstalacao(d.deviceId);
+    case "tipo:app_acesso": return await registrarVisita("app", d.deviceId);
+    case "tipo:site_acesso": return await registrarVisita("site", d.deviceId);
+    case "tipo:push_subscribe": case "tipo:push_unsubscribe": case "tipo:push_limpar": return { ok: true };   // push usa servidor próprio (Render)
+    case "feedback": return await registrarFeedback(d);
+    case "importarLegado": return await importarLegado(d);
+    case "excluirInscricao": return await excluirInscricao(d);
     case "inscrever": return await inscrever(d);
     case "importarInscricoes": return await importarInscricoes(d);
     case "salvarNoticia": return await salvarNoticia(d);
@@ -1325,6 +1425,12 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
       case "statusTermo": return await statusTermo(d.equipe || "");
       case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "ranking_quiz": return await rankingQuiz();
+      case "count_installs": return await contarInstalacoes();
+      case "count_acessos": return await contarAcessos("app");
+      case "count_acessos_site": return await contarAcessos("site");
+      case "acessos_log": return await acessosLog();
+      case "feedback": return await listarFeedback();
       case "inscricoes": return await listarInscricoes();
       case "equipesConhecidas": return { ok: true, equipes: await equipesConhecidas() };
       case "noticias": return { ok: true, noticias: await listarNoticias() };
@@ -1382,7 +1488,9 @@ Deno.serve(async (req) => {
     }
     const corpo = await req.text();
     const d = JSON.parse(corpo || "{}");
-    const r = await rotear(d.acao || d.action || "", d, false);
+    let chave = d.acao || d.action || (d.tipo ? "tipo:" + d.tipo : "");
+    if (!chave && d.nome !== undefined && d.acertos !== undefined) chave = "tipo:quiz";   // quiz antigo: sem "tipo"
+    const r = await rotear(chave, d, false);
     if (r) return json(r);
     const p = await fetch(APPS_SCRIPT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: corpo });   // repasse
     return new Response(await p.text(), { headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" } });
