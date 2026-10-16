@@ -246,7 +246,7 @@ async function acaoSimples(tipo: string, d: Any) {
   const r = await mutar(d.id, (e, log) => aplicarEvento(e, log, tipo, d));
   if (r.ok) {
     await sb.from("partida_eventos").insert({ partida_id: idNorm(d.id), tipo, dados: d });
-    if (r._setFechado) await empurrarPlacar(r.estado);
+    if (r._setFechado) { await empurrarPlacar(r.estado); await sincronizarJogo(r.estado); }
   }
   delete r._setFechado;
   return r;
@@ -279,13 +279,13 @@ async function processarLote(d: Any) {
   });
   if (!r.ok) { if (d.loteId) await sb.from("lotes").delete().eq("partida_id", id).eq("lote_id", String(d.loteId)); return r; }
   if (eventos.length) await sb.from("partida_eventos").insert(eventos.map((ev) => ({ partida_id: id, lote_id: d.loteId ? String(d.loteId) : null, tipo: ev.tipo, dados: ev.dados || {} })));
-  if (r._setFechado) await empurrarPlacar(r.estado);
+  if (r._setFechado) { await empurrarPlacar(r.estado); await sincronizarJogo(r.estado); }
   return { ok: true, estado: r.estado, erros, processados: eventos.length - erros.length };
 }
 
 async function finalizar(d: Any) {
   const r = await mutar(d.id, (e) => { e.status = "finalizada"; if (d.linkPdf) e.linkPdf = d.linkPdf; return {}; });
-  if (r.ok) await empurrarPlacar(r.estado, true);
+  if (r.ok) { await empurrarPlacar(r.estado, true); await sincronizarJogo(r.estado); }
   delete r._setFechado;
   return r;
 }
@@ -295,6 +295,7 @@ async function reabrir(d: Any) {
     e.status = e.setsCasa >= 2 || e.setsVisitante >= 2 ? "sets_completos" : "em_andamento";
     return {};
   });
+  if (r.ok) await sincronizarJogo(r.estado, null);
   delete r._setFechado;
   return r;
 }
@@ -302,6 +303,7 @@ async function excluir(d: Any) {
   const id = idNorm(d.id);
   if (!(await carregar(id))) return { ok: false, erro: "Partida não encontrada: " + d.id };
   await sb.from("partidas").delete().eq("id", id);   // eventos saem em cascata
+  if (!ehTeste(id)) await sb.from("jogos").update({ status: "agendado", sets_casa: 0, sets_visitante: 0, parciais: [], wo: null }).eq("modalidade", MODALIDADE_PADRAO).eq("id", id).then(() => {}, () => {});
   await sb.from("lotes").delete().eq("partida_id", id);
   return { ok: true };
 }
@@ -465,6 +467,7 @@ async function registrarWO(d: Any) {
   });
   if (r.ok) {
     await empurrarPlacar(r.estado, true);
+    await sincronizarJogo(r.estado, d.equipeFaltou === "B" ? "visitante" : "casa");
     await sb.from("wo_registros").insert({ jogo: idNorm(d.id), equipe_faltou: faltou, adversario: faltouB ? d.equipeA : d.equipeB, motivo: d.motivo || "", registrado_por: c.usuario });
   }
   delete r._setFechado;
@@ -772,6 +775,233 @@ async function limparTestes(d: Any) {
   return { ok: true, removidos: n };
 }
 
+// ==CLASS-INICIO==
+// ════════ Classificação automática (Regulamento de Voleibol, art. 17-19 e 34) ════════
+// Pontos: vitória 2x0 = 3 · vitória 2x1 = 2 · derrota 1x2 = 1 · derrota 0x2 = 0 · W.O.: vitória 3 / derrota 0 (placar 2x0, 25x0 e 25x0).
+// W.O. de ambas as equipes (as duas incompletas): nenhuma pontua.
+// Ordem: pontos → vitórias → saldo de sets → saldo de pontos → sorteio (sorteio_ordem informado pela organização).
+type JogoC = { id: string; fase: string; grupo?: string | null; casa?: string | null; visitante?: string | null; status: string; setsCasa: number; setsVisitante: number; parciais?: { a: number; b: number }[]; wo?: string | null };
+type EquipeC = { nome: string; grupo?: string | null; ordem?: number; sorteioOrdem?: number | null };
+type LinhaC = { pos: number; equipe: string; jogos: number; pontos: number; vitorias: number; derrotas: number; setsPro: number; setsContra: number; saldoSets: number; pontosPro: number; pontosContra: number; saldoPontos: number; empateSorteio: boolean; sorteioOrdem: number | null };
+
+function jogoDecidido(j: JogoC) { return j.status === "finalizado" || j.status === "wo"; }
+
+function calcularGrupo(equipes: EquipeC[], jogos: JogoC[]): { tabela: LinhaC[]; completo: boolean; jogosFeitos: number; jogosTotal: number } {
+  const L: Record<string, LinhaC> = {};
+  equipes.forEach((e) => { L[e.nome] = { pos: 0, equipe: e.nome, jogos: 0, pontos: 0, vitorias: 0, derrotas: 0, setsPro: 0, setsContra: 0, saldoSets: 0, pontosPro: 0, pontosContra: 0, saldoPontos: 0, empateSorteio: false, sorteioOrdem: e.sorteioOrdem ?? null }; });
+  let feitos = 0;
+  for (const j of jogos) {
+    if (!jogoDecidido(j)) continue;
+    const a = j.casa ? L[j.casa] : undefined, b = j.visitante ? L[j.visitante] : undefined;
+    if (!a || !b) continue;
+    feitos++;
+    a.jogos++; b.jogos++;
+    if (j.wo === "ambos") continue;   // as duas incompletas: ninguém pontua
+    let sc = j.setsCasa, sv = j.setsVisitante, pa = 0, pb = 0;
+    if (j.wo === "casa") { sc = 0; sv = 2; pa = 0; pb = 50; }          // casa faltou: visitante vence 2x0, 25x0 duplo
+    else if (j.wo === "visitante") { sc = 2; sv = 0; pa = 50; pb = 0; }
+    else { for (const p of j.parciais || []) { pa += Number(p.a) || 0; pb += Number(p.b) || 0; } }
+    a.setsPro += sc; a.setsContra += sv; b.setsPro += sv; b.setsContra += sc;
+    a.pontosPro += pa; a.pontosContra += pb; b.pontosPro += pb; b.pontosContra += pa;
+    const casaVenceu = sc > sv;
+    const venc = casaVenceu ? a : b, perd = casaVenceu ? b : a;
+    const wo = j.wo === "casa" || j.wo === "visitante";
+    venc.vitorias++; perd.derrotas++;
+    if (wo) { venc.pontos += 3; }
+    else if (Math.min(sc, sv) === 0) { venc.pontos += 3; }
+    else { venc.pontos += 2; perd.pontos += 1; }
+  }
+  const tabela = Object.values(L);
+  tabela.forEach((l) => { l.saldoSets = l.setsPro - l.setsContra; l.saldoPontos = l.pontosPro - l.pontosContra; });
+  const cmp = (x: LinhaC, y: LinhaC) =>
+    y.pontos - x.pontos || y.vitorias - x.vitorias || y.saldoSets - x.saldoSets || y.saldoPontos - x.saldoPontos ||
+    ((x.sorteioOrdem ?? 1e9) - (y.sorteioOrdem ?? 1e9));
+  const bruto = (x: LinhaC, y: LinhaC) => y.pontos - x.pontos || y.vitorias - x.vitorias || y.saldoSets - x.saldoSets || y.saldoPontos - x.saldoPontos;
+  tabela.sort((x, y) => cmp(x, y) || x.equipe.localeCompare(y.equipe));
+  tabela.forEach((l, i) => { l.pos = i + 1; });
+  // empate que só o sorteio resolve: iguais em tudo e sem ordem de sorteio definida (ou ordem igual)
+  tabela.forEach((l, i) => {
+    const viz = [tabela[i - 1], tabela[i + 1]].filter(Boolean) as LinhaC[];
+    l.empateSorteio = viz.some((v) => bruto(l, v) === 0 && (l.sorteioOrdem === null || v.sorteioOrdem === null || l.sorteioOrdem === v.sorteioOrdem));
+  });
+  const total = jogos.length;
+  return { tabela, completo: total > 0 && feitos === total, jogosFeitos: feitos, jogosTotal: total };
+}
+
+function calcularClassificacao(equipes: EquipeC[], jogos: JogoC[]) {
+  const grupos = [...new Set(equipes.map((e) => e.grupo).filter(Boolean) as string[])].sort();
+  return grupos.map((g) => {
+    const eq = equipes.filter((e) => e.grupo === g).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const r = calcularGrupo(eq, jogos.filter((j) => j.fase === "grupos" && j.grupo === g));
+    return { grupo: g, ...r };
+  });
+}
+
+// Mata-mata: '1A' = 1º do grupo A (só vale com o grupo completo), 'V:Q1' = vencedor do jogo Q1.
+function resolverOrigem(origem: string | null | undefined, clas: ReturnType<typeof calcularClassificacao>, jogos: JogoC[]): string | null {
+  if (!origem) return null;
+  const m = /^(\d)([A-Z])$/.exec(origem.trim().toUpperCase());
+  if (m) { const g = clas.find((x) => x.grupo === m[2]); return g && g.completo ? (g.tabela[Number(m[1]) - 1]?.equipe || null) : null; }
+  const v = /^V:(.+)$/.exec(origem.trim());
+  if (v) {
+    const j = jogos.find((x) => x.id === v[1]);
+    if (!j || !jogoDecidido(j)) return null;
+    if (j.wo === "ambos") return null;
+    const casaVenceu = j.wo === "visitante" ? true : j.wo === "casa" ? false : j.setsCasa > j.setsVisitante;
+    return (casaVenceu ? j.casa : j.visitante) || null;
+  }
+  return null;
+}
+// ==CLASS-FIM==
+
+// ════════ Torneio: equipes por grupo, jogos, mata-mata ════════
+const MODALIDADE_PADRAO = "volei";
+const modOf = (d: Any) => (d?.modalidade || MODALIDADE_PADRAO).toString();
+const jogoParaC = (j: Any): JogoC => ({ id: j.id, fase: j.fase, grupo: j.grupo, casa: j.casa, visitante: j.visitante, status: j.status, setsCasa: j.sets_casa || 0, setsVisitante: j.sets_visitante || 0, parciais: j.parciais || [], wo: j.wo });
+
+async function carregarTorneio(mod: string) {
+  const [{ data: eq, error: e1 }, { data: jg, error: e2 }] = await Promise.all([
+    sb.from("torneio_equipes").select("*").eq("modalidade", mod),
+    sb.from("jogos").select("*").eq("modalidade", mod).order("ordem").order("id"),
+  ]);
+  if (e1 || e2) throw new Error((e1 || e2)!.message);
+  return { equipes: eq || [], jogos: jg || [] };
+}
+async function montarTorneio(mod: string) {
+  const { equipes, jogos } = await carregarTorneio(mod);
+  const eqC: EquipeC[] = equipes.map((e: Any) => ({ nome: e.nome, grupo: e.grupo, ordem: e.ordem, sorteioOrdem: e.sorteio_ordem }));
+  const base = jogos.map(jogoParaC);
+  const clas = calcularClassificacao(eqC, base);
+  // mata-mata: equipe efetiva = nome explícito, senão resolvida pela origem (1A, 2B, V:Q1...), senão "Aguardando"
+  const efetivo = (j: Any, lado: "casa" | "visitante") => j[lado] || resolverOrigem(lado === "casa" ? j.origem_casa : j.origem_visitante, clas, base);
+  const lista = jogos.map((j: Any) => {
+    const casa = efetivo(j, "casa"), visitante = efetivo(j, "visitante");
+    const rotulo = (o: string | null) => (o ? (/^V:/.test(o) ? "Vencedor " + o.slice(2) : o.replace(/^(\d)([A-Z])$/, "$1º Grupo $2")) : "");
+    return {
+      id: j.id, fase: j.fase, grupo: j.grupo, rodada: j.rodada, ordem: j.ordem,
+      casa: casa || "Aguardando", visitante: visitante || "Aguardando",
+      casaDefinida: !!casa, visitanteDefinida: !!visitante,
+      origemCasa: j.origem_casa, origemVisitante: j.origem_visitante, rotuloCasa: rotulo(j.origem_casa), rotuloVisitante: rotulo(j.origem_visitante),
+      data: j.data, hora: j.hora ? String(j.hora).slice(0, 5) : null, quadra: j.quadra,
+      status: j.status, setsCasa: j.sets_casa, setsVisitante: j.sets_visitante, parciais: j.parciais || [], wo: j.wo || null,
+      vencedor: jogoDecidido(jogoParaC(j)) && j.wo !== "ambos" ? (j.wo === "casa" ? visitante : j.wo === "visitante" ? casa : j.sets_casa > j.sets_visitante ? casa : visitante) : null,
+      atualizadoEm: j.atualizado_em,
+    };
+  });
+  const final = lista.find((j: Any) => j.fase === "final");
+  return {
+    ok: true, modalidade: mod, geradoEm: new Date().toISOString(),
+    equipes: equipes.map((e: Any) => ({ nome: e.nome, grupo: e.grupo, ordem: e.ordem, sorteioOrdem: e.sorteio_ordem, escudo: e.escudo })),
+    grupos: clas, jogos: lista, campeao: final && final.vencedor ? final.vencedor : null,
+    alertas: clas.filter((g) => g.completo && g.tabela.some((l) => l.empateSorteio)).map((g) => "Grupo " + g.grupo + ": empate que só o sorteio resolve — informe a ordem do sorteio."),
+  };
+}
+async function sincronizarJogo(e: Any, wo?: string | null) {
+  if (!e || ehTeste(e.id)) return;
+  const status = e.status === "finalizada" ? (wo ? "wo" : "finalizado") : "ao_vivo";
+  const upd: Any = { sets_casa: e.setsCasa || 0, sets_visitante: e.setsVisitante || 0, parciais: e.historicoSets || [], status, atualizado_em: new Date().toISOString() };
+  if (wo !== undefined) upd.wo = wo || null;
+  try { await sb.from("jogos").update(upd).eq("modalidade", MODALIDADE_PADRAO).eq("id", idNorm(e.id)); } catch (_) { /* a súmula nunca pode falhar por causa disso */ }
+}
+async function jogoDaTabela(d: Any) {   // ação "jogo" (dados do jogo para abrir a súmula); cai no Apps Script se a tabela ainda estiver vazia
+  const id = idNorm(d.id);
+  if (ehTeste(id)) return { ok: true, id, aba: "TESTE", linha: 0, numero: id, equipeA: "", equipeB: "", sets: [{ a: "", b: "" }, { a: "", b: "" }, { a: "", b: "" }], sumula: null };
+  const t = await montarTorneio(MODALIDADE_PADRAO);
+  if (!t.jogos.length) return null;
+  const j: Any = t.jogos.find((x: Any) => x.id === id);
+  const info = resolverJogo(id);
+  if (!j || !info) return { ok: false, erro: "Jogo não encontrado: " + id };
+  const sets = [0, 1, 2].map((i) => ({ a: j.parciais[i] ? j.parciais[i].a : "", b: j.parciais[i] ? j.parciais[i].b : "" }));
+  return { ok: true, id, aba: info.aba, linha: info.linha, numero: /^[A-D]\d$/.test(id) ? Number(id.slice(1)) : id, equipeA: j.casaDefinida ? j.casa : "", equipeB: j.visitanteDefinida ? j.visitante : "", sets, sumula: null };
+}
+
+const PODE_EDITAR_TORNEIO = ["admin", "organizacao"];
+async function salvarEquipeTorneio(d: Any) {
+  const c: Any = await papel(d.auth, PODE_EDITAR_TORNEIO); if (c.erro) return { ok: false, erro: c.erro };
+  const nome = (d.nome || "").toString().trim(); if (!nome) return { ok: false, erro: "Informe o nome da equipe." };
+  const reg: Any = { modalidade: modOf(d), nome, atualizado_em: new Date().toISOString() };
+  if (d.grupo !== undefined) reg.grupo = d.grupo ? String(d.grupo).trim().toUpperCase().slice(0, 2) : null;
+  if (d.ordem !== undefined) reg.ordem = Number(d.ordem) || 0;
+  if (d.sorteioOrdem !== undefined) reg.sorteio_ordem = d.sorteioOrdem === null || d.sorteioOrdem === "" ? null : Number(d.sorteioOrdem);
+  if (d.escudo !== undefined) reg.escudo = d.escudo || null;
+  const { error } = await sb.from("torneio_equipes").upsert(reg);
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function removerEquipeTorneio(d: Any) {
+  const c: Any = await papel(d.auth, PODE_EDITAR_TORNEIO); if (c.erro) return { ok: false, erro: c.erro };
+  const mod = modOf(d), nome = (d.nome || "").toString().trim();
+  const { data: usado } = await sb.from("jogos").select("id,status").eq("modalidade", mod).or("casa.eq." + nome + ",visitante.eq." + nome);
+  if ((usado || []).some((j: Any) => j.status !== "agendado") && !d.forcar) return { ok: false, erro: "A equipe já tem jogo em andamento ou finalizado. Confirme para remover mesmo assim." };
+  await sb.from("jogos").update({ casa: null }).eq("modalidade", mod).eq("casa", nome);
+  await sb.from("jogos").update({ visitante: null }).eq("modalidade", mod).eq("visitante", nome);
+  await sb.from("torneio_equipes").delete().eq("modalidade", mod).eq("nome", nome);
+  return { ok: true };
+}
+async function salvarJogo(d: Any) {
+  const c: Any = await papel(d.auth, PODE_EDITAR_TORNEIO); if (c.erro) return { ok: false, erro: c.erro };
+  const id = idNorm(d.id); if (!id) return { ok: false, erro: "Informe o ID do jogo." };
+  const reg: Any = { modalidade: modOf(d), id, atualizado_em: new Date().toISOString() };
+  const campos: Any = { fase: "fase", grupo: "grupo", rodada: "rodada", ordem: "ordem", casa: "casa", visitante: "visitante", origemCasa: "origem_casa", origemVisitante: "origem_visitante", data: "data", hora: "hora", quadra: "quadra" };
+  for (const k of Object.keys(campos)) if (d[k] !== undefined) reg[campos[k]] = d[k] === "" ? null : d[k];
+  if (reg.fase && !["grupos", "quartas", "semifinal", "final"].includes(reg.fase)) return { ok: false, erro: "Fase inválida." };
+  const { data: ex } = await sb.from("jogos").select("id").eq("modalidade", reg.modalidade).eq("id", id).maybeSingle();
+  if (!ex && !reg.fase) return { ok: false, erro: "Jogo novo precisa da fase." };
+  const { error } = ex ? await sb.from("jogos").update(reg).eq("modalidade", reg.modalidade).eq("id", id) : await sb.from("jogos").insert(reg);
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function excluirJogoTorneio(d: Any) {
+  const c: Any = await papel(d.auth, PODE_EDITAR_TORNEIO); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("jogos").delete().eq("modalidade", modOf(d)).eq("id", idNorm(d.id)).select("id");
+  return data && data.length ? { ok: true } : { ok: false, erro: "Jogo não encontrado." };
+}
+// Resultado lançado à mão (contingência: internet/aparelho da súmula caiu, ou jogo sem súmula digital).
+async function lancarResultado(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao", "mesa"]); if (c.erro) return { ok: false, erro: c.erro };
+  const mod = modOf(d), id = idNorm(d.id);
+  const { data: j } = await sb.from("jogos").select("*").eq("modalidade", mod).eq("id", id).maybeSingle();
+  if (!j) return { ok: false, erro: "Jogo não encontrado: " + id };
+  const wo = d.wo === "casa" || d.wo === "visitante" || d.wo === "ambos" ? d.wo : null;
+  let parciais: Any[] = [], sc = 0, sv = 0;
+  if (!wo) {
+    parciais = (d.parciais || []).map((p: Any) => ({ a: Number(p.a), b: Number(p.b) }));
+    if (!parciais.length || parciais.some((p) => !Number.isFinite(p.a) || !Number.isFinite(p.b) || p.a < 0 || p.b < 0 || p.a === p.b)) return { ok: false, erro: "Informe o placar de cada set (sem empate)." };
+    parciais.forEach((p, i) => { const alvo = i === 2 ? 15 : 25; if (Math.max(p.a, p.b) < alvo || Math.abs(p.a - p.b) < 2) return; if (p.a > p.b) sc++; else sv++; });
+    const invalido = parciais.some((p, i) => { const alvo = i === 2 ? 15 : 25; return Math.max(p.a, p.b) < alvo || Math.abs(p.a - p.b) < 2 || (Math.max(p.a, p.b) > alvo && Math.abs(p.a - p.b) !== 2); });
+    if (invalido) return { ok: false, erro: "Algum set tem placar inválido (vai a 25, o 3º a 15, com 2 de diferença)." };
+    if (parciais.length > 3 || Math.max(sc, sv) !== 2 || sc === sv || (parciais.length === 3 && Math.min(sc, sv) !== 1) || (parciais.length === 2 && Math.min(sc, sv) !== 0)) return { ok: false, erro: "O jogo é melhor de 3 sets: o vencedor precisa ter 2 sets." };
+  }
+  const upd = { sets_casa: sc, sets_visitante: sv, parciais, wo, status: wo ? "wo" : "finalizado", versao: (j.versao || 0) + 1, atualizado_em: new Date().toISOString() };
+  const { error } = await sb.from("jogos").update(upd).eq("modalidade", mod).eq("id", id);
+  if (error) return { ok: false, erro: error.message };
+  await sb.from("partida_eventos").insert({ partida_id: id, tipo: "resultadoManual", dados: { por: c.usuario, parciais, wo } }).then(() => {}, () => {});
+  return { ok: true, torneio: await montarTorneio(mod) };
+}
+// Cria a chave: 4 grupos de 3, 12 jogos de grupo, 4 quartas, 2 semifinais e a final (mesmos IDs da súmula). Só administrador.
+async function semearTorneio(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const mod = modOf(d);
+  const { data: ja } = await sb.from("jogos").select("id").eq("modalidade", mod).limit(1);
+  if (ja && ja.length && !d.forcar) return { ok: false, erro: "A chave já existe. Use forcar:true para recriar (os jogos atuais serão apagados)." };
+  if (ja && ja.length) await sb.from("jogos").delete().eq("modalidade", mod);
+  const grupos: Any = d.grupos || {};
+  const letras = Object.keys(grupos).sort();
+  const equipes: Any[] = [], jogos: Any[] = []; let ordem = 0;
+  for (const g of letras) {
+    const nomes: string[] = (grupos[g] || []).map((n: string) => String(n).trim()).filter(Boolean);
+    nomes.forEach((nome, i) => equipes.push({ modalidade: mod, nome, grupo: g, ordem: i }));
+    const pares = [[0, 1], [0, 2], [1, 2]];
+    pares.forEach(([a, b], i) => jogos.push({ modalidade: mod, id: g + (i + 1), fase: "grupos", grupo: g, rodada: i + 1, ordem: ++ordem, casa: nomes[a] || null, visitante: nomes[b] || null }));
+  }
+  const mm = [
+    ["Q1", "quartas", "1A", "2B"], ["Q2", "quartas", "1B", "2A"], ["Q3", "quartas", "1C", "2D"], ["Q4", "quartas", "1D", "2C"],
+    ["SF1", "semifinal", "V:Q1", "V:Q3"], ["SF2", "semifinal", "V:Q2", "V:Q4"], ["FINAL", "final", "V:SF1", "V:SF2"],
+  ];
+  mm.forEach(([id, fase, oc, ov]) => jogos.push({ modalidade: mod, id, fase, origem_casa: oc, origem_visitante: ov, ordem: ++ordem }));
+  if (equipes.length) await sb.from("torneio_equipes").upsert(equipes);
+  const { error } = await sb.from("jogos").insert(jogos);
+  return error ? { ok: false, erro: error.message } : { ok: true, jogos: jogos.length, equipes: equipes.length };
+}
+
 // Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
 // Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
 async function removerEquipe(d: Any) {
@@ -811,6 +1041,12 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "salvarEquipeTorneio": return await salvarEquipeTorneio(d);
+    case "removerEquipeTorneio": return await removerEquipeTorneio(d);
+    case "salvarJogo": return await salvarJogo(d);
+    case "excluirJogoTorneio": return await excluirJogoTorneio(d);
+    case "lancarResultado": return await lancarResultado(d);
+    case "semearTorneio": return await semearTorneio(d);
     case "loginPainel": return await loginPainelAcao(d);
     case "listarUsuariosPainel": return await listarUsuariosPainel(d);
     case "salvarUsuarioPainel": return await salvarUsuarioPainel(d);
@@ -876,6 +1112,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
       case "statusTermo": return await statusTermo(d.equipe || "");
       case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "torneio": case "classificacao": return await montarTorneio(modOf(d));
+      case "jogo": { const r = await jogoDaTabela(d); if (r) return r; break; }
       case "verificarSenhaAdmin": return { ok: await senhaAdminOk(d.senha) };
       case "avisos": return { ok: true, avisos: await listarAvisos() };
       case "listarPresencas": return { ok: true, presencas: await listarPresencas(d.jogo || "") };
