@@ -1059,6 +1059,46 @@ async function semearTorneio(d: Any) {
   return error ? { ok: false, erro: error.message } : { ok: true, jogos: jogos.length, equipes: equipes.length };
 }
 
+// ════════ Notícias do app ════════
+async function listarNoticias() {
+  const { data } = await sb.from("noticias").select("*").order("id");
+  return (data || []).map((n: Any) => ({
+    id: String(n.id), ic: n.icone || "📰", cat: n.categoria || "Notícia", titulo: n.titulo || "", data: n.data_txt || "", corpo: n.corpo || "",
+    hora: new Date(n.criado_em).toLocaleTimeString("pt-BR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }),
+  }));
+}
+async function salvarNoticia(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const titulo = (d.titulo || "").toString().trim();
+  if (!titulo) return { ok: false, erro: "Digite o título da notícia." };
+  const reg: Any = {
+    icone: (d.ic || "📰").toString().trim() || "📰", categoria: (d.cat || "Notícia").toString().trim() || "Notícia", titulo,
+    data_txt: (d.data || "").toString().trim(), corpo: (d.corpo || "").toString().trim(), atualizado_em: new Date().toISOString(),
+  };
+  if (d.id) {
+    const { data } = await sb.from("noticias").update(reg).eq("id", d.id).select("id");
+    return data && data.length ? { ok: true, id: String(d.id) } : { ok: false, erro: "Notícia não encontrada." };
+  }
+  const { data, error } = await sb.from("noticias").insert(reg).select("id").single();
+  return error ? { ok: false, erro: error.message } : { ok: true, id: String(data.id) };
+}
+async function excluirNoticia(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("noticias").delete().eq("id", d.id || -1).select("id");
+  return data && data.length ? { ok: true } : { ok: false, erro: "Notícia não encontrada." };
+}
+async function importarNoticias(d: Any) {
+  const c: Any = await papel(d.auth, ["admin"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data: ex } = await sb.from("noticias").select("titulo");
+  const tem = new Set((ex || []).map((n: Any) => chaveEq(n.titulo)));
+  let n = 0;
+  for (const x of d.noticias || []) {
+    const titulo = (x.titulo || "").toString().trim(); if (!titulo || tem.has(chaveEq(titulo))) continue;
+    await sb.from("noticias").insert({ icone: x.ic || "📰", categoria: x.cat || "Notícia", titulo, data_txt: x.data || "", corpo: x.corpo || "" }); n++;
+  }
+  return { ok: true, importadas: n };
+}
+
 // Tira uma equipe da lista de convites (PIN, confirmação, termo, assinaturas e atletas). Só administrador.
 // Por segurança recusa equipe que já confirmou presença ou já tem atletas, a menos que venha forcar:true.
 async function removerEquipe(d: Any) {
@@ -1098,6 +1138,9 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
   switch (acao) {
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
+    case "salvarNoticia": return await salvarNoticia(d);
+    case "excluirNoticia": return await excluirNoticia(d);
+    case "importarNoticias": return await importarNoticias(d);
     case "salvarEquipeTorneio": return await salvarEquipeTorneio(d);
     case "removerEquipeTorneio": return await removerEquipeTorneio(d);
     case "salvarJogo": return await salvarJogo(d);
@@ -1171,6 +1214,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "statusCadastroEquipes": return { ok: true, equipes: await statusCadastro() };
       case "statusTermo": return await statusTermo(d.equipe || "");
       case "listarJuizes": return { ok: true, juizes: await listarJuizes() };
+      case "noticias": return { ok: true, noticias: await listarNoticias() };
       case "torneio": case "classificacao": return await montarTorneio(modOf(d));
       case "jogo": { const r = await jogoDaTabela(d); if (r) return r; break; }
       case "verificarSenhaAdmin": return { ok: await senhaAdminOk(d.senha) };
