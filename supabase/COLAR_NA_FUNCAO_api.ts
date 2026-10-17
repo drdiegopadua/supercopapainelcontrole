@@ -1166,6 +1166,26 @@ async function listarInscricoes() {
   }));
   return { ok: true, headers: HEADERS_INSCRICOES, inscricoes };
 }
+// Equipes confirmadas para o site/app (sem telefone): dados da inscrição + escudo.
+function escudoPublico(u: string) {
+  const m = /drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)([A-Za-z0-9_-]+)/.exec(u || "");
+  return m ? "https://lh3.googleusercontent.com/d/" + m[1] + "=w320" : (u || "");
+}
+const CASA_DEFAULT: Record<string, Any> = { "ct das montanhas": { cidade: "Afonso Cláudio - ES", instagram: "@ctdasmontanhas", responsavel: "Caio Rebuli", alojamento: "Equipe da casa", como: "Equipe da casa" } };
+async function timesPublicos() {
+  const conf = await listarConfirmacoes();
+  const { data: insc } = await sb.from("inscricoes").select("nome_equipe,cidade,instagram,responsavel,alojamento,pessoas_alojamento,como_conheceu,carimbo,escudo_url").ilike("modalidade", "v%lei");
+  const por: Record<string, Any> = {};
+  (insc || []).forEach((r: Any) => { por[chaveEq(r.nome_equipe || "")] = r; });
+  const times = conf.map((c: Any) => {
+    const k = chaveEq(c.equipe), r = por[k], d = CASA_DEFAULT[k] || {};
+    let ig = ((r && r.instagram) || d.instagram || "").toString().trim(); if (ig && !ig.startsWith("@") && !/\s/.test(ig)) ig = "@" + ig;
+    const aloj = r ? (r.alojamento === "Sim" ? "Sim" + (r.pessoas_alojamento ? " · " + r.pessoas_alojamento + " pessoas" : "") : "Não") : (d.alojamento || "");
+    return { nome: c.equipe, cidade: ((r && r.cidade) || d.cidade || "").toString().trim(), instagram: ig, responsavel: ((r && r.responsavel) || d.responsavel || "").toString().trim(), alojamento: aloj, inscritaEm: r && r.carimbo ? String(r.carimbo).slice(0, 10) : "", como: (r && r.como_conheceu) || d.como || "", escudo: escudoPublico(r && r.escudo_url) };
+  });
+  return { ok: true, vagas: 12, times };
+}
+
 async function equipesConhecidas() {
   const nomes = new Set<string>();
   const [{ data: i }, { data: e }] = await Promise.all([sb.from("inscricoes").select("nome_equipe"), sb.from("torneio_equipes").select("nome").eq("modalidade", "volei")]);
@@ -1545,6 +1565,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "feedback": return await listarFeedback();
       case "inscricoes": return await listarInscricoes();
       case "equipesConhecidas": return { ok: true, equipes: await equipesConhecidas() };
+      case "timesPublicos": return await timesPublicos();
       case "noticias": return { ok: true, noticias: await listarNoticias() };
       case "torneio": case "classificacao": return await montarTorneio(modOf(d));
       case "jogo": { const r = await jogoDaTabela(d); if (r) return r; break; }
