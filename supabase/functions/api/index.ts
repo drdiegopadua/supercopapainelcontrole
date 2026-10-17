@@ -1138,9 +1138,11 @@ async function guardarEscudo(nomeEquipe: string, base64: string): Promise<{ url?
   if (error) return { erro: "Não foi possível guardar o escudo: " + error.message };
   return { url: Deno.env.get("SUPABASE_URL")! + "/storage/v1/object/public/escudos/" + caminho };
 }
+const INSCRICOES_ENCERRADAS = true; // mude para false para reabrir as inscrições
 async function inscrever(d: Any) {
   const nome = (d.nomeEquipe || "").toString().trim();
   const falha = (msg: string) => ({ ok: false, status: "erro", erro: msg, msg });
+  if (INSCRICOES_ENCERRADAS) return falha("As inscrições estão encerradas.");
   if (!nome) return falha("Nome da equipe é obrigatório.");
   const modalidade = (d.modalidade || "").toString().trim();
   const { data: ja } = await sb.from("inscricoes").select("id").ilike("nome_equipe", nome.replace(/[%_]/g, (c) => "\\" + c)).ilike("modalidade", modalidade.replace(/[%_]/g, (c) => "\\" + c)).limit(1);
