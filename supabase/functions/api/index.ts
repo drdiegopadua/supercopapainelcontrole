@@ -1171,17 +1171,16 @@ function escudoPublico(u: string) {
   const m = /drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)([A-Za-z0-9_-]+)/.exec(u || "");
   return m ? "https://lh3.googleusercontent.com/d/" + m[1] + "=w320" : (u || "");
 }
-const CASA_DEFAULT: Record<string, Any> = { "ct das montanhas": { cidade: "Afonso Cláudio - ES", instagram: "@ctdasmontanhas", responsavel: "Caio Rebuli", alojamento: "Equipe da casa", como: "Equipe da casa" } };
+const CASA_DEFAULT: Record<string, Any> = { "ct das montanhas": { cidade: "Afonso Cláudio - ES", instagram: "@ctdasmontanhas", responsavel: "Diego Padua", escudo: "https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png", como: "Equipe da casa" } };
 async function timesPublicos() {
   const conf = await listarConfirmacoes();
-  const { data: insc } = await sb.from("inscricoes").select("nome_equipe,cidade,instagram,responsavel,alojamento,pessoas_alojamento,como_conheceu,carimbo,escudo_url").ilike("modalidade", "v%lei");
+  const { data: insc } = await sb.from("inscricoes").select("nome_equipe,cidade,instagram,responsavel,como_conheceu,carimbo,escudo_url").ilike("modalidade", "v%lei");
   const por: Record<string, Any> = {};
   (insc || []).forEach((r: Any) => { por[chaveEq(r.nome_equipe || "")] = r; });
   const times = conf.map((c: Any) => {
     const k = chaveEq(c.equipe), r = por[k], d = CASA_DEFAULT[k] || {};
     let ig = ((r && r.instagram) || d.instagram || "").toString().trim(); if (ig && !ig.startsWith("@") && !/\s/.test(ig)) ig = "@" + ig;
-    const aloj = r ? (r.alojamento === "Sim" ? "Sim" + (r.pessoas_alojamento ? " · " + r.pessoas_alojamento + " pessoas" : "") : "Não") : (d.alojamento || "");
-    return { nome: c.equipe, cidade: ((r && r.cidade) || d.cidade || "").toString().trim(), instagram: ig, responsavel: ((r && r.responsavel) || d.responsavel || "").toString().trim(), alojamento: aloj, inscritaEm: r && r.carimbo ? String(r.carimbo).slice(0, 10) : "", como: (r && r.como_conheceu) || d.como || "", escudo: escudoPublico(r && r.escudo_url) };
+    return { nome: c.equipe, cidade: ((r && r.cidade) || d.cidade || "").toString().trim(), instagram: ig, responsavel: ((r && r.responsavel) || d.responsavel || "").toString().trim(), inscritaEm: r && r.carimbo ? String(r.carimbo).slice(0, 10) : "", como: (r && r.como_conheceu) || d.como || "", escudo: escudoPublico(r && r.escudo_url) || d.escudo || "" };
   });
   return { ok: true, vagas: 12, times };
 }
