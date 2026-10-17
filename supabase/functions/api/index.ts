@@ -1138,6 +1138,40 @@ async function guardarEscudo(nomeEquipe: string, base64: string): Promise<{ url?
   if (error) return { erro: "Não foi possível guardar o escudo: " + error.message };
   return { url: Deno.env.get("SUPABASE_URL")! + "/storage/v1/object/public/escudos/" + caminho };
 }
+// ════════ Atleta destaque da partida (nome, time e foto) ════════
+async function guardarFotoDestaque(nome: string, base64: string): Promise<{ url?: string; erro?: string }> {
+  const m = /^data:([a-z]+\/[a-z0-9.+-]+);base64,(.*)$/is.exec(base64 || "");
+  const tipo = m ? m[1].toLowerCase() : "image/jpeg";
+  const ext = TIPOS_IMG[tipo];
+  if (!ext) return { erro: "A foto precisa ser PNG, JPG, WEBP ou GIF." };
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob((m ? m[2] : base64).replace(/\s/g, "")), (c) => c.charCodeAt(0)); } catch (_) { return { erro: "Foto inválida." }; }
+  if (bytes.length > 3 * 1024 * 1024) return { erro: "A foto é muito grande (máximo 3 MB)." };
+  const caminho = "destaques/" + Date.now() + "-" + slug(nome) + "." + ext;
+  const { error } = await sb.storage.from("escudos").upload(caminho, bytes, { contentType: tipo, upsert: false });
+  if (error) return { erro: "Não foi possível guardar a foto: " + error.message };
+  return { url: Deno.env.get("SUPABASE_URL")! + "/storage/v1/object/public/escudos/" + caminho };
+}
+async function salvarDestaquePartida(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const nome = (d.nome || "").toString().trim().slice(0, 120), equipe = (d.equipe || "").toString().trim().slice(0, 120);
+  if (!nome || !equipe) return { ok: false, erro: "Informe o nome do atleta e o time." };
+  const reg: Any = { modalidade: (d.modalidade || "Vôlei").toString().slice(0, 20), jogo: (d.jogo || "").toString().trim().slice(0, 120), nome, equipe, observacao: (d.observacao || "").toString().trim().slice(0, 300) };
+  if (d.fotoBase64) { const f = await guardarFotoDestaque(nome, d.fotoBase64); if (f.erro) return { ok: false, erro: f.erro }; reg.foto = f.url; }
+  if (d.id) {
+    const { data, error } = await sb.from("destaques").update(reg).eq("id", d.id).select("id");
+    if (error) return { ok: false, erro: error.message };
+    return data && data.length ? { ok: true, id: d.id, foto: reg.foto || null } : { ok: false, erro: "Destaque não encontrado." };
+  }
+  reg.data_hora = fmtBR(new Date());
+  const { data, error } = await sb.from("destaques").insert(reg).select("id").single();
+  return error ? { ok: false, erro: error.message } : { ok: true, id: data.id, foto: reg.foto || null };
+}
+async function excluirDestaquePartida(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("destaques").delete().eq("id", d.id || -1).select("id");
+  return data && data.length ? { ok: true } : { ok: false, erro: "Destaque não encontrado." };
+}
 const INSCRICOES_ENCERRADAS = true; // mude para false para reabrir as inscrições
 async function inscrever(d: Any) {
   const nome = (d.nomeEquipe || "").toString().trim();
@@ -1498,6 +1532,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "importarUsuarios": return await importarUsuarios(d);
     case "limparTestes": return await limparTestes(d);
     case "salvarAviso": return await salvarAviso(d);
+    case "salvarDestaquePartida": return await salvarDestaquePartida(d);
+    case "excluirDestaquePartida": return await excluirDestaquePartida(d);
     case "excluirAviso": return await excluirAviso(d);
     case "registrarPresenca": return await registrarPresenca(d);
     case "saudeSistema": return await saudeSistema(d);
@@ -1576,7 +1612,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "ranking": case "ranking_atleta": return { ok: true, ranking: await rankingGalera() };
       case "atletasTime": return await atletasTimeDestaque(d.equipe || "");
       case "premiacao": { const { data } = await sb.from("premiacao").select("*"); return { premiacao: (data || []).map((p: Any) => ({ categoria: p.categoria, nome: p.nome, equipe: p.equipe || "", atualizado: p.atualizado || "" })) }; }
-      case "destaques": { const { data } = await sb.from("destaques").select("*").order("id"); return { ok: true, destaques: (data || []).filter((r: Any) => r.nome).map((r: Any) => ({ _linha: r.id, modalidade: r.modalidade, jogo: r.jogo, nome: r.nome, equipe: r.equipe, observacao: r.observacao, dataHora: r.data_hora })) }; }
+      case "destaques": { const { data } = await sb.from("destaques").select("*").order("id"); return { ok: true, destaques: (data || []).filter((r: Any) => r.nome).map((r: Any) => ({ _linha: r.id, modalidade: r.modalidade, jogo: r.jogo, nome: r.nome, equipe: r.equipe, observacao: r.observacao, dataHora: r.data_hora, id: r.id, foto: r.foto || "" })) }; }
       case "assinaturasEquipe": return { ok: true, assinaturas: await assinaturasEquipe(d.equipe || "") };
     }
   }
