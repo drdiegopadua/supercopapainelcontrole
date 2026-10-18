@@ -5657,12 +5657,12 @@ function confirmarEscalacaoSet() {
   st.textContent = `
 /* ===== Súmula: layout em 2 colunas + modo tela cheia (ordem de saque sempre visível) ===== */
 #sumulaConsole .rf-colA,#sumulaConsole .rf-colB{display:contents}
-.rf-reg{max-height:340px;overflow:auto}
+.rf-regbox{max-height:340px;overflow:auto}
 .rf-fs{margin-left:auto;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer}
 .rf-fs:hover{background:rgba(255,255,255,.26)}
 #sumulaConsole .rf-layout{display:flex;flex-direction:column}
-#sumulaConsole .rf-placar{order:1}#sumulaConsole .rf-formwrap{order:2}#sumulaConsole .rf-esc{order:3}#sumulaConsole .rf-kpis{order:4}#sumulaConsole .rf-toolsbox{order:5}#sumulaConsole .rf-reg{order:6}#sumulaConsole .rf-finwrap{order:7}#sumulaConsole .rf-obs{order:8}
-#sumulaConsole .rf-esc,#sumulaConsole .rf-reg,#sumulaConsole .rf-toolsbox{margin-bottom:14px}
+#sumulaConsole .rf-placar{order:1}#sumulaConsole .rf-formwrap{order:2}#sumulaConsole .rf-esc{order:3}#sumulaConsole .rf-kpis{order:4}#sumulaConsole .rf-toolsbox{order:5}#sumulaConsole .rf-regbox{order:6}#sumulaConsole .rf-finwrap{order:7}#sumulaConsole .rf-obs{order:8}
+#sumulaConsole .rf-esc,#sumulaConsole .rf-regbox,#sumulaConsole .rf-toolsbox{margin-bottom:14px}
 @media (min-width:1000px){
   #sumulaConsole .rf-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(400px,1fr);gap:16px;align-items:start}
   #sumulaConsole .rf-colA,#sumulaConsole .rf-colB{display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -5670,7 +5670,7 @@ function confirmarEscalacaoSet() {
   #sumulaConsole .rf-colB{position:sticky;top:8px;max-height:calc(100vh - 16px)}
   #sumulaConsole .rf-colB .rf-esc{flex:none}
   #sumulaConsole .rf-colB .rf-quadras{grid-template-columns:1fr 1fr;gap:10px}
-  #sumulaConsole .rf-colB .rf-reg{flex:1;min-height:0;max-height:none;overflow:auto}
+  #sumulaConsole .rf-colB .rf-regbox{flex:1;min-height:0;max-height:none;overflow:auto}
 }
 body.rf-full .mesa-header{display:none}
 body.rf-full .mesa-wrap{max-width:none}
@@ -5926,7 +5926,7 @@ function renderSumulaConsole() {
     </div>
   </div>
 
-  <div class="rf-box rf-reg">
+  <div class="rf-box rf-regbox">
       <div class="rf-sec">ACOMPANHAMENTO EM TEMPO REAL</div><div class="rf-tit">Registro da partida</div>
       ${rfRegistroHtml_(s, emAndamento)}
     </div>
