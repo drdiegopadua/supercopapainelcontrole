@@ -1541,6 +1541,7 @@ body.dark .btn-secondary:hover { color: #fff; }
             <select class="form-control" id="sumula-select-jogo" style="border:none"></select>
           </div>
           <button class="btn" style="background:#fff;color:var(--blue)" onclick="abrirOuCriarPartida()"><i class='bx bx-play-circle'></i> Abrir Súmula</button>
+          <button class="btn" style="background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.4)" onclick="zerarTesteSumula_()" title="Apaga os dados do jogo de teste selecionado">🧪 Zerar teste</button>
           <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="abrirCadastroAtletas()"><i class='bx bx-group'></i> Times e Atletas</button>
           <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="abrirArbitragem()"><i class='bx bx-shield-quarter'></i> Cadastrar Arbitragem</button>
           <button class="btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="window.open('arbitro2.html','_blank')"><i class='bx bx-show'></i> Árbitro 2</button>
@@ -5919,7 +5920,7 @@ async function postSumulaComRetry_(payload) {
 // fila; um único POST "processarEventosLote" manda tudo junto.
 // O servidor refaz as regras e devolve o estado oficial.
 // ════════════════════════════════════════════════════════
-const SUMULA_SYNC_MS = 30000;
+const SUMULA_SYNC_MS = 5000;   // verificação periódica (envio de cada ação é imediato)
 let sumulaFila = [];
 let sumulaLotePend = null;
 let sumulaSyncEmVoo = false;
@@ -5965,7 +5966,7 @@ function sumulaAcao_(tipo, dados, aplicar) {
   sumulaFilaSalvar_();
   salvarCacheOffline_(novo);
   renderSumulaConsole();
-  if (sumulaFila.length >= 40) flushFilaSumula_();
+  agendarFlushSumula_();
   return true;
 }
 
@@ -6004,6 +6005,32 @@ function sumulaSyncTexto_() {
 function atualizarIndicadorSync_() {
   const el = document.getElementById('sumula-sync-ind');
   if (el) el.textContent = sumulaSyncTexto_();
+}
+
+// Envio automático: cada ação vai pro servidor logo depois (espera 250 ms só pra juntar toques seguidos).
+let _sumulaFlushT = null;
+function agendarFlushSumula_() { clearTimeout(_sumulaFlushT); _sumulaFlushT = setTimeout(sumulaFlushLoop_, 250); }
+async function sumulaFlushLoop_() {
+  if (sumulaSyncEmVoo) { _sumulaFlushT = setTimeout(sumulaFlushLoop_, 300); return; }
+  if (!sumulaFila.length) return;
+  const ok = await flushFilaSumula_();
+  if (ok && sumulaFila.length) agendarFlushSumula_();   // entrou ação nova durante o envio
+}
+
+// Zera uma partida de TESTE (apaga no servidor e limpa o que ficou guardado neste aparelho).
+async function zerarTesteSumula_() {
+  const man = (document.getElementById('sumula-id-manual') || {}).value || '';
+  const sel = (document.getElementById('sumula-select-jogo') || {}).value || '';
+  const id = (man.trim() || sel).toUpperCase();
+  if (!/^TESTE/.test(id)) { showToast('Só jogos de teste (TESTE1, TESTE2...) podem ser zerados.', 'error'); return; }
+  if (!confirm('Apagar todos os dados do ' + id + ' e começar de novo?')) return;
+  try { Object.keys(localStorage).filter(k => k.indexOf(id) >= 0).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  sumulaFila = []; sumulaLotePend = null;
+  try {
+    const r = await fetch(SUMULA_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirPartida', id: id }) }).then(x => x.json());
+    showToast(r.ok ? '🧪 ' + id + ' zerado. Pode abrir de novo.' : (r.erro || 'Nada para apagar.'), r.ok ? undefined : 'error');
+  } catch (ex) { showToast('Erro ao zerar: ' + ex.message, 'error'); }
+  initSumulaLive();
 }
 
 async function flushFilaSumula_() {
