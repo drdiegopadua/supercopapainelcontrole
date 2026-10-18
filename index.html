@@ -2156,6 +2156,31 @@ const ATLETA_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2h
 const ATLETA_DESTAQUE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJcF6s2NNYrOtv2WkfBzKSlosU75wpfDopW1T91p0k7IYJvHlFsrh2p-5g78759UQz/exec";
 // Preencha após rodar criarPlanilhaVolei() em apps-script-volei-apoio.js e implantar:
 const VOLEI_APOIO_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";
+
+// ── Elenco FICTÍCIO das equipes de teste (só para treinar a súmula; nada é gravado no banco) ──
+(function(){
+  const NOMES = {
+    'EQUIPE TESTE A': ['Bruno Almeida','Caio Ribeiro','Diego Matos','Eduardo Lima','Felipe Souza','Gustavo Pinto','Henrique Costa','Igor Barros','João Vieira','Kaique Nunes','Leandro Dias','Marcelo Rocha','Nicolas Ferraz','Otávio Lopes'],
+    'EQUIPE TESTE B': ['André Moreira','Bernardo Freitas','Cauã Mendes','Davi Carvalho','Enzo Batista','Fabrício Alves','Guilherme Rangel','Hugo Pacheco','Ícaro Monteiro','Jorge Azevedo','Kleber Duarte','Lucas Tavares','Matheus Andrade','Nelson Prado']
+  };
+  const COM = { 'EQUIPE TESTE A': ['Paulo Cardoso','Rafael Teixeira'], 'EQUIPE TESTE B': ['Sérgio Campos','Thiago Bastos'] };
+  const f0 = window.fetch.bind(window);
+  window.fetch = function(u, o) {
+    try {
+      const s = String(u);
+      if (/action=atletasEquipe/.test(s) && !/atletasEquipeApp/.test(s)) {
+        const m = /[?&]equipe=([^&]*)/.exec(s);
+        const eq = m ? decodeURIComponent(m[1]).trim().toUpperCase() : '';
+        if (NOMES[eq]) {
+          const lista = NOMES[eq].map((n, i) => ({ equipe: eq, numero: String(i + 1), nome: n, tipo: 'Atleta' }))
+            .concat([{ equipe: eq, numero: '', nome: COM[eq][0], tipo: 'Técnico' }, { equipe: eq, numero: '', nome: COM[eq][1], tipo: 'Comissão Técnica' }]);
+          return Promise.resolve(new Response(JSON.stringify({ ok: true, atletas: lista }), { headers: { 'Content-Type': 'application/json' } }));
+        }
+      }
+    } catch (e) {}
+    return f0(u, o);
+  };
+})();
 const SUMULA_SCRIPT_URL = (function(){try{if(localStorage.getItem("scBackend")==="planilha")return "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";}catch(e){}return "https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api";})();
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 const EDICOES_LEGADO_URL = "https://script.google.com/macros/s/AKfycbyhmN1mCzUWNpwyQ_AT6SKj1YqodCd2At3rLCu6rAn2cNqFjvwXidnw86wu3z3iTLdt9Q/exec"; // PALPITES — installs/quiz/blocked_games
