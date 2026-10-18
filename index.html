@@ -2182,6 +2182,53 @@ const VOLEI_APOIO_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTT4C5
     return f0(u, o);
   };
 })();
+// ── Login automático nas chamadas protegidas da API (a senha fica só na sessão desta aba) ──
+(function(){
+  const API_HOST = 'hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+  const ACOES = ['criarPartida','ponto','pontoMenos','timeout','cartao','substituicao','definirEscalacaoSet','definirCapitaoQuadra','atualizarObservacoes','removerEvento','desfazerPonto','processarEventosLote','finalizarPartida','reabrirPartida','excluirPartida','cadastrarAtleta','removerAtleta','gerarPinEquipe','cadastrarJuiz','removerJuiz','salvarPremiacao','excluirPremiacao','adicionar','excluir'];
+  const LEITURAS = ['inscricoes','verPinEquipeAdmin'];
+  function sessao() { try { const a = JSON.parse(sessionStorage.getItem('supercopa_auth') || 'null'); return a && a.usuario ? { usuario: a.usuario, senha: a.senha } : null; } catch (e) { return null; } }
+  function pedirLogin() {
+    if (document.getElementById('scLoginOv')) return;
+    const ov = document.createElement('div'); ov.id = 'scLoginOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(7,26,92,.96);display:grid;place-items:center;padding:20px;font-family:system-ui,sans-serif';
+    ov.innerHTML = '<form style="width:100%;max-width:340px;background:#fff;padding:22px;border-radius:14px"><h3 style="margin:0 0 4px;color:#0b2a8f">Entrar na súmula</h3><p style="margin:0 0 14px;font-size:13px;color:#6b7aa5">Use seu usuário e senha do painel.</p><input id="scU" placeholder="Usuário" autocomplete="username" style="width:100%;padding:12px;margin-bottom:8px;border:2px solid #dfe6f5;border-radius:8px;font-size:16px;box-sizing:border-box"><input id="scP" type="password" placeholder="Senha" autocomplete="current-password" style="width:100%;padding:12px;margin-bottom:8px;border:2px solid #dfe6f5;border-radius:8px;font-size:16px;box-sizing:border-box"><div id="scE" style="min-height:18px;color:#e5484d;font-size:13px;margin-bottom:6px"></div><button style="width:100%;padding:13px;border:0;border-radius:8px;background:#1b52e0;color:#fff;font-weight:700;font-size:16px;cursor:pointer">Entrar</button></form>';
+    document.body.appendChild(ov);
+    ov.querySelector('form').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const u = document.getElementById('scU').value.trim(), p = document.getElementById('scP').value, e = document.getElementById('scE');
+      e.textContent = 'Entrando...';
+      try {
+        const r = await window.fetch('https://' + API_HOST, { method: 'POST', body: JSON.stringify({ acao: 'loginPainel', auth: { usuario: u, senha: p } }) }).then(x => x.json());
+        if (!r || !r.ok) { e.textContent = (r && r.erro) || 'Usuário ou senha incorretos.'; return; }
+        sessionStorage.setItem('supercopa_auth', JSON.stringify({ usuario: r.usuario, senha: p, papel: r.papel }));
+        ov.remove();
+      } catch (x) { e.textContent = 'Sem conexão. Tente de novo.'; }
+    };
+  }
+  const f1 = window.fetch.bind(window);
+  window.fetch = function(u, o) {
+    try {
+      const s = String(u);
+      if (s.indexOf(API_HOST) >= 0) {
+        if (o && o.method === 'POST' && typeof o.body === 'string') {
+          const b = JSON.parse(o.body);
+          if (ACOES.indexOf(b.acao) >= 0 && !b.auth) { const a = sessao(); if (a) { b.auth = a; o = Object.assign({}, o, { body: JSON.stringify(b) }); } else setTimeout(pedirLogin, 0); }
+        } else {
+          const m = /[?&]action=([^&]+)/.exec(s);
+          if (m && LEITURAS.indexOf(m[1]) >= 0) {
+            const a = sessao(); if (!a) setTimeout(pedirLogin, 0);
+            const q = Object.fromEntries(new URL(s).searchParams);
+            return f1(s.split('?')[0], { method: 'POST', body: JSON.stringify(Object.assign({}, q, { acao: m[1], auth: a })) });
+          }
+        }
+      }
+    } catch (e) {}
+    return f1(u, o).then(r => { try { if (String(u).indexOf(API_HOST) >= 0) r.clone().json().then(j => { if (j && j.precisaLogin) { try { sessionStorage.removeItem('supercopa_auth'); } catch (x) {} pedirLogin(); } }).catch(() => {}); } catch (e) {} return r; });
+  };
+  // a Mesa abre direto no tablet da mesa: pede o login logo de início
+  if (/mesa\.html/.test(location.pathname)) document.addEventListener('DOMContentLoaded', () => { if (!sessao()) pedirLogin(); });
+})();
 const SUMULA_SCRIPT_URL = (function(){try{if(localStorage.getItem("scBackend")==="planilha")return "https://script.google.com/macros/s/AKfycbwwTT4C5NQ6awTRsdzl-t__mKxK0LdMlUKoPVxla43Xj5k_BsKoS5PJGIk-4wNJuDe0Kw/exec";}catch(e){}return "https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api";})();
 const NOTICIAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsedixY6fR2ht5C8clm70obzvtjiBail0UeINtO_L1cVgKj-PtoTikRFZAhmtTDsWqUg/exec"; // Mesmo URL do Apps Script geral
 const EDICOES_LEGADO_URL = "https://script.google.com/macros/s/AKfycbyhmN1mCzUWNpwyQ_AT6SKj1YqodCd2At3rLCu6rAn2cNqFjvwXidnw86wu3z3iTLdt9Q/exec"; // PALPITES — installs/quiz/blocked_games
@@ -3008,7 +3055,7 @@ async function loadInscricoesDashboard(manual) {
     return;
   }
   try {
-    const data = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
+    const data = await fetch(SUMULA_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
     if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
     const inscricoes = data.inscricoes || [];
     window._inscricoesCache = inscricoes;
@@ -3855,7 +3902,7 @@ async function initConvitePage() {
   sel.innerHTML = '<option value="">Carregando equipes inscritas...</option>';
   document.getElementById('cv-resultado').style.display = 'none';
   try {
-    const res = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
     convideEquipesCache = (res && res.inscricoes) || [];
     if (!convideEquipesCache.length) {
       sel.innerHTML = '<option value="">Nenhuma equipe inscrita ainda</option>';
@@ -3889,7 +3936,7 @@ async function loadStatusCadastros(manual) {
     if (!res.ok) throw new Error(res.erro || 'erro');
     if (!window._inscricoesCache && typeof INSCRICAO_SCRIPT_URL !== 'undefined' && INSCRICAO_SCRIPT_URL) {
       try {
-        const d = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
+        const d = await fetch(SUMULA_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
         if (d && d.ok) window._inscricoesCache = d.inscricoes || [];
       } catch (e) { /* cobrança por WhatsApp fica sem telefone */ }
     }
@@ -7306,7 +7353,7 @@ let _inscricoesDashCache = null;
 async function carregarInscricoesDash_() {
   if (_inscricoesDashCache) return _inscricoesDashCache;
   try {
-    const res = await fetch(INSCRICAO_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
+    const res = await fetch(SUMULA_SCRIPT_URL + '?action=inscricoes').then(r => r.json());
     _inscricoesDashCache = (res && res.inscricoes) || [];
   } catch (e) {
     _inscricoesDashCache = [];

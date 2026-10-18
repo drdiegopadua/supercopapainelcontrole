@@ -347,7 +347,14 @@ async function loginLocal(auth: Any): Promise<{ ok: boolean; usuario?: string; p
   await sb.from("usuarios_painel").update(falhas >= 5 ? { falhas: 0, bloqueado_ate: new Date(Date.now() + 10 * 60000).toISOString() } : { falhas }).eq("chave", k);
   return { ok: false, erro: "Usuário ou senha incorretos." };
 }
-async function autenticar(auth: Any) { return (await temUsuarios()) ? await loginLocal(auth) : await loginPainelAS(auth); }
+const authCache = new Map<string, { r: Any; ate: number }>();
+async function autenticar(auth: Any) {
+  const k = await hashLogin(auth), c = authCache.get(k);
+  if (c && c.ate > Date.now()) return c.r;
+  const r: Any = (await temUsuarios()) ? await loginLocal(auth) : await loginPainelAS(auth);
+  if (r && r.ok) authCache.set(k, { r, ate: Date.now() + 5 * 60 * 1000 }); else authCache.delete(k);
+  return r;
+}
 async function gravarUsuario(usuario: string, senha: string, papelU: string) {
   const sal = novoSal();
   const { error } = await sb.from("usuarios_painel").upsert({ chave: chaveEq(usuario), usuario, papel: papelU, sal, hash: await derivar(senha, sal), falhas: 0, bloqueado_ate: null, atualizado_em: new Date().toISOString() });
@@ -530,7 +537,15 @@ async function pinDe(equipe: string): Promise<string | null> {
   const { data } = await sb.from("equipes_pin").select("pin").eq("chave", k).maybeSingle();
   return data ? data.pin : null;
 }
-async function pinOk(equipe: string, pin: Any) { const r = await pinDe(equipe); return !!r && r === (pin || "").toString().trim(); }
+const falhasPin = new Map<string, { n: number; ate: number }>();
+async function pinOk(equipe: string, pin: Any) {
+  const k = chaveEq(equipe), f = falhasPin.get(k);
+  if (f && f.n >= 8 && f.ate > Date.now()) return false;
+  const r = await pinDe(equipe), ok = !!r && r === (pin || "").toString().trim();
+  if (ok) falhasPin.delete(k);
+  else falhasPin.set(k, { n: ((f && f.ate > Date.now()) ? f.n : 0) + 1, ate: Date.now() + 10 * 60 * 1000 });
+  return ok;
+}
 async function gerarPin(d: Any) {
   const equipe = (d.equipe || "").toString().trim();
   if (!equipe) return { ok: false, erro: "Equipe é obrigatória." };
@@ -1537,18 +1552,22 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "excluirAviso": return await excluirAviso(d);
     case "registrarPresenca": return await registrarPresenca(d);
     case "saudeSistema": return await saudeSistema(d);
+    case "inscricoes": { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro }; return await listarInscricoes(); }
+    case "verPinEquipeAdmin": { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro }; return { ok: true, pin: await pinDe(d.equipe || "") }; }
     case "salvarPremiacao": {
+      { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro }; }
       if (!d.categoria || !d.nome) return { ok: false, erro: "Categoria e nome são obrigatórios" };
       const { error } = await sb.from("premiacao").upsert({ categoria: String(d.categoria).trim(), nome: d.nome, equipe: d.equipe || "", atualizado: fmtBR(new Date()) });
       return error ? { ok: false, erro: error.message } : { ok: true };
     }
-    case "excluirPremiacao": await sb.from("premiacao").delete().eq("categoria", String(d.categoria || "").trim()); return { ok: true };
+    case "excluirPremiacao": { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro }; } await sb.from("premiacao").delete().eq("categoria", String(d.categoria || "").trim()); return { ok: true };
     case "adicionar": {
+      { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro }; }
       const l = d.linha || [];
       const { error } = await sb.from("destaques").insert({ modalidade: String(l[0] ?? ""), jogo: String(l[1] ?? ""), nome: String(l[2] ?? ""), equipe: String(l[3] ?? ""), observacao: String(l[4] ?? ""), data_hora: String(l[5] ?? "") });
       return error ? { ok: false, erro: error.message } : { ok: true };
     }
-    case "excluir": { const id = parseInt(d.rowIndex); if (id > 0) await sb.from("destaques").delete().eq("id", id); return { ok: true }; }
+    case "excluir": { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro }; const id = parseInt(d.rowIndex); if (id > 0) await sb.from("destaques").delete().eq("id", id); return { ok: true }; }
     case "votar": case "votar_atleta": {
       const atleta = (d.atleta || "").toString().trim(), time = (d.time || "").toString().trim();
       if (!atleta) return { ok: false, erro: "Nome do atleta obrigatório" };
@@ -1556,8 +1575,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       return error ? { ok: false, erro: error.message } : { ok: true };
     }
     case "migrarDoSheets": return await migrarDoSheets(d);
-    case "cadastrarAtleta": return await cadastrarAtleta(d);
-    case "removerAtleta": return await removerAtleta(d);
+    case "cadastrarAtleta": { const c: Any = await papel(d.auth, ["admin", "organizacao", "mesa"]); if (c.erro) return { ok: false, erro: c.erro }; return await cadastrarAtleta(d); }
+    case "removerAtleta": { const c: Any = await papel(d.auth, ["admin", "organizacao", "mesa"]); if (c.erro) return { ok: false, erro: c.erro }; return await removerAtleta(d); }
     case "cadastrarAtletaApp": case "removerAtletaApp":
       if (!(await pinOk(d.equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
       if (new Date() > PRAZO_CADASTRO_ATLETAS) return { ok: false, erro: PRAZO_MSG };
@@ -1565,12 +1584,12 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "cadastrarAtletaAdmin": case "removerAtletaAdmin":
       if (!(await SENHA_OK(d.senha))) return { ok: false, erro: "Senha incorreta." };
       return acao === "cadastrarAtletaAdmin" ? await cadastrarAtleta(d) : await removerAtleta(d);
-    case "gerarPinEquipe": return await gerarPin(d);
+    case "gerarPinEquipe": { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro }; return await gerarPin(d); }
     case "definirPinEquipe": return await definirPinEquipe(d);
     case "confirmarPresenca": return await confirmarPresenca(d);
     case "aceitarTermoLgpd": return await aceitarTermo(d);
-    case "cadastrarJuiz": return await cadastrarJuiz(d);
-    case "removerJuiz": return await removerJuiz(d);
+    case "cadastrarJuiz": { const c: Any = await papel(d.auth, ["admin", "organizacao", "mesa"]); if (c.erro) return { ok: false, erro: c.erro }; return await cadastrarJuiz(d); }
+    case "removerJuiz": { const c: Any = await papel(d.auth, ["admin", "organizacao", "mesa"]); if (c.erro) return { ok: false, erro: c.erro }; return await removerJuiz(d); }
     case "salvarAssinatura": return await salvarAssinatura(d);
   }
   if (ehGet) {
@@ -1581,7 +1600,6 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
         if (!(await pinOk(d.equipe, d.pin))) return { ok: false, erro: "PIN incorreto." };
         return { ok: true, atletas: (await atletasDe(d.equipe)).map(atletaOut) };
       case "temPinEquipe": return { ok: true, temPin: !!(await pinDe(d.equipe || "")) };
-      case "verPinEquipeAdmin": return { ok: true, pin: await pinDe(d.equipe || "") };
       case "verificarPinEquipe": return { ok: await pinOk(d.equipe || "", d.pin) };
       case "statusConfirmacao": {
         const { data } = await sb.from("confirmacoes").select("confirmado_em").eq("chave", chaveEq(d.equipe)).maybeSingle();
@@ -1600,7 +1618,6 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "count_acessos_site": return await contarAcessos("site");
       case "acessos_log": return await acessosLog();
       case "feedback": return await listarFeedback();
-      case "inscricoes": return await listarInscricoes();
       case "equipesConhecidas": return { ok: true, equipes: await equipesConhecidas() };
       case "timesPublicos": return await timesPublicos();
       case "noticias": return { ok: true, noticias: await listarNoticias() };
@@ -1615,6 +1632,11 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "destaques": { const { data } = await sb.from("destaques").select("*").order("id"); return { ok: true, destaques: (data || []).filter((r: Any) => r.nome).map((r: Any) => ({ _linha: r.id, modalidade: r.modalidade, jogo: r.jogo, nome: r.nome, equipe: r.equipe, observacao: r.observacao, dataHora: r.data_hora, id: r.id, foto: r.foto || "" })) }; }
       case "assinaturasEquipe": return { ok: true, assinaturas: await assinaturasEquipe(d.equipe || "") };
     }
+  }
+  const EXIGE_LOGIN = ["criarPartida", "ponto", "pontoMenos", "timeout", "cartao", "substituicao", "definirEscalacaoSet", "definirCapitaoQuadra", "atualizarObservacoes", "removerEvento", "desfazerPonto", "processarEventosLote", "finalizarPartida", "reabrirPartida", "excluirPartida"];
+  if (EXIGE_LOGIN.includes(acao)) {
+    const c: Any = await papel(d.auth, ["excluirPartida", "reabrirPartida"].includes(acao) ? ["admin", "organizacao"] : ["admin", "organizacao", "mesa"]);
+    if (c.erro) return { ok: false, erro: c.erro, precisaLogin: true };
   }
   switch (acao) {
     case "criarPartida": return await criarPartida(d);
