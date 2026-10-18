@@ -5213,7 +5213,7 @@ function escTapInit_(prefixo, lado, atletas, rotacaoAtual, liberoAtual, capitaoA
     prefixo: prefixo, lado: lado,
     atletas: atletas || [],
     posicoes: posicoes,
-    libero: (liberoAtual && liberoAtual.nome) ? { numero: (liberoAtual.numero || '').toString(), nome: liberoAtual.nome } : null,
+    liberos: (Array.isArray(liberoAtual) ? liberoAtual : (liberoAtual && liberoAtual.nome ? [liberoAtual] : [])).filter(l => l && l.nome).slice(0, 2).map(l => ({ numero: (l.numero || '').toString(), nome: l.nome })),
     capitao: capitaoAtual ? capitaoAtual.toString() : null
   });
 }
@@ -5229,6 +5229,7 @@ function escTapTocar_(prefixo, lado, numero, nome) {
   const idxAtual = escTapAchaPos_(st, numero);
   if (idxAtual >= 0) { st.posicoes[idxAtual] = null; }
   else {
+    if ((st.liberos || []).some(l => l.numero === numero)) { showToast('Esse atleta está marcado como líbero e não ocupa posição inicial. Desmarque o líbero para escalá-lo.', 'error'); return; }
     const livre = st.posicoes.findIndex(p => !p);
     if (livre === -1) { showToast('As 6 posições já estão preenchidas — arraste ou toque num jogador em quadra pra tirar antes de trocar.', 'error'); return; }
     st.posicoes[livre] = { numero: numero, nome: nome };
@@ -5244,6 +5245,7 @@ function escTapSoltarEm_(prefixo, lado, numero, nome, origemPos, pos) {
   const st = escTapGet_(prefixo, lado);
   const idxOrigem = (origemPos !== null && origemPos !== undefined) ? origemPos : escTapAchaPos_(st, numero);
   const jogador = { numero: numero, nome: nome };
+  if ((st.liberos || []).some(l => l.numero === numero)) { showToast('Esse atleta está marcado como líbero e não ocupa posição inicial. Desmarque o líbero para escalá-lo.', 'error'); return; }
   if (idxOrigem >= 0 && idxOrigem !== pos) {
     const deslocado = st.posicoes[pos];
     st.posicoes[pos] = jogador;
@@ -5257,7 +5259,14 @@ function escTapToggleLibero_(el, ev) {
   if (ev) ev.stopPropagation();
   const d = el.dataset;
   const st = escTapGet_(d.prefixo, d.lado);
-  st.libero = (st.libero && st.libero.numero === d.numero) ? null : { numero: d.numero, nome: d.nome };
+  st.liberos = st.liberos || [];
+  const i = st.liberos.findIndex(l => l.numero === d.numero);
+  if (i >= 0) st.liberos.splice(i, 1);
+  else {
+    if (escTapAchaPos_(st, d.numero) >= 0) { showToast('Esse atleta está em quadra. O líbero não faz parte dos 6 iniciais: tire-o da posição antes de marcar.', 'error'); return; }
+    if (st.liberos.length >= 2) { showToast('Máximo de 2 líberos por equipe. Desmarque um antes.', 'error'); return; }
+    st.liberos.push({ numero: d.numero, nome: d.nome });
+  }
   escTapRenderizar_(d.prefixo, d.lado);
 }
 function escTapSetCapitao_(el) {
@@ -5364,13 +5373,13 @@ function escTapListaHtml_(st, comLiberoCapitao) {
     const numero = (a.numero || '').toString();
     const idxPos = escTapAchaPos_(st, numero);
     const emQuadra = idxPos >= 0;
-    const ehLibero = comLiberoCapitao && st.libero && st.libero.numero === numero;
+    const ehLibero = comLiberoCapitao && (st.liberos || []).some(l => l.numero === numero);
     const dados = `data-prefixo="${st.prefixo}" data-lado="${st.lado}" data-numero="${escHtmlS_(numero)}" data-nome="${escHtmlS_(a.nome)}"`;
     return `<div ${dados} onclick="escTapTocar_(this.dataset.prefixo,this.dataset.lado,this.dataset.numero,this.dataset.nome)"
         style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;background:${emQuadra ? 'var(--light-blue)' : 'var(--grey)'};border:1.5px solid ${emQuadra ? 'var(--blue)' : 'transparent'}">
       <div ${dados} onpointerdown="escTapPD_(event,this)" onclick="event.stopPropagation()" title="Arraste até a posição" style="width:30px;height:30px;border-radius:50%;background:${emQuadra ? 'var(--blue)' : '#94a3b8'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;touch-action:none;cursor:grab;user-select:none">${emQuadra ? 'P' + (idxPos + 1) : (escHtmlS_(numero) || '·')}</div>
       <div style="flex:1;font-size:12px;font-weight:600;color:var(--dark)">${escHtmlS_(a.nome)}${numero ? ' <span style="color:var(--dark-grey);font-weight:400">#' + escHtmlS_(numero) + '</span>' : ''}</div>
-      ${comLiberoCapitao ? `<span ${dados} onclick="escTapToggleLibero_(this,event)" title="Líbero" style="font-size:15px;opacity:${ehLibero ? 1 : 0.25};cursor:pointer">🟡</span>` : ''}
+      ${comLiberoCapitao ? `<span ${dados} onclick="escTapToggleLibero_(this,event)" title="Marcar como líbero (até 2 por equipe)" style="font-size:10.5px;font-weight:800;letter-spacing:.5px;padding:3px 8px;border-radius:999px;cursor:pointer;border:1.5px solid ${ehLibero ? '#d99a14' : '#cbd5e1'};background:${ehLibero ? '#fff4dc' : 'transparent'};color:${ehLibero ? '#a86b00' : '#94a3b8'}">LÍBERO</span>` : ''}
     </div>`;
   }).join('') + '</div>';
 }
@@ -5392,7 +5401,8 @@ function escTapLer_(prefixo, lado) {
   const st = escTapGet_(prefixo, lado);
   return {
     titulares: st.posicoes.map(p => p ? { numero: p.numero, nome: p.nome } : { numero: '', nome: '' }),
-    libero: st.libero || { numero: '', nome: '' },
+    libero: (st.liberos && st.liberos[0]) || { numero: '', nome: '' },
+    liberos: (st.liberos || []).slice(),
     capitao: st.capitao || ''
   };
 }
@@ -5406,7 +5416,7 @@ function renderQuadra_(lado, nomeEquipe, atletas) {
   return `
     <div>
       <div class="team-col-title" style="font-weight:800;padding:6px 10px;border-radius:8px;background:var(--light-blue);color:var(--blue);text-align:center;margin-bottom:10px">${escHtmlS_(nomeEquipe)}</div>
-      <p style="font-size:10px;color:var(--dark-grey);margin:0 0 6px">1) Arraste o jogador (pela bolinha) até a posição — ou toque pra ocupar a próxima livre. 2) Marque o capitão em quadra. 🟡 = líbero.</p>
+      <p style="font-size:10px;color:var(--dark-grey);margin:0 0 6px">1) Arraste o jogador (pela bolinha) até a posição — ou toque pra ocupar a próxima livre. 2) Marque o capitão em quadra. 3) Toque em <b>LÍBERO</b> no atleta que for líbero (1 ou 2 por equipe; o líbero não fica entre os 6 iniciais).</p>
       <div id="esctap-wz-${lado}" data-com-libero-capitao="1">${escTapConteudoHtml_('wz', lado, st, true)}</div>
     </div>`;
 }
@@ -5420,7 +5430,7 @@ async function gerarSumula() {
     const pool = lado === 'A' ? wizardAtletasA : wizardAtletasB;
     const tecnico = pool.find(a => a.tipo === 'Técnico') || null;
     const auxiliarTecnico = pool.find(a => a.tipo === 'Auxiliar Técnico') || null;
-    return { titulares: lida.titulares, libero: lida.libero, capitao: lida.capitao, tecnico: tecnico, auxiliarTecnico: auxiliarTecnico };
+    return { titulares: lida.titulares, libero: lida.libero, liberos: lida.liberos, capitao: lida.capitao, tecnico: tecnico, auxiliarTecnico: auxiliarTecnico };
   };
 
   const elencoCasa = montarElenco('A');
@@ -5778,6 +5788,11 @@ function rfDuracao_(s) {
 }
 function rfSubsSet_(s, eq) { return (s.substituicoes || []).filter(x => x.equipe === eq && x.set === s.setAtual).length; }
 
+function rfListaLiberos_(e) {
+  const l = (e && e.liberos && e.liberos.length) ? e.liberos : ((e && e.libero && e.libero.nome) ? [e.libero] : []);
+  return l.filter(x => x && (x.nome || x.numero));
+}
+
 function rfQuadra_(rot, capNum, cor, libero) {
   if (!rot || !rot.length) return '<div class="rf-vazio">sem escalação</div>';
   const por = { 1: rot[0], 2: rot[1], 3: rot[2], 4: rot[3], 5: rot[4], 6: rot[5] };
@@ -5786,7 +5801,7 @@ function rfQuadra_(rot, capNum, cor, libero) {
     const cap = capNum && p.numero && String(p.numero) === String(capNum);
     return `<div class="rf-cel"><span class="rf-num${pos === 1 ? ' saque' : ''}" style="border-color:${cor}">${rfEsc_(p.numero || '—')}${cap ? '<i class="rf-cap">C</i>' : ''}</span><span class="rf-nome" title="${rfEsc_(p.nome || '')}">${rfEsc_(p.nome || '')}</span></div>`;
   };
-  const lib = libero && (libero.nome || libero.numero) ? `<div class="rf-lib"><b style="color:${cor}">LÍBERO</b> · ${rfEsc_(libero.numero || '')} ${rfEsc_(libero.nome || '')}</div>` : '';
+  const lib = libero && libero.length ? `<div class="rf-lib"><b style="color:${cor}">${libero.length > 1 ? 'LÍBEROS' : 'LÍBERO'}</b> · ${libero.map(l => rfEsc_(((l.numero || '') + ' ' + (l.nome || '')).trim())).join(' · ')}</div>` : '';
   return `<div class="rf-qd" style="background:linear-gradient(180deg,${cor}22,${cor}0d)"><div class="rf-rede">REDE</div>
     <div class="rf-g">${cel(4)}${cel(3)}${cel(2)}${cel(5)}${cel(6)}${cel(1)}</div></div>${lib}`;
 }
@@ -5843,7 +5858,7 @@ function renderSumulaConsole() {
   const tA = tempoUsados_(s.timeouts, 'A', s.setAtual), tB = tempoUsados_(s.timeouts, 'B', s.setAtual);
   const statusTxt = finalizada ? 'FINALIZADA' : prontaFinalizar ? 'PRONTA PRA FINALIZAR' : 'AO VIVO';
   const hs = (s.historicoSets || []).map((x, i) => `<span class="rf-sp" style="color:${x.a > x.b ? corA : corB}">${i + 1}º ${x.a}–${x.b}</span>`).join('');
-  const libA = (s.elencoCasa || {}).libero, libB = (s.elencoVisitante || {}).libero;
+  const libA = rfListaLiberos_(s.elencoCasa), libB = rfListaLiberos_(s.elencoVisitante);
 
   el.innerHTML = `<div class="rf-layout"><div class="rf-colA">
 
@@ -6595,14 +6610,14 @@ async function gerarPdfSumula(s) {
         if (ehCap) { doc.setFont(undefined, 'bold'); txt('CAPITÃO', x + wNum + wNome + wPos / 2, yy + 4.3, { align: 'center' }); }
         yy += 6;
       });
-      if (elenco && elenco.libero && elenco.libero.nome) {
+      rfListaLiberos_(elenco).filter(lb => lb.nome).forEach((lb) => {
         box(x, yy, wNum, 6, [255, 249, 230]); box(x + wNum, yy, wNome, 6, [255, 249, 230]); box(x + wNum + wNome, yy, wPos, 6, [255, 249, 230]);
         doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(20, 20, 20);
-        txt(elenco.libero.numero || '—', x + wNum / 2, yy + 4.3, { align: 'center' });
-        txt(elenco.libero.nome, x + wNum + 2, yy + 4.3);
+        txt(lb.numero || '—', x + wNum / 2, yy + 4.3, { align: 'center' });
+        txt(lb.nome, x + wNum + 2, yy + 4.3);
         doc.setFont(undefined, 'bold'); txt('LÍBERO', x + wNum + wNome + wPos / 2, yy + 4.3, { align: 'center' });
         yy += 6;
-      }
+      });
       // COMISSÃO TÉCNICA (Técnico/Auxiliar Técnico) — vem do cadastro
       // de atletas da equipe, não tem número de quadra.
       [['tecnico', 'TÉCNICO'], ['auxiliarTecnico', 'AUX. TÉCNICO']].forEach(([campo, rotulo]) => {

@@ -1392,6 +1392,7 @@ async function elegiveisDestaque(incluirTeste: boolean) {
     [["A", r.equipe_casa, e.elencoCasa, "rotacaoCasa"], ["B", r.equipe_visitante, e.elencoVisitante, "rotacaoVisitante"]].forEach(([lado, eq, elenco, rot]: Any) => {
       ((elenco && elenco.titulares) || []).forEach((p: Any) => add(eq, p));
       if (elenco && elenco.libero) add(eq, elenco.libero);
+      ((elenco && elenco.liberos) || []).forEach((l: Any) => add(eq, l));
       Object.values(e.escalacoesPorSet || {}).forEach((s: Any) => (s[rot] || []).forEach((p: Any) => add(eq, p)));
       (e[rot] || []).forEach((p: Any) => add(eq, p));
     });
