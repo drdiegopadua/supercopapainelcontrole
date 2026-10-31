@@ -1187,6 +1187,21 @@ async function excluirDestaquePartida(d: Any) {
   const { data } = await sb.from("destaques").delete().eq("id", d.id || -1).select("id");
   return data && data.length ? { ok: true } : { ok: false, erro: "Destaque não encontrado." };
 }
+// ════════ Exibições dos logos dos patrocinadores (cada vez que um logo é visto conta 1) ════════
+const PATROC_LOCAIS = ["home", "patrocinadores", "pedidos"];
+async function registrarPatrocinio(d: Any) {
+  const plat = (d.plataforma || "").toString(), local = (d.local || "").toString();
+  let slugs: string[] = (Array.isArray(d.slugs) ? d.slugs : []).map((s: Any) => String(s)).filter((s: string) => /^[a-z0-9-]{2,60}$/.test(s));
+  slugs = [...new Set(slugs)].slice(0, 20);
+  if (!["site", "app"].includes(plat) || !PATROC_LOCAIS.includes(local) || !slugs.length) return { ok: false, erro: "dados inválidos" };
+  const dia = new Date().toLocaleDateString("sv-SE", { timeZone: TZ });
+  const { error } = await sb.rpc("registrar_patrocinio", { p_dia: dia, p_plat: plat, p_local: local, p_slugs: slugs });
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+async function statsPatrocinio() {
+  const { data, error } = await sb.rpc("patrocinio_resumo");
+  return error ? { ok: false, erro: error.message } : { ok: true, ...data };
+}
 const INSCRICOES_ENCERRADAS = true; // mude para false para reabrir as inscrições
 async function inscrever(d: Any) {
   const nome = (d.nomeEquipe || "").toString().trim();
@@ -1523,6 +1538,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "tipo:app_install": return await registrarInstalacao(d.deviceId);
     case "tipo:app_acesso": return await registrarVisita("app", d.deviceId);
     case "tipo:site_acesso": return await registrarVisita("site", d.deviceId);
+    case "tipo:patrocinio_view": return await registrarPatrocinio(d);
+    case "patrocinio_stats": return await statsPatrocinio();
     case "tipo:push_subscribe": case "tipo:push_unsubscribe": case "tipo:push_limpar": return { ok: true };   // push usa servidor próprio (Render)
     case "feedback": return ehGet ? await listarFeedback() : await registrarFeedback(d);
     case "importarLegado": return await importarLegado(d);

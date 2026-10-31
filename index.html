@@ -3499,8 +3499,8 @@ function renderJogoCard(j) {
       <div class="set-col">
         <div class="set-label">SET ${i+1}</div>
         <div class="set-inputs">
-          <input class="set-input" type="number" min="0" max="99" value="${s.a}" placeholder="0" onchange="updateSetA('${j.id}',${i},this.value)">
-          <input class="set-input" type="number" min="0" max="99" value="${s.b}" placeholder="0" onchange="updateSetB('${j.id}',${i},this.value)">
+          <input class="set-input" type="number" value="${s.a}" placeholder="0" readonly tabindex="-1" style="pointer-events:none;opacity:.85">
+          <input class="set-input" type="number" value="${s.b}" placeholder="0" readonly tabindex="-1" style="pointer-events:none;opacity:.85">
         </div>
       </div>`).join('');
     const totA = sets.filter(s => parseInt(s.a || 0) > parseInt(s.b || 0)).length;
@@ -3519,7 +3519,7 @@ function renderJogoCard(j) {
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;">${statusMap[j.status] || ''}</div>
           <div class="placar-section">
-            <div class="placar-title">Placar por set — Equipe A | Equipe B</div>
+            <div class="placar-title">Placar por set — Equipe A | Equipe B <span style="display:block;font-size:11px;font-weight:600;color:#8a90a2;text-transform:none;letter-spacing:0;margin-top:2px">Preenchido automaticamente pela súmula</span></div>
             <div class="sets-grid">${setsHtml}</div>
             <div class="total-row">
               <span class="total-label">Sets vencidos</span>
@@ -3528,7 +3528,7 @@ function renderJogoCard(j) {
           </div>
         </div>
         <div class="jogo-footer">
-          <button class="btn btn-success btn-sm" style="padding:5px 12px;font-size:12px" onclick="salvarPlacarVolei('${j.id}')"><i class='bx bxs-cloud-upload'></i> Enviar Placar</button>
+          <!-- RESULTADO_SO_PELA_SUMULA: sem envio manual de placar -->
           ${j.sumulaId ? `<button class="btn btn-secondary btn-sm" style="padding:5px 12px;font-size:12px" onclick="gerarLinkSumula('${j.sumulaId}')"><i class='bx bx-link'></i> Link</button>` : ''}
           ${j.sumulaId ? `<button class="btn btn-secondary btn-sm" style="padding:5px 12px;font-size:12px" onclick="verSumula('${j.sumulaId}')"><i class='bx bx-show'></i> Ver Súmula</button>` : ''}
           <button class="btn btn-danger btn-sm" style="padding:5px 12px;font-size:12px" onclick="excluirJogo('${j.id}','volei')"><i class='bx bx-trash'></i></button>
@@ -3605,6 +3605,7 @@ function rerenderJogoTotals(id, sport) {
 }
 
 async function salvarPlacarVolei(id) {
+  showToast('O placar do vôlei vem da súmula e não é mais lançado à mão.', 'error'); return;
   const j = state.jogos.volei.find(x => x.id === id);
   if (!j) return;
   const parciais = j.placar.sets
@@ -4727,7 +4728,7 @@ function tnJogosHtml_(t) {
       <td><input type="text" value="${tnEsc_(j.quadra || '')}" ${dis} placeholder="quadra" style="width:110px;font-size:12px;padding:3px" id="tn-quadra-${tnEsc_(j.id)}"></td>
       <td style="font-size:11px;white-space:nowrap">${st}<br><span style="color:#6b7280">${tnEsc_(res)}</span></td>
       <td style="white-space:nowrap">${podeEditar ? `<button class="btn btn-secondary btn-sm" data-id="${tnEsc_(j.id)}" onclick="tnSalvarJogo_(this.dataset.id)">Salvar</button> ` : ''}
-        ${j.casaDefinida && j.visitanteDefinida ? `<button class="btn btn-sm" style="background:#e8f0ff;color:#1c2b66" data-id="${tnEsc_(j.id)}" onclick="tnAbrirResultado_(this.dataset.id)">Resultado</button>` : ''}</td></tr>`;
+        ${j.casaDefinida && j.visitanteDefinida ? `<button class="btn btn-sm" style="background:#e8f0ff;color:#1c2b66" data-id="${tnEsc_(j.id)}" onclick="tnAbrirResultado_(this.dataset.id)">W.O.</button>` : ''}</td></tr>`;
   };
   return ['grupos', 'quartas', 'semifinal', 'final'].map(fase => {
     const js = t.jogos.filter(j => j.fase === fase); if (!js.length) return '';
@@ -4868,18 +4869,20 @@ function tnAbrirResultado_(id) {
   const m = document.createElement('div'); m.id = 'tn-modal-res';
   m.style.cssText = 'position:fixed;inset:0;background:rgba(10,18,50,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   m.innerHTML = `<div style="background:#fff;border-radius:18px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow:auto">
-    <h3 style="margin:0 0 4px">Lançar resultado — ${tnEsc_(id)}</h3><div style="font-size:13px;color:#6b7280;margin-bottom:12px"><b>${tnEsc_(j.casa)}</b> × <b>${tnEsc_(j.visitante)}</b></div>
+    <h3 style="margin:0 0 4px">Registrar W.O. — ${tnEsc_(id)}</h3><div style="font-size:13px;color:#6b7280;margin-bottom:12px"><b>${tnEsc_(j.casa)}</b> × <b>${tnEsc_(j.visitante)}</b></div>
     <label style="font-size:12px;font-weight:800">Tipo</label>
     <select class="form-control" id="tn-r-tipo" onchange="document.getElementById('tn-r-sets').style.display=this.value?'none':'';document.getElementById('tn-r-wo').style.display=this.value?'':'none'">
-      <option value="">Jogo normal (placar dos sets)</option><option value="casa">W.O. — ${tnEsc_(j.casa)} faltou</option><option value="visitante">W.O. — ${tnEsc_(j.visitante)} faltou</option><option value="ambos">W.O. — as duas equipes incompletas</option></select>
-    <div id="tn-r-sets" style="margin-top:12px">${par(0)}${par(1)}${par(2)}<div style="font-size:11px;color:#8a90a2">Sets 1 e 2 vão a 25, o 3º a 15, sempre com 2 de diferença. Deixe o 3º vazio se o jogo acabou 2x0.</div></div>
-    <div id="tn-r-wo" style="display:none;margin-top:10px;font-size:12px;color:#8a6100;background:#fff7e0;border-radius:10px;padding:8px 10px">W.O.: o vencedor ganha 3 pts e 2x0 com 25x0 duplo. Se as duas equipes estiverem incompletas, nenhuma pontua.</div>
+      <option value="casa">W.O. — ${tnEsc_(j.casa)} faltou</option><option value="visitante">W.O. — ${tnEsc_(j.visitante)} faltou</option><option value="ambos">W.O. — as duas equipes incompletas</option></select>
+    <div id="tn-r-sets" style="display:none;margin-top:12px">${par(0)}${par(1)}${par(2)}<div style="font-size:11px;color:#8a90a2">Sets 1 e 2 vão a 25, o 3º a 15, sempre com 2 de diferença. Deixe o 3º vazio se o jogo acabou 2x0.</div></div>
+    <div style="margin-top:10px;font-size:12px;color:#1c2b66;background:#e8f0ff;border-radius:10px;padding:8px 10px">O placar dos jogos jogados vem sempre da súmula. Esta janela serve só para registrar W.O.</div><div id="tn-r-wo" style="margin-top:10px;font-size:12px;color:#8a6100;background:#fff7e0;border-radius:10px;padding:8px 10px">W.O.: o vencedor ganha 3 pts e 2x0 com 25x0 duplo. Se as duas equipes estiverem incompletas, nenhuma pontua.</div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn btn-secondary" onclick="document.getElementById('tn-modal-res').remove()">Cancelar</button><button class="btn btn-success" onclick="tnConfirmarResultado_('${tnEsc_(id)}')">Confirmar resultado</button></div></div>`;
   document.body.appendChild(m);
   if (j.wo) { const s = document.getElementById('tn-r-tipo'); s.value = j.wo; s.onchange(); }
+  else document.getElementById('tn-r-tipo').onchange();
 }
 async function tnConfirmarResultado_(id) {
   const wo = document.getElementById('tn-r-tipo').value;
+  if (!wo) { showToast('O placar vem da súmula. Aqui só é possível registrar W.O.', 'error'); return; }
   const parciais = [];
   if (!wo) for (let i = 0; i < 3; i++) { const a = document.getElementById('tn-r-a' + i).value, b = document.getElementById('tn-r-b' + i).value; if (a === '' && b === '') continue; parciais.push({ a: Number(a), b: Number(b) }); }
   const r = await tnPost_('lancarResultado', { modalidade: 'volei', id: id, wo: wo || null, parciais: parciais });
