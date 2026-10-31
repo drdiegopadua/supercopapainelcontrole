@@ -834,6 +834,7 @@ body.dark .btn-secondary:hover { color: #fff; }
     <li><a href="javascript:void(0)" onclick="navTo('torneio',this); return false;"><i class='bx bx-sitemap'></i><span>Torneio</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('sumulaLive',this); return false;"><i class='bx bx-clipboard'></i><span>Súmula</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('convite',this); return false;"><i class='bx bxs-envelope'></i><span>Convite</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('relatorios',this); return false;"><i class='bx bxs-file-pdf'></i><span>Relatórios</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('edicoes',this); return false;"><i class='bx bxs-layer'></i><span>Edições</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('noticias',this); return false;"><i class='bx bxs-news'></i><span>Notícias</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('notificacoes',this); return false;"><i class='bx bxs-bell'></i><span>Notificações</span></a></li>
@@ -1902,6 +1903,26 @@ body.dark .btn-secondary:hover { color: #fff; }
     </div>
 
     <!-- ─── EDIÇÕES ─── -->
+    <div class="page" id="page-relatorios">
+      <div class="page-header">
+        <div>
+          <h1>Relatórios</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Relatórios</span></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin:0 0 6px">Relatório das Edições 2021–2026</h3>
+        <p style="margin:0 0 12px;opacity:.8">Revista em PDF com gráficos e números: equipes, cidades, alcance no Instagram, acessos ao site e ao app, visibilidade dos patrocinadores, impacto econômico e parceiros. A página abaixo usa os números de hoje.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href="relatorio/index.html?print=1" target="_blank" rel="noopener">Gerar PDF com números de hoje</a>
+          <a class="btn" href="relatorio/index.html" target="_blank" rel="noopener">Abrir em tela cheia</a>
+          <a class="btn" href="https://drdiegopadua.github.io/supercopa-admin/relatorio/relatorio-supercopa-edicoes.pdf" target="_blank" rel="noopener">Baixar o PDF pronto</a>
+        </div>
+        <p style="margin:10px 0 0;font-size:12px;opacity:.7">No "Gerar PDF", a janela de impressão abre sozinha: escolha "Salvar como PDF", papel A4 paisagem, margens nenhuma e gráficos de fundo ligados.</p>
+      </div>
+      <iframe id="relFrame" title="Relatório" style="width:100%;height:78vh;border:0;border-radius:12px;background:#5d6683" loading="lazy"></iframe>
+    </div>
+
     <div class="page" id="page-edicoes">
       <div class="page-header">
         <div>
@@ -2503,7 +2524,7 @@ function navTo(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('#sidebar .side-menu li').forEach(li => li.classList.remove('active'));
   if (el) el.parentElement.classList.add('active');
-  const labels = {dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',sumulaLive:'Súmula',convite:'Convite',edicoes:'Edições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
+  const labels = {relatorios:'Relatórios',dashboard:'Dashboard',volei:'Vôlei',basquete:'Basquete',destaque:'Atleta Destaque',social:'Social',feedback:'Feedback',inscricoes:'Inscrições',sumulaLive:'Súmula',convite:'Convite',edicoes:'Edições',noticias:'Notícias',notificacoes:'Notificações Push',tvconfig:'TV Config'};
   if (page === 'tvconfig') { initTvSceneGrid(); initTvSceneGridBasq(); initTvSceneGridVolei(); loadQuizStatus(); carregarLinkTransmissao(); loadLiveJogosList(); }
   document.getElementById('navLabel').textContent = labels[page] || page;
   if (page === 'notificacoes') loadPushStatus();
@@ -2512,6 +2533,7 @@ function navTo(page, el) {
   if (page === 'sumulaLive') initSumulaLive();
   if (page === 'convite') { initConvitePage(); loadConfirmacoesPresenca(); }
   if (page === 'edicoes') loadEdicoesDashboard();
+  if (page === 'relatorios') { const f = document.getElementById('relFrame'); if (f && !f.src) f.src = 'relatorio/index.html'; }
   return false;
 }
 
