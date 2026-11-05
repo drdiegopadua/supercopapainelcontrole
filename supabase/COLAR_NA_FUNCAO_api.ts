@@ -1387,11 +1387,13 @@ async function excluirInscricao(d: Any) {
 
 // ════════ Votação do Atleta Destaque (1 voto por WhatsApp e por aparelho) ════════
 const normN = (s: Any) => (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const VOTACAO_ABRE_PADRAO = "2026-11-28T14:30:00-03:00", VOTACAO_FECHA_PADRAO = "2026-11-29T14:00:00-03:00";   // sáb 28/11 14h30 → dom 29/11 14h (horário de Brasília)
 async function configVotacao() {
   const { data } = await sb.from("config").select("valor").eq("chave", "votacao_destaque").maybeSingle();
   const v: Any = (data && data.valor) || {};
-  const aberta = v.aberta !== false && !(v.encerraEm && new Date(v.encerraEm) < new Date());
-  return { aberta, encerraEm: v.encerraEm || null, manual: v.aberta === false };
+  const abreEm = v.abreEm || VOTACAO_ABRE_PADRAO, encerraEm = v.encerraEm || VOTACAO_FECHA_PADRAO, agora = new Date();
+  const antes = agora < new Date(abreEm), depois = agora >= new Date(encerraEm), manual = v.aberta === false;
+  return { aberta: !manual && !antes && !depois, antes: !manual && antes, depois: manual || depois, abreEm, encerraEm, manual };
 }
 // Atletas que JOGARAM em partidas já encerradas (titulares, líbero, escalações de cada set e quem entrou por substituição).
 async function elegiveisDestaque(incluirTeste: boolean) {
@@ -1428,7 +1430,7 @@ async function elegiveisDestaque(incluirTeste: boolean) {
 }
 async function dadosVotacao(d: Any) {
   const [cfg, equipes, { count }] = await Promise.all([configVotacao(), elegiveisDestaque(d.teste === "1" || d.teste === true), sb.from("votos_destaque").select("id", { count: "exact", head: true }).eq("teste", d.teste === "1" || d.teste === true)]);
-  return { ok: true, aberta: cfg.aberta, encerraEm: cfg.encerraEm, equipes, totalVotos: count || 0 };
+  return { ok: true, aberta: cfg.aberta, antes: cfg.antes, abreEm: cfg.abreEm, encerraEm: cfg.encerraEm, equipes, totalVotos: count || 0 };
 }
 async function rankingDestaque(d: Any) {
   const teste = d.teste === "1" || d.teste === true;
@@ -1442,7 +1444,7 @@ async function rankingDestaque(d: Any) {
   const total = linhas.length;
   const ranking = Object.values(mapa).sort((a: Any, b: Any) => b.votos - a.votos || a.nome.localeCompare(b.nome)).slice(0, 20).map((r: Any, i: number) => ({ pos: i + 1, ...r, pct: total ? Math.round((r.votos / total) * 1000) / 10 : 0 }));
   const cfg = await configVotacao();
-  return { ok: true, ranking, totalVotos: total, aberta: cfg.aberta, atualizadoEm: new Date().toISOString() };
+  return { ok: true, ranking, totalVotos: total, aberta: cfg.aberta, antes: cfg.antes, abreEm: cfg.abreEm, encerraEm: cfg.encerraEm, atualizadoEm: new Date().toISOString() };
 }
 async function sha256Hex(s: string) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map((x) => x.toString(16).padStart(2, "0")).join(""); }
 function normalizarTelefone(raw: Any): string | null {
@@ -1455,7 +1457,7 @@ function normalizarTelefone(raw: Any): string | null {
 async function votarDestaque(d: Any) {
   const teste = d.teste === true || d.teste === "1";
   const cfg = await configVotacao();
-  if (!cfg.aberta) return { ok: false, erro: "A votação está encerrada.", encerrada: true };
+  if (!cfg.aberta && !teste) return cfg.antes ? { ok: false, erro: "A votação ainda não abriu: começa em 28/11 às 14h30.", antes: true } : { ok: false, erro: "A votação está encerrada.", encerrada: true };
   const nome = (d.nome || "").toString().trim().replace(/\s+/g, " ");
   if (nome.length < 3 || nome.length > 80) return { ok: false, erro: "Digite seu nome (mínimo 3 letras)." };
   const tel = normalizarTelefone(d.whatsapp);
@@ -1476,7 +1478,7 @@ async function votarDestaque(d: Any) {
 }
 async function definirVotacao(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
-  const valor: Any = { aberta: d.aberta !== false, encerraEm: d.encerraEm || null };
+  const valor: Any = { aberta: d.aberta !== false, abreEm: d.abreEm || null, encerraEm: d.encerraEm || null };
   await sb.from("config").upsert({ chave: "votacao_destaque", valor, atualizado_em: new Date().toISOString() });
   return { ok: true, ...(await configVotacao()) };
 }
