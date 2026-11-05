@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Overlay Vôlei — Supercopa AFC</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;700&display=swap">
+<style>
+/* Placar ao vivo da Supercopa para transmissão (fundo transparente, 1920x1080).
+   Parâmetros: ?id=JOGO (fixa um jogo) · ?pos=baixo-esq|baixo-dir|topo-esq|topo-dir|topo-centro|baixo-centro · ?demo=1 */
+html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#fff}
+#board{position:absolute;opacity:0;transform:translateY(24px);transition:opacity .5s,transform .5s}
+#board.on{opacity:1;transform:none}
+.cab{display:flex;align-items:center;gap:16px;height:46px;padding:0 20px 0 12px;background:#071a5c;border-top:4px solid #f5b800;color:#ffd34d;font-weight:800;font-size:26px;letter-spacing:2px;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%);width:max-content}
+.cab img{height:34px}
+.cab .set{background:#f5b800;color:#0b1a55;padding:2px 14px;font-size:24px}
+.lin{display:grid;grid-template-columns:76px 420px 38px 74px 120px;align-items:stretch;height:84px;background:linear-gradient(90deg,#071a5c,#0b2a8f);border-bottom:2px solid rgba(255,255,255,.12)}
+.lin:last-of-type{border-bottom:0}
+.esc{display:flex;align-items:center;justify-content:center;background:#fff}
+.esc img{max-width:60px;max-height:60px;object-fit:contain}
+.esc b{color:#0b2a8f;font-size:34px}
+.nm{display:flex;align-items:center;padding:0 18px;font-weight:800;font-size:46px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;overflow:hidden}
+.sv{display:flex;align-items:center;justify-content:center}
+.sv i{width:20px;height:20px;border-radius:50%;background:#ffd34d;box-shadow:0 0 14px #ffd34d;opacity:0;transition:opacity .3s}
+.sv i.on{opacity:1}
+.st{display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.14);font-size:50px;font-weight:800}
+.pt{display:flex;align-items:center;justify-content:center;background:#fff;color:#0b2a8f;font-size:74px;font-weight:800;font-variant-numeric:tabular-nums}
+.pt.flash{animation:fl .9s}
+@keyframes fl{0%{background:#ffd34d;transform:scale(1.12)}100%{background:#fff;transform:none}}
+.rod{display:flex;gap:22px;padding:0 20px;height:36px;align-items:center;background:rgba(7,26,92,.92);font-size:24px;font-weight:700;letter-spacing:1px;color:#cfe0ff;text-transform:uppercase;white-space:nowrap}
+.rod span b{color:#fff}
+.rod:empty{display:none}
+.msg{position:absolute;left:0;top:0;color:#fff;font:700 28px 'Barlow',sans-serif;background:rgba(0,0,0,.6);padding:10px 16px}
+</style>
+</head>
+<body>
+<div id="stage">
+ <div id="board">
+  <div class="cab"><img src="https://www.supercopaafc.com.br/novo/logo-branco.png" alt=""><span id="fase">Vôlei</span><span class="set" id="set">SET 1</span></div>
+  <div class="lin"><div class="esc" id="eA"></div><div class="nm" id="nA"></div><div class="sv"><i id="sA"></i></div><div class="st" id="vA">0</div><div class="pt" id="pA">0</div></div>
+  <div class="lin"><div class="esc" id="eB"></div><div class="nm" id="nB"></div><div class="sv"><i id="sB"></i></div><div class="st" id="vB">0</div><div class="pt" id="pB">0</div></div>
+  <div class="rod" id="rod"></div>
+ </div>
+</div>
+<script>
+(function(){
+var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api',Q=new URLSearchParams(location.search);
+var ID=Q.get('id'),POS=Q.get('pos')||'baixo-esq',DEMO=Q.has('demo'),$=function(i){return document.getElementById(i)};
+var stage=$('stage'),board=$('board'),ESC={},ult={},W=728,H=250;
+function ajusta(){var s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='scale('+s+')'}
+addEventListener('resize',ajusta);ajusta();
+function posiciona(){var m=60,p=POS.split('-'),v=p[0],h=p[1]||'esq';board.style.top=board.style.bottom=board.style.left=board.style.right='';
+ if(v==='topo')board.style.top=m+'px';else board.style.top=(1080-m-H)+'px';
+ if(h==='esq')board.style.left=m+'px';else if(h==='dir')board.style.left=(1920-m-W)+'px';else board.style.left=((1920-W)/2)+'px'}
+posiciona();
+var get=function(a,p){var q=new URLSearchParams(Object.assign({action:a},p||{}));return fetch(API+'?'+q,{cache:'no-store'}).then(function(r){return r.json()})};
+function escudos(){return get('timesPublicos').then(function(r){(r.times||[]).forEach(function(t){ESC[String(t.nome).toLowerCase()]=t.escudo})}).catch(function(){})}
+function logo(el,nome){var u=ESC[String(nome).toLowerCase()],k=el.dataset.n;if(k===nome)return;el.dataset.n=nome;
+ var ini=String(nome).trim().charAt(0).toUpperCase();el.innerHTML='<b>'+ini+'</b>';
+ if(u){var im=new Image();im.onload=function(){el.innerHTML='';el.appendChild(im)};im.src=u}}
+function set(id,v,flash){var e=$(id),t=String(v);if(e.textContent!==t){e.textContent=t;if(flash){e.classList.remove('flash');void e.offsetWidth;e.classList.add('flash')}}}
+function mostra(e){
+ if(!e){board.classList.remove('on');return}
+ $('nA').textContent=e.equipeCasa;$('nB').textContent=e.equipeVisitante;logo($('eA'),e.equipeCasa);logo($('eB'),e.equipeVisitante);
+ var fim=e.status==='finalizada';
+ $('set').textContent=fim?'FIM DE JOGO':'SET '+(e.setAtual||1);
+ set('pA',e.pontosCasa||0,true);set('pB',e.pontosVisitante||0,true);set('vA',e.setsCasa||0);set('vB',e.setsVisitante||0);
+ $('sA').className=!fim&&e.sacando==='A'?'on':'';$('sB').className=!fim&&e.sacando==='B'?'on':'';
+ var hs=(e.historicoSets||[]);$('rod').innerHTML=hs.map(function(s,i){return '<span>'+(i+1)+'º set <b>'+s.a+' x '+s.b+'</b></span>'}).join('');
+ H=250-(hs.length?0:36);board.classList.add('on');posiciona();
+}
+function escolhe(lista){ // jogo mais recente em andamento
+ var l=(lista||[]).filter(function(p){return p.status==='em_andamento'||p.status==='sets_completos'});
+ l.sort(function(a,b){return String(b.atualizadoEm||'')>String(a.atualizadoEm||'')?1:-1});return l[0]&&l[0].id}
+var DEMO_E=[{equipeCasa:'Alpha Vôlei',equipeVisitante:'CT das Montanhas',setAtual:2,pontosCasa:14,pontosVisitante:11,setsCasa:1,setsVisitante:0,sacando:'A',historicoSets:[{a:25,b:21}],status:'em_andamento'}];
+function ciclo(){
+ if(DEMO){var e=DEMO_E[0];e.pontosCasa+=Math.random()<.5?1:0;e.pontosVisitante+=Math.random()<.5?1:0;e.sacando=Math.random()<.5?'A':'B';return mostra(e)}
+ var p=ID?Promise.resolve(ID):get('partidasAoVivo').then(function(r){return escolhe(r.partidas)});
+ return p.then(function(id){if(!id)return mostra(null);return get('partida',{id:id}).then(function(r){mostra(r&&r.ok?r.estado:null)})}).catch(function(){})
+}
+escudos().then(function(){ciclo();setInterval(ciclo,2000)});
+setInterval(escudos,600000);
+})();
+</script>
+</body>
+</html>
