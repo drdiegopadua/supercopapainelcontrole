@@ -4855,7 +4855,7 @@ const TN_OFICIAL_ = {
 async function tnAplicarOficial_() {
   const existe = window._torneio && window._torneio.jogos && window._torneio.jogos.length;
   if (!confirm('Aplicar o sorteio dos grupos e a tabela de jogos do sábado (28/11)?' + (existe ? '\n\nA chave atual será APAGADA e recriada (resultados lançados serão perdidos).' : ''))) return;
-  const r = await tnPost_('semearTorneio', { modalidade: 'volei', grupos: TN_OFICIAL_.grupos, forcar: !!existe });
+  const r = await tnPost_('semearTorneio', { modalidade: 'volei', grupos: TN_OFICIAL_.grupos, forcar: true });
   if (!r.ok) { showToast('❌ ' + r.erro, 'error'); return; }
   for (const [id, hora, q] of TN_OFICIAL_.jogos) {
     const j = await tnPost_('salvarJogo', { modalidade: 'volei', id: id, data: TN_OFICIAL_.data, hora: hora, quadra: TN_OFICIAL_.quadras[q] });
