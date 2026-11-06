@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;700&display=swap">
 <style>
 /* Placar ao vivo da Supercopa para transmissão (fundo transparente, 1920x1080).
-   Parâmetros: ?quadra=principal|alternativa (pega o jogo ao vivo dessa quadra) · ?id=JOGO (fixa um jogo) · ?pos=baixo-esq|baixo-dir|topo-esq|topo-dir|topo-centro|baixo-centro · ?demo=1 */
+   Parâmetros: ?quadra=principal|alternativa (pega o jogo ao vivo dessa quadra) · ?id=JOGO (fixa um jogo) · ?pos=baixo-esq|baixo-dir|topo-esq|topo-dir|topo-centro|baixo-centro · ?teste=1 (pega um jogo de teste da súmula em andamento) · ?demo=1 */
 html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#fff}
 #board{position:absolute;opacity:0;transform:translateY(24px);transition:opacity .5s,transform .5s}
@@ -76,9 +76,12 @@ function escolhe(lista){ // jogo em andamento (filtra pela quadra, se ?quadra=pr
  if(QUA)l=l.filter(function(p){return (QMAP[String(p.id).toUpperCase()]||'').indexOf(QUA)>=0});
  l.sort(function(a,b){return String(b.atualizadoEm||'')>String(a.atualizadoEm||'')?1:-1});return l[0]&&l[0].id}
 var DEMO_E=[{equipeCasa:'Alpha Vôlei',equipeVisitante:'CT das Montanhas',setAtual:2,pontosCasa:14,pontosVisitante:11,setsCasa:1,setsVisitante:0,sacando:'A',historicoSets:[{a:25,b:21}],status:'em_andamento'}];
+function testeAoVivo(){ // jogos de teste da súmula não entram na lista ao vivo: procura TESTE1..TESTE4
+ var ids=['TESTE1','TESTE2','TESTE3','TESTE4'];
+ return Promise.all(ids.map(function(i){return get('partida',{id:i}).then(function(r){return r&&r.ok&&r.estado&&r.estado.status==='em_andamento'?i:null}).catch(function(){return null})})).then(function(l){return l.filter(Boolean)[0]})}
 function ciclo(){
  if(DEMO){var e=DEMO_E[0];e.pontosCasa+=Math.random()<.5?1:0;e.pontosVisitante+=Math.random()<.5?1:0;e.sacando=Math.random()<.5?'A':'B';return mostra(e)}
- var p=ID?Promise.resolve(ID):get('partidasAoVivo').then(function(r){return escolhe(r.partidas)});
+ var p=ID?Promise.resolve(ID):Q.has('teste')?testeAoVivo():get('partidasAoVivo').then(function(r){return escolhe(r.partidas)});
  return p.then(function(id){if(!id)return mostra(null);return get('partida',{id:id}).then(function(r){mostra(r&&r.ok?r.estado:null)})}).catch(function(){})
 }
 escudos().then(function(){return QUA?quadras():0}).then(function(){ciclo();setInterval(ciclo,2000);if(QUA)setInterval(quadras,60000)});
