@@ -772,6 +772,7 @@ async function limparTestes(d: Any) {
   if (c.erro) return { ok: false, erro: c.erro };
   const n: Any = {};
   const del = async (tab: string, col: string, padrao: string) => { const { data } = await sb.from(tab).delete().ilike(col, padrao).select("*"); n[tab + "." + col] = (data || []).length; };
+  { const { data } = await sb.from("chat_mensagens").delete().eq("teste", true).select("id"); n["chat_mensagens.teste"] = (data || []).length; }
   await del("galera_votos", "atleta", "TESTE%");
   await del("presencas", "jogo", "TESTE%");
   await del("wo_registros", "jogo", "TESTE%");
@@ -1385,6 +1386,86 @@ async function excluirInscricao(d: Any) {
   return data && data.length ? { ok: true } : { ok: false, erro: "Inscrição não encontrada." };
 }
 
+// ════════ Chat ao vivo (site + app) ════════
+const CHAT_ABRE = "2026-11-28T12:00:00-03:00", CHAT_FECHA = "2026-11-29T23:00:00-03:00";   // sáb 28/11 12h → dom 29/11 23h (Brasília)
+async function chatCfg() {
+  const { data } = await sb.from("config").select("valor").eq("chave", "chat").maybeSingle();
+  const v: Any = (data && data.valor) || {};
+  const abreEm = v.abreEm || CHAT_ABRE, encerraEm = v.encerraEm || CHAT_FECHA, agora = new Date();
+  const antes = agora < new Date(abreEm), depois = agora >= new Date(encerraEm), pausado = !!v.pausado;
+  return { aberta: !pausado && !antes && !depois, antes, depois, pausado, abreEm, encerraEm };
+}
+const CHAT_LONGAS = ["caralho", "buceta", "arrombado", "filhodaputa", "piroca", "cuzao", "nazista"];           // bloqueadas mesmo coladas em outra palavra
+const CHAT_EXATAS = ["porra", "puta", "puto", "putaria", "fdp", "foda", "fodase", "foder", "viado", "vadia", "desgracado", "retardado", "macaco", "estupro", "estuprador", "cu", "pau"];   // só como palavra inteira ("disputou" e "computador" passam)
+function chatTextoRuim(t: string): string | null {
+  const n = normN(t), junto = n.replace(/[^a-z0-9]/g, "");
+  if (/(https?:|www\.|\.com|\.net|\.org|\.br\b|wa\.me|bit\.ly|t\.me|@[a-z0-9_.]{3,})/.test(n)) return "Links e contatos não são permitidos no chat.";
+  if (/\d{8,}/.test(t.replace(/[\s().-]/g, ""))) return "Não envie números de telefone no chat.";
+  if (CHAT_LONGAS.some((p) => junto.includes(p)) || n.split(/[^a-z0-9]+/).some((w) => CHAT_EXATAS.includes(w))) return "Mensagem não permitida. Vamos manter o respeito!";
+  if (/(.)\1{9,}/.test(n)) return "Evite repetir a mesma letra muitas vezes.";
+  return null;
+}
+const chatHora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+async function chatListar(d: Any) {
+  const teste = d.teste === "1" || d.teste === true, desde = parseInt(d.desde) || 0;
+  let q = sb.from("chat_mensagens").select("id,criado_em,apelido,texto,oficial").eq("teste", teste).eq("apagada", false).order("id", { ascending: false }).limit(desde ? 200 : 80);
+  if (desde) q = q.gt("id", desde);
+  const { data } = await q;
+  const cfg = await chatCfg();
+  return { ok: true, aberta: cfg.aberta || teste, antes: cfg.antes && !teste, depois: cfg.depois && !teste, pausado: cfg.pausado && !teste, abreEm: cfg.abreEm, encerraEm: cfg.encerraEm,
+    mensagens: (data || []).reverse().map((m: Any) => ({ id: m.id, apelido: m.apelido, texto: m.texto, hora: chatHora(m.criado_em), oficial: !!m.oficial })) };
+}
+async function chatEnviar(d: Any) {
+  const teste = d.teste === true || d.teste === "1";
+  let oficial = false;
+  if (d.auth) { const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (!c.erro) oficial = true; }
+  const cfg = await chatCfg();
+  if (!teste && !oficial && !cfg.aberta) return { ok: false, erro: cfg.pausado ? "O chat está pausado pela organização." : cfg.antes ? "O chat abre em 28/11 às 12h." : "O chat foi encerrado. Obrigado por participar!" };
+  const apelido = (d.apelido || "").toString().trim().replace(/\s+/g, " ");
+  const texto = (d.texto || "").toString().trim().replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n");
+  if (apelido.length < 2 || apelido.length > 20) return { ok: false, erro: "Escolha um apelido de 2 a 20 letras." };
+  if (!texto) return { ok: false, erro: "Escreva uma mensagem." };
+  if (texto.length > 280) return { ok: false, erro: "Mensagem muito longa (máximo 280 letras)." };
+  const dev = devOk(d.deviceId); if (!dev) return { ok: false, erro: "Aparelho não identificado. Atualize a página." };
+  if (!oficial) {
+    if (/(admin|organiza|supercopa|moderad|oficial|arbitr)/.test(normN(apelido))) return { ok: false, erro: "Esse apelido é reservado. Escolha outro." };
+    const { data: bl } = await sb.from("chat_bloqueados").select("device_id").eq("device_id", dev).maybeSingle();
+    if (bl) return { ok: false, erro: "Você foi bloqueado do chat pela organização." };
+    const ruim = chatTextoRuim(apelido) || chatTextoRuim(texto); if (ruim) return { ok: false, erro: ruim };
+    const { data: ult } = await sb.from("chat_mensagens").select("criado_em").eq("device_id", dev).order("id", { ascending: false }).limit(30);
+    const l = ult || [];
+    if (l[0] && Date.now() - new Date(l[0].criado_em).getTime() < 3000) return { ok: false, erro: "Calma! Espere alguns segundos para enviar outra mensagem." };
+    if (l.length >= 30 && Date.now() - new Date(l[29].criado_em).getTime() < 5 * 60 * 1000) return { ok: false, erro: "Muitas mensagens seguidas. Espere um pouco." };
+    if (l[0] && normN(l[0].texto || "") === normN(texto)) { /* repetida: o filtro abaixo cobre */ }
+  }
+  const { data, error } = await sb.from("chat_mensagens").insert({ apelido: oficial ? (apelido || "Organização") : apelido, texto, device_id: dev, oficial, teste }).select("id,criado_em,apelido,texto,oficial").single();
+  if (error) return { ok: false, erro: error.message };
+  return { ok: true, mensagem: { id: data.id, apelido: data.apelido, texto: data.texto, hora: chatHora(data.criado_em), oficial: !!data.oficial } };
+}
+async function chatApagar(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("chat_mensagens").update({ apagada: true }).eq("id", parseInt(d.id) || -1).select("id");
+  return data && data.length ? { ok: true } : { ok: false, erro: "Mensagem não encontrada." };
+}
+async function chatBloquear(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data: m } = await sb.from("chat_mensagens").select("device_id,apelido").eq("id", parseInt(d.id) || -1).maybeSingle();
+  if (!m) return { ok: false, erro: "Mensagem não encontrada." };
+  await sb.from("chat_bloqueados").upsert({ device_id: m.device_id, apelido: m.apelido });
+  const { data } = await sb.from("chat_mensagens").update({ apagada: true }).eq("device_id", m.device_id).select("id");
+  return { ok: true, apagadas: (data || []).length };
+}
+async function chatConfigurar(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data } = await sb.from("config").select("valor").eq("chave", "chat").maybeSingle();
+  const v: Any = { ...((data && data.valor) || {}) };
+  if (d.pausado !== undefined) v.pausado = !!d.pausado;
+  if (d.abreEm !== undefined) v.abreEm = d.abreEm || null;
+  if (d.encerraEm !== undefined) v.encerraEm = d.encerraEm || null;
+  await sb.from("config").upsert({ chave: "chat", valor: v, atualizado_em: new Date().toISOString() });
+  return { ok: true, ...(await chatCfg()) };
+}
+
 // ════════ Votação do Atleta Destaque (1 voto por WhatsApp e por aparelho) ════════
 const normN = (s: Any) => (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 const VOTACAO_ABRE_PADRAO = "2026-11-28T14:30:00-03:00", VOTACAO_FECHA_PADRAO = "2026-11-29T14:00:00-03:00";   // sáb 28/11 14h30 → dom 29/11 14h (horário de Brasília)
@@ -1533,6 +1614,11 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
     case "votarDestaque": return await votarDestaque(d);
+    case "chat": return await chatListar(d);
+    case "chatEnviar": return await chatEnviar(d);
+    case "chatApagar": return await chatApagar(d);
+    case "chatBloquear": return await chatBloquear(d);
+    case "chatConfigurar": return await chatConfigurar(d);
     case "definirVotacao": return await definirVotacao(d);
     case "listarVotosDestaque": return await listarVotosDestaque(d);
     case "anularVotoDestaque": return await anularVotoDestaque(d);
