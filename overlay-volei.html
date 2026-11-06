@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;700&display=swap">
 <style>
 /* Placar ao vivo da Supercopa para transmissão (fundo transparente, 1920x1080).
-   Parâmetros: ?id=JOGO (fixa um jogo) · ?pos=baixo-esq|baixo-dir|topo-esq|topo-dir|topo-centro|baixo-centro · ?demo=1 */
+   Parâmetros: ?quadra=principal|alternativa (pega o jogo ao vivo dessa quadra) · ?id=JOGO (fixa um jogo) · ?pos=baixo-esq|baixo-dir|topo-esq|topo-dir|topo-centro|baixo-centro · ?demo=1 */
 html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#fff}
 #board{position:absolute;opacity:0;transform:translateY(24px);transition:opacity .5s,transform .5s}
@@ -46,7 +46,7 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 <script>
 (function(){
 var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api',Q=new URLSearchParams(location.search);
-var ID=Q.get('id'),POS=Q.get('pos')||'baixo-esq',DEMO=Q.has('demo'),$=function(i){return document.getElementById(i)};
+var QUA=(Q.get('quadra')||'').toLowerCase(),QMAP={};var ID=Q.get('id'),POS=Q.get('pos')||'baixo-esq',DEMO=Q.has('demo'),$=function(i){return document.getElementById(i)};
 var stage=$('stage'),board=$('board'),ESC={},ult={},W=728,H=250;
 function ajusta(){var s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='scale('+s+')'}
 addEventListener('resize',ajusta);ajusta();
@@ -70,8 +70,10 @@ function mostra(e){
  var hs=(e.historicoSets||[]);$('rod').innerHTML=hs.map(function(s,i){return '<span>'+(i+1)+'º set <b>'+s.a+' x '+s.b+'</b></span>'}).join('');
  H=250-(hs.length?0:36);board.classList.add('on');posiciona();
 }
-function escolhe(lista){ // jogo mais recente em andamento
+function quadras(){return get('torneio',{modalidade:'volei'}).then(function(t){(t.jogos||[]).forEach(function(j){QMAP[String(j.id).toUpperCase()]=String(j.quadra||'').toLowerCase()})}).catch(function(){})}
+function escolhe(lista){ // jogo em andamento (filtra pela quadra, se ?quadra=principal|alternativa)
  var l=(lista||[]).filter(function(p){return p.status==='em_andamento'||p.status==='sets_completos'});
+ if(QUA)l=l.filter(function(p){return (QMAP[String(p.id).toUpperCase()]||'').indexOf(QUA)>=0});
  l.sort(function(a,b){return String(b.atualizadoEm||'')>String(a.atualizadoEm||'')?1:-1});return l[0]&&l[0].id}
 var DEMO_E=[{equipeCasa:'Alpha Vôlei',equipeVisitante:'CT das Montanhas',setAtual:2,pontosCasa:14,pontosVisitante:11,setsCasa:1,setsVisitante:0,sacando:'A',historicoSets:[{a:25,b:21}],status:'em_andamento'}];
 function ciclo(){
@@ -79,7 +81,7 @@ function ciclo(){
  var p=ID?Promise.resolve(ID):get('partidasAoVivo').then(function(r){return escolhe(r.partidas)});
  return p.then(function(id){if(!id)return mostra(null);return get('partida',{id:id}).then(function(r){mostra(r&&r.ok?r.estado:null)})}).catch(function(){})
 }
-escudos().then(function(){ciclo();setInterval(ciclo,2000)});
+escudos().then(function(){return QUA?quadras():0}).then(function(){ciclo();setInterval(ciclo,2000);if(QUA)setInterval(quadras,60000)});
 setInterval(escudos,600000);
 })();
 </script>
