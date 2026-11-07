@@ -88,8 +88,10 @@ function logo(el,nome){var u=ESC[String(nome).toLowerCase()],k=el.dataset.n;if(k
 function set(id,v,flash){var e=$(id),t=String(v);if(e.textContent!==t&&e.dataset.v!==t){var prim=e.dataset.v===undefined;e.dataset.v=t;
   if(id==='pA'||id==='pB'){e.innerHTML='<span>'+t+'</span>';if(!prim&&flash){e.classList.remove('flash','roll');void e.offsetWidth;e.classList.add('flash','roll');var l=e.closest('.lin');l.classList.remove('up');void l.offsetWidth;l.classList.add('up')}}
   else{e.textContent=t;if(!prim){e.classList.remove('pop');void e.offsetWidth;e.classList.add('pop')}}}}
+function aviso(on){var m=$('aviso');if(!m){m=document.createElement('div');m.id='aviso';m.style.cssText='position:absolute;left:60px;top:60px;padding:12px 18px;background:rgba(7,26,92,.85);color:#fff;font:700 26px Barlow,sans-serif;letter-spacing:1px;border-left:6px solid #f5b800';m.textContent='Aguardando jogo em andamento na súmula…';stage.appendChild(m)}m.style.display=on?'block':'none'}
 function mostra(e){
- if(!e){board.classList.remove('on');return}
+ if(!e){board.classList.remove('on');if(Q.has('teste')||Q.has('aguarde'))aviso(true);return}
+ if(Q.has('teste')||Q.has('aguarde'))aviso(false);
  $('nA').textContent=e.equipeCasa;$('nB').textContent=e.equipeVisitante;logo($('eA'),e.equipeCasa);logo($('eB'),e.equipeVisitante);
  var fim=e.status==='finalizada';
  var stx=fim?'FIM DE JOGO':'SET '+(e.setAtual||1);if($('set').textContent!==stx){$('set').textContent=stx;var sl=$('set');sl.classList.remove('chg');void sl.offsetWidth;sl.classList.add('chg')}
