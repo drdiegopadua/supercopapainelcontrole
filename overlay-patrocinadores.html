@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Overlay Patrocinadores — Supercopa AFC</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;700&display=swap">
+<style>
+/* Faixa de patrocinadores para transmissão (fundo transparente, 1920x1080).
+   Parâmetros: ?modo=categoria (padrão: mostra os logos de cada categoria) | logo (um logo por vez) | rolagem (faixa contínua)
+               ?pos=baixo (padrão) | topo · ?tempo=6 (segundos por tela) · ?escala=0.8 · ?fundo=escuro */
+html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#fff}
+#bar{position:absolute;left:0;right:0;height:150px;display:flex;align-items:stretch;background:rgba(255,255,255,.96);box-shadow:0 -10px 40px rgba(5,10,40,.35);transform:translateY(100%);transition:transform .8s cubic-bezier(.22,1.1,.36,1)}
+#bar.topo{top:0;transform:translateY(-100%)}
+#bar.on{transform:none}
+#bar.escuro{background:rgba(7,26,92,.95)}
+#rot{flex:none;width:420px;display:flex;flex-direction:column;justify-content:center;padding:0 34px;background:linear-gradient(135deg,#1b52e0,#0b2a8f);clip-path:polygon(0 0,100% 0,calc(100% - 36px) 100%,0 100%);position:relative}
+#rot small{font:700 22px 'Barlow',sans-serif;letter-spacing:5px;text-transform:uppercase;color:#ffd34d}
+#rot b{display:block;margin-top:6px;font:800 54px/.95 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:1px;transition:opacity .35s,transform .45s}
+#rot b.out{opacity:0;transform:translateY(-14px)}
+#logos{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-evenly;gap:30px;padding:0 50px;overflow:hidden}
+#logos img{height:112px;max-width:300px;object-fit:contain;opacity:0;transform:translateY(26px) scale(.9);animation:entra .7s cubic-bezier(.2,1.3,.4,1) forwards;animation-delay:calc(var(--i)*110ms + 150ms)}
+#logos.sai img{animation:sai .35s ease-in forwards;animation-delay:calc(var(--i)*40ms)}
+@keyframes entra{to{opacity:1;transform:none}}
+@keyframes sai{to{opacity:0;transform:translateY(-22px) scale(.92)}}
+#prog{position:absolute;left:0;bottom:0;height:6px;background:#ffd34d;width:0}
+/* modo rolagem */
+#roll{flex:1;min-width:0;display:none;align-items:center;overflow:hidden}
+#roll .trk{display:flex;align-items:center;gap:90px;white-space:nowrap;animation:corre var(--dur,60s) linear infinite;padding-left:60px}
+#roll img{height:104px;max-width:290px;object-fit:contain;flex:none}
+@keyframes corre{to{transform:translateX(-50%)}}
+#bar.rolagem #logos{display:none}#bar.rolagem #roll{display:flex}#bar.rolagem #rot b{font-size:46px}
+</style>
+</head>
+<body>
+<div id="stage"><div id="bar"><div id="rot"><small>Supercopa AFC</small><b id="cat">Patrocinadores</b></div><div id="logos"></div><div id="roll"><div class="trk" id="trk"></div></div><i id="prog"></i></div></div>
+<script>
+(function(){
+var Q=new URLSearchParams(location.search),MODO=(Q.get('modo')||'categoria').toLowerCase(),POS=(Q.get('pos')||'baixo').toLowerCase(),TEMPO=Math.max(3,parseFloat(Q.get('tempo'))||6),SC=parseFloat(Q.get('escala'))||1;
+var BASE='https://www.supercopaafc.com.br/novo/parceiros/',$=function(i){return document.getElementById(i)};
+var G=[
+ ['Realização',[['prefeitura-afonso-claudio','Prefeitura de Afonso Cláudio']]],
+ ['Patrocinador Master',[['coroa-instituto','Coroa Instituto']]],
+ ['Patrocinador Ouro',[['izi-internet','IZI Internet']]],
+ ['Patrocinadores Prata',[['planet-sports','Planet Sports'],['acai-do-diego','Açaí do Diego'],['casa-homem-do-campo','Casa Homem do Campo'],['sicredi','Sicredi'],['express-pizzas-e-lanches','Express Pizzas e Lanches']]],
+ ['Patrocinador Bronze',[['prato-fino','Prato Fino'],['restaurante-do-marcao','Restaurante do Marcão'],['elite-suplementos','Elite Suplementos'],['jacare-fotografia','Jacaré Fotografia'],['laboratorio-cda','Laboratório CDA']]],
+ ['Apoio',[['basquetebol-das-montanhas','Basquetebol das Montanhas'],['instituto-cultural-das-montanhas','Instituto Cultural das Montanhas']]]
+];
+var stage=$('stage'),bar=$('bar');
+function ajusta(){var s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='scale('+s+')'}
+addEventListener('resize',ajusta);ajusta();
+bar.style.scale=String(SC);bar.style.transformOrigin=POS==='topo'?'0 0':'0 100%';
+if(POS==='topo'){bar.classList.add('topo');bar.style.top='0'}else{bar.style.bottom='0'}
+if(Q.get('fundo')==='escuro')bar.classList.add('escuro');
+var todas=[];G.forEach(function(g){g[1].forEach(function(x){todas.push(x)})});
+var idx=0,tm=null;
+function img(x,i){var im=new Image();im.src=BASE+x[0]+'.png';im.alt=x[1];im.style.setProperty('--i',i);return im}
+function prog(){var p=$('prog');p.style.transition='none';p.style.width='0';void p.offsetWidth;p.style.transition='width '+TEMPO+'s linear';p.style.width='100%'}
+function mostra(titulo,lista){
+  var cat=$('cat'),lg=$('logos');
+  lg.classList.add('sai');cat.classList.add('out');
+  setTimeout(function(){
+    lg.classList.remove('sai');lg.innerHTML='';cat.textContent=titulo;cat.classList.remove('out');
+    lista.forEach(function(x,i){lg.appendChild(img(x,i))});prog()
+  },lg.children.length?520:0)
+}
+function passo(){
+  if(MODO==='logo'){var x=todas[idx%todas.length];var g=G.filter(function(gr){return gr[1].indexOf(x)>=0})[0];mostra(g[0],[x])}
+  else{var gr=G[idx%G.length];mostra(gr[0],gr[1])}
+  idx++;tm=setTimeout(passo,TEMPO*1000)
+}
+function inicia(){
+  if(MODO==='rolagem'){
+    bar.classList.add('rolagem');$('cat').textContent='Patrocinadores';
+    var h='';for(var k=0;k<2;k++)todas.forEach(function(x){h+='<img src="'+BASE+x[0]+'.png" alt="">'});
+    $('trk').innerHTML=h;$('trk').style.setProperty('--dur',Math.max(24,todas.length*5.5)+'s');
+  }else{passo()}
+  setTimeout(function(){bar.classList.add('on')},300)
+}
+inicia();
+})();
+</script>
+</body>
+</html>
