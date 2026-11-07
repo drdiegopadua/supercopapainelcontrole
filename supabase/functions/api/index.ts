@@ -1386,6 +1386,44 @@ async function excluirInscricao(d: Any) {
   return data && data.length ? { ok: true } : { ok: false, erro: "Inscrição não encontrada." };
 }
 
+// ════════ Galeria (fotos enviadas pelo app SC Admin) ════════
+const GAL_BUCKET = "galeria", GAL_MAX_B64 = 2_400_000;
+function b64Bytes(b64: string): Uint8Array {
+  const limpo = (b64 || "").replace(/^data:[^,]*,/, ""), bin = atob(limpo), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+const ehJpeg = (u: Uint8Array) => u.length > 3 && u[0] === 0xff && u[1] === 0xd8;
+const galUrl = (path: string) => sb.storage.from(GAL_BUCKET).getPublicUrl(path).data.publicUrl;
+async function galeriaLista() {
+  const { data } = await sb.from("galeria_fotos").select("*").order("criado_em", { ascending: false }).limit(400);
+  return { ok: true, fotos: (data || []).map((r: Any) => ({ id: r.id, f: galUrl(r.f), t: galUrl(r.t), w: r.w, h: r.h, tw: r.tw, th: r.th, cap: r.legenda || "", lq: "" })) };
+}
+async function galeriaEnviar(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  if (!d.full || !d.thumb) return { ok: false, erro: "Faltou a imagem." };
+  if (d.full.length > GAL_MAX_B64 || d.thumb.length > 600_000) return { ok: false, erro: "Imagem grande demais. Tente de novo." };
+  let full: Uint8Array, thumb: Uint8Array;
+  try { full = b64Bytes(d.full); thumb = b64Bytes(d.thumb); } catch (_) { return { ok: false, erro: "Imagem inválida." }; }
+  if (!ehJpeg(full) || !ehJpeg(thumb)) return { ok: false, erro: "Envie a foto em formato JPG." };
+  const id = Date.now().toString(36) + crypto.randomUUID().slice(0, 6);
+  const up = async (nome: string, bytes: Uint8Array) => sb.storage.from(GAL_BUCKET).upload(nome, bytes, { contentType: "image/jpeg", cacheControl: "31536000", upsert: false });
+  const a = await up("f-" + id + ".jpg", full); if (a.error) return { ok: false, erro: a.error.message };
+  const b = await up("t-" + id + ".jpg", thumb); if (b.error) { await sb.storage.from(GAL_BUCKET).remove(["f-" + id + ".jpg"]); return { ok: false, erro: b.error.message }; }
+  const reg = { id, f: "f-" + id + ".jpg", t: "t-" + id + ".jpg", w: Math.max(1, parseInt(d.w) || 1600), h: Math.max(1, parseInt(d.h) || 1200), tw: Math.max(1, parseInt(d.tw) || 600), th: Math.max(1, parseInt(d.th) || 450), legenda: (d.legenda || "").toString().trim().slice(0, 140), enviado_por: c.usuario || "" };
+  const { error } = await sb.from("galeria_fotos").insert(reg);
+  if (error) { await sb.storage.from(GAL_BUCKET).remove([reg.f, reg.t]); return { ok: false, erro: error.message }; }
+  return { ok: true, id, f: galUrl(reg.f), t: galUrl(reg.t) };
+}
+async function galeriaRemover(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const { data: r } = await sb.from("galeria_fotos").select("f,t").eq("id", (d.id || "").toString()).maybeSingle();
+  if (!r) return { ok: false, erro: "Foto não encontrada." };
+  await sb.storage.from(GAL_BUCKET).remove([r.f, r.t]);
+  await sb.from("galeria_fotos").delete().eq("id", d.id);
+  return { ok: true };
+}
+
 // ════════ Chat ao vivo (site + app) ════════
 const CHAT_ABRE = "2026-11-28T12:00:00-03:00", CHAT_FECHA = "2026-11-29T23:00:00-03:00";   // sáb 28/11 12h → dom 29/11 23h (Brasília)
 async function chatCfg() {
@@ -1614,6 +1652,9 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "exportarTudo": return await exportarTudo(d);
     case "removerEquipe": return await removerEquipe(d);
     case "votarDestaque": return await votarDestaque(d);
+    case "galeriaLista": return await galeriaLista();
+    case "galeriaEnviar": return await galeriaEnviar(d);
+    case "galeriaRemover": return await galeriaRemover(d);
     case "chat": return await chatListar(d);
     case "chatEnviar": return await chatEnviar(d);
     case "chatApagar": return await chatApagar(d);
