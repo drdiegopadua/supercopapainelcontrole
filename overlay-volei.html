@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;700&display=swap">
 <style>
 /* Placar ao vivo da Supercopa para transmissão (fundo transparente, 1920x1080).
-   Parâmetros: ?quadra=principal|alternativa (pega o jogo ao vivo dessa quadra) · ?id=JOGO (fixa um jogo) · ?pos=baixo-esq|baixo-dir|topo-esq|topo-dir|topo-centro|baixo-centro · ?teste=1 (pega um jogo de teste da súmula em andamento) · ?demo=1 */
+   Parâmetros: ?estilo=classico|fino|minimo · ?escala=0.8 · ?quadra=principal|alternativa (pega o jogo ao vivo dessa quadra) · ?id=JOGO (fixa um jogo) · ?pos=baixo-esq|baixo-dir|topo-esq|topo-dir|topo-centro|baixo-centro · ?teste=1 (pega um jogo de teste da súmula em andamento) · ?demo=1 */
 html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#fff}
 #board{position:absolute;opacity:0;transform:translateY(24px);transition:opacity .5s,transform .5s}
@@ -32,6 +32,30 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 .rod span b{color:#fff}
 .rod:empty{display:none}
 .msg{position:absolute;left:0;top:0;color:#fff;font:700 28px 'Barlow',sans-serif;background:rgba(0,0,0,.6);padding:10px 16px}
+
+/* animações quando o ponto muda */
+.lin{position:relative}
+.lin::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:#ffd34d;transform:scaleX(0);transform-origin:left;pointer-events:none}
+.lin.up::after{animation:barra 1.4s ease-out}
+@keyframes barra{0%{transform:scaleX(0);opacity:1}30%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+.pt.roll>span{display:inline-block;animation:roll .55s cubic-bezier(.2,1.4,.4,1)}
+@keyframes roll{0%{transform:translateY(-70%) scale(.7);opacity:0}60%{transform:translateY(8%) scale(1.25);opacity:1}100%{transform:none}}
+.st.pop{animation:stpop .9s cubic-bezier(.2,1.5,.4,1)}
+@keyframes stpop{0%{transform:scale(1);background:rgba(255,211,77,.9);color:#0b1a55}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+.cab .set.chg{animation:setchg .8s}
+@keyframes setchg{0%,100%{transform:none}30%{transform:scale(1.25) rotate(-2deg)}}
+.sv i.on{animation:saque 1.4s ease-in-out infinite}
+@keyframes saque{50%{transform:scale(1.35);box-shadow:0 0 22px #ffd34d}}
+/* estilo FINO: uma faixa só, no topo ou embaixo */
+#board.fino{display:flex;align-items:stretch}
+#board.fino .cab{clip-path:none;height:auto;padding:0 18px;font-size:22px;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;border-top:0;border-left:5px solid #f5b800}
+#board.fino .cab img{height:26px}
+#board.fino .lin{height:84px;border-bottom:0;border-left:2px solid rgba(255,255,255,.15);grid-template-columns:76px 330px 34px 70px 112px}
+#board.fino .nm{font-size:40px}#board.fino .rod{display:none}
+/* estilo MÍNIMO: só os dois times e os pontos */
+#board.minimo .cab,#board.minimo .rod{display:none}
+#board.minimo .lin{height:70px;grid-template-columns:64px 340px 34px 64px 100px}
+#board.minimo .nm{font-size:38px}#board.minimo .pt{font-size:62px}
 </style>
 </head>
 <body>
@@ -47,10 +71,12 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 (function(){
 var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api',Q=new URLSearchParams(location.search);
 var QUA=(Q.get('quadra')||'').toLowerCase(),QMAP={};var ID=Q.get('id'),POS=Q.get('pos')||'baixo-esq',DEMO=Q.has('demo'),$=function(i){return document.getElementById(i)};
+var EST=(Q.get('estilo')||'classico').toLowerCase(),SC=parseFloat(Q.get('escala'))||1;
 var stage=$('stage'),board=$('board'),ESC={},ult={},W=728,H=250;
+if(EST!=='classico')board.classList.add(EST);board.style.transformOrigin='0 0';board.style.scale=String(SC);
 function ajusta(){var s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='scale('+s+')'}
 addEventListener('resize',ajusta);ajusta();
-function posiciona(){var m=60,p=POS.split('-'),v=p[0],h=p[1]||'esq';board.style.top=board.style.bottom=board.style.left=board.style.right='';
+function posiciona(){var bw=board.offsetWidth,bh=board.offsetHeight;if(bw)W=bw*SC;if(bh)H=bh*SC;var m=60,p=POS.split('-'),v=p[0],h=p[1]||'esq';board.style.top=board.style.bottom=board.style.left=board.style.right='';
  if(v==='topo')board.style.top=m+'px';else board.style.top=(1080-m-H)+'px';
  if(h==='esq')board.style.left=m+'px';else if(h==='dir')board.style.left=(1920-m-W)+'px';else board.style.left=((1920-W)/2)+'px'}
 posiciona();
@@ -59,16 +85,18 @@ function escudos(){return get('timesPublicos').then(function(r){(r.times||[]).fo
 function logo(el,nome){var u=ESC[String(nome).toLowerCase()],k=el.dataset.n;if(k===nome)return;el.dataset.n=nome;
  var ini=String(nome).trim().charAt(0).toUpperCase();el.innerHTML='<b>'+ini+'</b>';
  if(u){var im=new Image();im.onload=function(){el.innerHTML='';el.appendChild(im)};im.src=u}}
-function set(id,v,flash){var e=$(id),t=String(v);if(e.textContent!==t){e.textContent=t;if(flash){e.classList.remove('flash');void e.offsetWidth;e.classList.add('flash')}}}
+function set(id,v,flash){var e=$(id),t=String(v);if(e.textContent!==t&&e.dataset.v!==t){var prim=e.dataset.v===undefined;e.dataset.v=t;
+  if(id==='pA'||id==='pB'){e.innerHTML='<span>'+t+'</span>';if(!prim&&flash){e.classList.remove('flash','roll');void e.offsetWidth;e.classList.add('flash','roll');var l=e.closest('.lin');l.classList.remove('up');void l.offsetWidth;l.classList.add('up')}}
+  else{e.textContent=t;if(!prim){e.classList.remove('pop');void e.offsetWidth;e.classList.add('pop')}}}}
 function mostra(e){
  if(!e){board.classList.remove('on');return}
  $('nA').textContent=e.equipeCasa;$('nB').textContent=e.equipeVisitante;logo($('eA'),e.equipeCasa);logo($('eB'),e.equipeVisitante);
  var fim=e.status==='finalizada';
- $('set').textContent=fim?'FIM DE JOGO':'SET '+(e.setAtual||1);
+ var stx=fim?'FIM DE JOGO':'SET '+(e.setAtual||1);if($('set').textContent!==stx){$('set').textContent=stx;var sl=$('set');sl.classList.remove('chg');void sl.offsetWidth;sl.classList.add('chg')}
  set('pA',e.pontosCasa||0,true);set('pB',e.pontosVisitante||0,true);set('vA',e.setsCasa||0);set('vB',e.setsVisitante||0);
  $('sA').className=!fim&&e.sacando==='A'?'on':'';$('sB').className=!fim&&e.sacando==='B'?'on':'';
  var hs=(e.historicoSets||[]);$('rod').innerHTML=hs.map(function(s,i){return '<span>'+(i+1)+'º set <b>'+s.a+' x '+s.b+'</b></span>'}).join('');
- H=250-(hs.length?0:36);board.classList.add('on');posiciona();
+ board.classList.add('on');posiciona();
 }
 function quadras(){return get('torneio',{modalidade:'volei'}).then(function(t){(t.jogos||[]).forEach(function(j){QMAP[String(j.id).toUpperCase()]=String(j.quadra||'').toLowerCase()})}).catch(function(){})}
 function escolhe(lista){ // jogo em andamento (filtra pela quadra, se ?quadra=principal|alternativa)
