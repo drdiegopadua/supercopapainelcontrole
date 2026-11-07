@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Painel de LED — Supercopa AFC</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@600;700&display=swap">
+<style>
+/* Painel de LED do ginásio (1920x1080, fundo preto, letras grandes e cores chapadas).
+   Parâmetros: ?tempo=14 (segundos por tela) · ?demo=1 (dados de exemplo) · ?cena=live|prox|class|patro (fixa uma tela) */
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#000;color:#fff;font-family:'Barlow Condensed','Arial Narrow',sans-serif}
+#top{position:absolute;left:0;right:0;top:0;height:120px;display:flex;align-items:center;gap:36px;padding:0 56px;background:#1b52e0}
+#top img{height:84px}
+#top h1{margin:0;font:800 74px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:3px;flex:1}
+#top .rel{font:800 74px/1 'Barlow Condensed',sans-serif;letter-spacing:2px;font-variant-numeric:tabular-nums}
+#top .live{display:none;align-items:center;gap:14px;padding:8px 26px;background:#ff2d3a;font:800 46px/1 'Barlow Condensed',sans-serif;letter-spacing:3px}
+#top .live.on{display:flex}#top .live i{width:22px;height:22px;border-radius:50%;background:#fff;animation:pisca 1s steps(2) infinite}
+@keyframes pisca{50%{opacity:.15}}
+#cena{position:absolute;left:0;right:0;top:120px;bottom:70px;overflow:hidden}
+.sc{position:absolute;inset:0;padding:34px 56px;opacity:0;transform:translateX(60px);transition:opacity .6s,transform .7s cubic-bezier(.2,.9,.2,1)}
+.sc.on{opacity:1;transform:none}.sc.sai{opacity:0;transform:translateX(-60px)}
+#rodape{position:absolute;left:0;right:0;bottom:0;height:70px;background:#ffcf33;color:#000;display:flex;align-items:center;gap:16px;padding:0 56px;font:800 40px/1 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+#rodape i{width:100%;height:0}
+#bolas{margin-left:auto;display:flex;gap:12px}#bolas b{width:20px;height:20px;border-radius:50%;background:#000;opacity:.25}#bolas b.on{opacity:1}
+/* AO VIVO */
+.quadras{display:grid;grid-template-columns:1fr 1fr;gap:40px;height:100%}
+.qd{display:flex;flex-direction:column;border:6px solid #1b52e0;min-width:0}
+.qd .tt{background:#1b52e0;padding:6px 26px;font:800 50px/1.1 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase;display:flex;justify-content:space-between}
+.qd .tt span{color:#ffcf33}
+.eq{flex:1;display:grid;grid-template-columns:1fr 110px 290px;align-items:center;border-bottom:4px solid #222}
+.eq:last-of-type{border-bottom:0}
+.eq .n{padding:0 26px;font:800 92px/.92 'Barlow Condensed',sans-serif;text-transform:uppercase;overflow-wrap:anywhere;display:flex;align-items:center;gap:20px}
+.eq .n i{width:30px;height:30px;border-radius:50%;background:#ffcf33;flex:none;opacity:0}.eq .n i.on{opacity:1;animation:pisca 1s steps(2) infinite}
+.eq .s{font:800 110px/1 'Barlow Condensed',sans-serif;text-align:center;color:#ffcf33}
+.eq .p{height:100%;display:grid;place-items:center;background:#fff;color:#000;font:800 215px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.qd .ft{padding:10px 26px;font:700 44px/1.1 'Barlow Condensed',sans-serif;color:#9fb8ff;letter-spacing:2px;text-transform:uppercase;border-top:4px solid #222;min-height:60px}
+.qd.vazia{align-items:center;justify-content:center;text-align:center}
+.qd.vazia .vz{font:800 70px/1.05 'Barlow Condensed',sans-serif;color:#9fb8ff;padding:0 40px;text-transform:uppercase}
+.qd.vazia .vz b{display:block;color:#fff;font-size:92px;margin-top:20px}
+/* PRÓXIMOS JOGOS */
+.lista{display:flex;flex-direction:column;gap:14px;height:100%}
+.jg{flex:1;display:grid;grid-template-columns:320px 300px 1fr;align-items:center;background:#0c1b52;border-left:14px solid #ffcf33;min-height:0}
+.jg .h{font:800 100px/1 'Barlow Condensed',sans-serif;color:#ffcf33;padding-left:26px;font-variant-numeric:tabular-nums}
+.jg .q{font:800 44px/1 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#000;background:#fff;padding:10px 18px;text-align:center}
+.jg .t{padding:0 30px;font:800 80px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jg .t em{font-style:normal;color:#ffcf33;padding:0 22px}
+/* CLASSIFICAÇÃO */
+.grupos{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:26px;height:100%}
+.gr{display:flex;flex-direction:column;border:6px solid #1b52e0}
+.gr .gt{background:#1b52e0;font:800 56px/1.1 'Barlow Condensed',sans-serif;padding:6px 22px;letter-spacing:2px}
+.gr .li{flex:1;display:grid;grid-template-columns:90px 1fr 120px;align-items:center;padding:0 24px;border-bottom:3px solid #222;font:800 62px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;min-height:0}
+.gr .li:last-child{border-bottom:0}.gr .li b{color:#ffcf33}.gr .li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gr .li u{text-decoration:none;text-align:right;font-size:70px}
+.gr .li.q{background:#0c1b52}
+/* PATROCINADORES */
+.pt{height:100%;display:flex;flex-direction:column}
+.pt .ct{font:800 90px/1 'Barlow Condensed',sans-serif;letter-spacing:4px;text-transform:uppercase;color:#ffcf33;margin-bottom:24px}
+.pt .lg{flex:1;display:flex;flex-wrap:wrap;gap:26px;align-content:center;justify-content:center}
+.pt .lg div{background:#fff;width:var(--w,520px);height:var(--h,300px);display:grid;place-items:center;padding:18px}
+.pt .lg img{max-width:100%;max-height:100%;object-fit:contain}
+</style>
+</head>
+<body>
+<div id="stage">
+ <div id="top"><img src="https://www.supercopaafc.com.br/novo/logo-branco.png" alt=""><h1 id="titulo">Supercopa AFC</h1><div class="live" id="live"><i></i>AO VIVO</div><div class="rel" id="rel">--:--</div></div>
+ <div id="cena"></div>
+ <div id="rodape"><span id="rtxt">Supercopa de Vôlei · Afonso Cláudio · 28 e 29 de novembro</span><div id="bolas"></div></div>
+</div>
+<script>
+(function(){
+var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api',Q=new URLSearchParams(location.search),DEMO=Q.has('demo'),TEMPO=Math.max(5,parseFloat(Q.get('tempo'))||14),FIXA=Q.get('cena');
+var BASE='https://www.supercopaafc.com.br/novo/parceiros/',$=function(i){return document.getElementById(i)},stage=$('stage');
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+function ajusta(){var s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='scale('+s+')';stage.style.left=((innerWidth-1920*s)/2)+'px';stage.style.top=((innerHeight-1080*s)/2)+'px'}
+addEventListener('resize',ajusta);ajusta();
+function relogio(){var d=new Date();$('rel').textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}setInterval(relogio,15000);relogio();
+var get=function(a,p){var q=new URLSearchParams(Object.assign({action:a},p||{}));return fetch(API+'?'+q,{cache:'no-store'}).then(function(r){return r.json()})};
+var T={jogos:[],grupos:[]},AO=[],QMAP={};
+var DEMO_T={jogos:[
+ {id:'A1',fase:'grupos',grupo:'A',casa:'ES VÔLEI',visitante:'CTV Aravôlei',casaDefinida:true,visitanteDefinida:true,data:'2026-11-28',hora:'13:00',quadra:'Quadra principal - Eurico Vieira',status:'ao_vivo'},
+ {id:'C3',fase:'grupos',grupo:'C',casa:'Supra Vôlei',visitante:'MS Vôlei',casaDefinida:true,visitanteDefinida:true,data:'2026-11-28',hora:'13:00',quadra:'Quadra alternativa - Anadir Barone',status:'ao_vivo'},
+ {id:'B1',fase:'grupos',grupo:'B',casa:'Equipe UVI',visitante:'CTVA Voleibol',casaDefinida:true,visitanteDefinida:true,data:'2026-11-28',hora:'14:15',quadra:'Quadra principal - Eurico Vieira',status:'agendado'},
+ {id:'D1',fase:'grupos',grupo:'D',casa:'RPB Volei',visitante:'Alpha Vôlei',casaDefinida:true,visitanteDefinida:true,data:'2026-11-28',hora:'14:15',quadra:'Quadra alternativa - Anadir Barone',status:'agendado'},
+ {id:'C2',fase:'grupos',grupo:'C',casa:'CT das Montanhas',visitante:'MS Vôlei',casaDefinida:true,visitanteDefinida:true,data:'2026-11-28',hora:'15:30',quadra:'Quadra principal - Eurico Vieira',status:'agendado'},
+ {id:'A3',fase:'grupos',grupo:'A',casa:'CTV Aravôlei',visitante:'União vôlei',casaDefinida:true,visitanteDefinida:true,data:'2026-11-28',hora:'15:30',quadra:'Quadra alternativa - Anadir Barone',status:'agendado'},
+ {id:'D2',fase:'grupos',grupo:'D',casa:'RPB Volei',visitante:'Super Vôlei',casaDefinida:true,visitanteDefinida:true,data:'2026-11-28',hora:'16:45',quadra:'Quadra principal - Eurico Vieira',status:'agendado'}],
+ grupos:[{grupo:'A',tabela:[{pos:1,equipe:'ES VÔLEI',pontos:6},{pos:2,equipe:'CTV Aravôlei',pontos:3},{pos:3,equipe:'União vôlei',pontos:0}]},{grupo:'B',tabela:[{pos:1,equipe:'Equipe UVI',pontos:5},{pos:2,equipe:'Tiger volley',pontos:4},{pos:3,equipe:'CTVA Voleibol',pontos:1}]},{grupo:'C',tabela:[{pos:1,equipe:'CT das Montanhas',pontos:6},{pos:2,equipe:'Supra Vôlei',pontos:3},{pos:3,equipe:'MS Vôlei',pontos:0}]},{grupo:'D',tabela:[{pos:1,equipe:'Alpha Vôlei',pontos:5},{pos:2,equipe:'RPB Volei',pontos:3},{pos:3,equipe:'Super Vôlei',pontos:1}]}]};
+var DEMO_AO=[{id:'A1',equipeCasa:'ES VÔLEI',equipeVisitante:'CTV Aravôlei',setAtual:2,pontosCasa:14,pontosVisitante:11,setsCasa:1,setsVisitante:0,sacando:'A',historicoSets:[{a:25,b:21}]},{id:'C3',equipeCasa:'Supra Vôlei',equipeVisitante:'MS Vôlei',setAtual:1,pontosCasa:8,pontosVisitante:9,setsCasa:0,setsVisitante:0,sacando:'B',historicoSets:[]}];
+function carrega(){
+ if(DEMO){T=DEMO_T;AO=JSON.parse(JSON.stringify(DEMO_AO));AO.forEach(function(g,i){g.pontosCasa+=Math.random()<.4?1:0;g.pontosVisitante+=Math.random()<.4?1:0});T.jogos.forEach(function(j){QMAP[j.id]=j.quadra});return Promise.resolve()}
+ return get('torneio',{modalidade:'volei'}).then(function(t){T={jogos:t.jogos||[],grupos:t.grupos||[]};(t.jogos||[]).forEach(function(j){QMAP[String(j.id).toUpperCase()]=j.quadra||''})}).catch(function(){});
+}
+function aoVivo(){
+ if(DEMO)return Promise.resolve();
+ return get('partidasAoVivo').then(function(r){var l=r.partidas||[];return Promise.all(l.map(function(p){return get('partida',{id:p.id}).then(function(x){return x&&x.ok?x.estado:p}).catch(function(){return p})}))}).then(function(l){AO=l}).catch(function(){})
+}
+var nm=function(j,k){return k==='c'?(j.casaDefinida===false?(j.rotuloCasa||'A definir'):j.casa):(j.visitanteDefinida===false?(j.rotuloVisitante||'A definir'):j.visitante)};
+var qCurta=function(q){return /principal/i.test(q)?'Principal':/altern/i.test(q)?'Alternativa':(q||'')};
+function quadraDe(g,i){var q=String(QMAP[String(g.id).toUpperCase()]||'');if(/principal/i.test(q))return 'P';if(/altern/i.test(q))return 'A';return i===0?'P':'A'}
+/* ---- cenas ---- */
+function cLive(){
+ var P=null,A=null;AO.forEach(function(g,i){var q=quadraDe(g,i);if(q==='P'&&!P)P=g;else if(q==='A'&&!A)A=g;else if(!P)P=g;else if(!A)A=g});
+ function bloco(g,rot,q){
+  if(!g){var prox=T.jogos.filter(function(j){return j.status!=='finalizado'&&j.status!=='wo'&&j.status!=='ao_vivo'&&new RegExp(q==='P'?'principal':'altern','i').test(j.quadra||'')}).sort(function(a,b){return (a.data+a.hora)<(b.data+b.hora)?-1:1})[0];
+   return '<div class="qd vazia"><div class="tt"><div>'+rot+'</div></div><div class="vz">Aguardando jogo'+(prox?'<b>'+esc(nm(prox,'c'))+' × '+esc(nm(prox,'v'))+'</b><span style="color:#ffcf33">'+esc(prox.hora||'')+'</span>':'')+'</div></div>'}
+  var hs=(g.historicoSets||[]).map(function(s,i){return (i+1)+'º '+s.a+'x'+s.b}).join('   ');
+  return '<div class="qd"><div class="tt"><div>'+rot+'</div><span>SET '+(g.setAtual||1)+'</span></div>'
+   +'<div class="eq"><div class="n"><i class="'+(g.sacando==='A'?'on':'')+'"></i>'+esc(g.equipeCasa)+'</div><div class="s">'+(g.setsCasa||0)+'</div><div class="p">'+(g.pontosCasa||0)+'</div></div>'
+   +'<div class="eq"><div class="n"><i class="'+(g.sacando==='B'?'on':'')+'"></i>'+esc(g.equipeVisitante)+'</div><div class="s">'+(g.setsVisitante||0)+'</div><div class="p">'+(g.pontosVisitante||0)+'</div></div>'
+   +'<div class="ft">'+(hs||'1º set em andamento')+'</div></div>'}
+ return {t:'Placar ao vivo',h:'<div class="quadras">'+bloco(P,'Quadra principal','P')+bloco(A,'Quadra alternativa','A')+'</div>'}
+}
+function cProx(){
+ var l=T.jogos.filter(function(j){return j.status!=='finalizado'&&j.status!=='wo'&&j.status!=='ao_vivo'&&j.data}).sort(function(a,b){return (a.data+(a.hora||''))<(b.data+(b.hora||''))?-1:1}).slice(0,6);
+ if(!l.length)return null;
+ return {t:'Próximos jogos',h:'<div class="lista">'+l.map(function(j){return '<div class="jg"><div class="h">'+esc(j.hora||'--')+'</div><div class="q">'+esc(qCurta(j.quadra))+'</div><div class="t">'+esc(nm(j,'c'))+'<em>×</em>'+esc(nm(j,'v'))+'</div></div>'}).join('')+'</div>'}
+}
+function cClass(){
+ var gs=(T.grupos||[]).filter(function(g){return g.tabela&&g.tabela.length});if(!gs.length)return null;
+ return {t:'Classificação',h:'<div class="grupos">'+gs.slice(0,4).map(function(g){return '<div class="gr"><div class="gt">GRUPO '+esc(g.grupo)+'</div>'+g.tabela.map(function(t,i){return '<div class="li'+(i<2?' q':'')+'"><b>'+(t.pos||i+1)+'º</b><span>'+esc(t.equipe)+'</span><u>'+(t.pontos||0)+'</u></div>'}).join('')+'</div>'}).join('')+'</div>'}
+}
+var G=[['Realização',[['prefeitura-afonso-claudio','Prefeitura']]],['Patrocinador Master',[['coroa-instituto','Coroa Instituto']]],['Patrocinadores Prata',[['planet-sports','Planet Sports'],['acai-do-diego','Açaí do Diego'],['casa-homem-do-campo','Casa Homem do Campo'],['sicredi','Sicredi'],['express-pizzas-e-lanches','Express Pizzas e Lanches'],['izi-internet','IZI Internet']]],['Patrocinador Bronze',[['prato-fino','Prato Fino'],['restaurante-do-marcao','Restaurante do Marcão'],['elite-suplementos','Elite Suplementos'],['jacare-fotografia','Jacaré Fotografia'],['laboratorio-cda','Laboratório CDA']]],['Apoio',[['basquetebol-das-montanhas','Basquetebol das Montanhas'],['instituto-cultural-das-montanhas','Instituto Cultural das Montanhas']]]];
+var pi=0;
+function cPatro(){
+ var g=G[pi%G.length];pi++;var n=g[1].length,w=n===1?640:n<=2?700:n<=3?560:n<=4?420:360,h=n===1?400:n<=3?340:300;
+ return {t:'Patrocinadores',h:'<div class="pt"><div class="ct">'+esc(g[0])+'</div><div class="lg" style="--w:'+w+'px;--h:'+h+'px">'+g[1].map(function(x){return '<div><img src="'+BASE+x[0]+'.png" alt="'+esc(x[1])+'"></div>'}).join('')+'</div></div>'}
+}
+/* ---- rotação ---- */
+var seq=[],si=0,atual=null;
+function montaSeq(){var s=[];var viv=AO.length>0;
+ if(viv)s.push('live');s.push('prox');if(viv)s.push('live');s.push('class');if(viv)s.push('live');s.push('patro');s.push('patro');return s}
+function constroi(k){return k==='live'?cLive():k==='prox'?cProx():k==='class'?cClass():cPatro()}
+function mostra(k){
+ var c=constroi(k);if(!c)return false;
+ var el=document.createElement('div');el.className='sc';el.innerHTML=c.h;$('cena').appendChild(el);
+ $('titulo').textContent=c.t;$('live').classList.toggle('on',k==='live'||AO.length>0);
+ var vel=atual;atual=el;void el.offsetWidth;el.classList.add('on');
+ if(vel){vel.classList.remove('on');vel.classList.add('sai');setTimeout(function(){vel.remove()},800)}
+ var d=$('bolas');d.innerHTML=seq.map(function(_,i){return '<b class="'+(i===si?'on':'')+'"></b>'}).join('');
+ atual.__k=k;return true
+}
+function passo(){
+ if(FIXA){mostra(FIXA);setTimeout(passo,TEMPO*1000);return}
+ if(!seq.length||si>=seq.length){seq=montaSeq();si=0}
+ var k=seq[si++],ok=mostra(k),tent=0;
+ while(!ok&&tent<6){k=seq[si++%seq.length]||'patro';ok=mostra(k);tent++}
+ setTimeout(passo,(k==='live'?TEMPO*1.2:TEMPO)*1000)
+}
+/* atualização do placar na tela atual sem trocar de cena */
+function atualizaLive(){if(atual&&atual.__k==='live'){var c=cLive();atual.innerHTML=c.h}}
+carrega().then(aoVivo).then(function(){passo();setInterval(carrega,60000);setInterval(function(){aoVivo().then(atualizaLive)},2000)});
+})();
+</script>
+</body>
+</html>
