@@ -1517,6 +1517,23 @@ async function voucherPainel(d: Any) {
   const equipes = Object.values(lista).sort((a: Any, b: Any) => a.equipe.localeCompare(b.equipe));
   return { ok: true, equipes, total: (data || []).length, recentes: (data || []).slice(0, 12) };
 }
+async function relatorioFotos() {
+  const { data } = await sb.from("config").select("valor").eq("chave", "relatorio_fotos").maybeSingle();
+  const v: Any = (data && data.valor) || {};
+  return { ok: true, slots: v.slots || null };
+}
+async function relatorioFotosSalvar(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const slots: Record<string, Any> = {}, ent = d.slots && typeof d.slots === "object" ? d.slots : {};
+  Object.keys(ent).slice(0, 40).forEach((k) => {
+    const o: Any = ent[k] || {}, src = (o.src || "").toString().slice(0, 500);
+    if (!/^[a-z0-9]+$/i.test(k) || !/^https?:\/\//.test(src)) return;
+    const n = (v: Any, a: number, b: number, def: number) => { const x = +v; return isFinite(x) ? Math.max(a, Math.min(b, x)) : def; };
+    slots[k] = { src, x: n(o.x, 0, 100, 50), y: n(o.y, 0, 100, 50), z: n(o.z, 1, 4, 1) };
+  });
+  await sb.from("config").upsert({ chave: "relatorio_fotos", valor: { slots }, atualizado_em: new Date().toISOString() });
+  return { ok: true };
+}
 async function galeriaRemover(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
   const { data: r } = await sb.from("galeria_fotos").select("f,t").eq("id", (d.id || "").toString()).maybeSingle();
@@ -1756,6 +1773,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "votarDestaque": return await votarDestaque(d);
     case "galeriaLista": return await galeriaLista();
     case "telaoFotos": return await telaoFotos();
+    case "relatorioFotos": return await relatorioFotos();
+    case "relatorioFotosSalvar": return await relatorioFotosSalvar(d);
     case "voucherEstado": return await voucherEstado(d);
     case "voucherQr": return await voucherQr(d);
     case "voucherLer": return await voucherLer(d);

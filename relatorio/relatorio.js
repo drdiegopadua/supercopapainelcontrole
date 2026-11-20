@@ -8,6 +8,27 @@ var N = function (n) { return Math.round(+n || 0).toLocaleString('pt-BR'); };
 var R = function (n) { return 'R$ ' + N(n); };
 var C = function (n) { return n >= 1e6 ? (n / 1e6).toFixed(2).replace('.', ',') + ' mi' : n >= 1e3 ? N(n / 1e3) + ' mil' : N(n); };
 var FOTO = function (n) { return SITE + 'galeria/f-' + String(n).padStart(2, '0') + '.webp'; };
+/* ---------- fotos do relatório: cada lugar tem um código, um tamanho (mm) e pode ser trocado/enquadrado no editor ---------- */
+var SLOTS = {
+  inicio:   { n: 'Capa', w: 184.1, h: 210, src: SITE + 'novo/fotos/inicio.webp', k: 'capa', nota: 'O lado esquerdo fica coberto pelo azul e pelo título: deixe os rostos à direita.' },
+  historia: { n: 'Abertura · A Supercopa', w: 297, h: 210, src: SITE + 'novo/fotos/historia.webp', k: 'bg', nota: 'Ocupa a página inteira, esmaecida ao fundo.' },
+  f10:      { n: 'Quem somos (arco)', w: 92, h: 170, src: FOTO(10), k: 'arco', nota: 'Os cantos de cima são arredondados: mantenha o rosto no centro.' },
+  f21:      { n: 'Linha do tempo (faixa lateral)', w: 48, h: 210, src: FOTO(21), k: '', nota: 'Faixa vertical estreita na lateral direita.' },
+  jogos:    { n: 'Abertura · As edições em números', w: 297, h: 210, src: SITE + 'novo/fotos/jogos.webp', k: 'bg', nota: 'Ocupa a página inteira, esmaecida ao fundo.' },
+  f14:      { n: 'Edições em números (foto do rodapé)', w: 120, h: 50, src: FOTO(14), k: '', nota: 'Faixa baixa e larga: enquadre rostos no meio.' },
+  galeria:  { n: 'Abertura · Alcance e audiência', w: 297, h: 210, src: SITE + 'novo/fotos/galeria.webp', k: 'bg', nota: 'Ocupa a página inteira, esmaecida ao fundo.' },
+  times:    { n: 'Abertura · Impacto na cidade', w: 297, h: 210, src: SITE + 'novo/fotos/times.webp', k: 'bg', nota: 'Ocupa a página inteira, esmaecida ao fundo.' },
+  f29:      { n: 'Impacto na cidade (foto larga)', w: 265, h: 62, src: FOTO(29), k: '', nota: 'Faixa larga e baixa no rodapé da página.' },
+  destaque: { n: 'Abertura · Edição 2026', w: 297, h: 210, src: SITE + 'novo/fotos/destaque.webp', k: 'bg', nota: 'Ocupa a página inteira, esmaecida ao fundo.' }
+};
+var OV = {};
+window.RV = { SLOTS: SLOTS, SITE: SITE, API: API, get: function () { return OV; }, set: function (o) { OV = o || {}; } };
+/* estilo da imagem com enquadramento: x,y (0-100) = ponto focal; z = aproximação (1 a 4) */
+var imgEstilo = function (o) { if (!o) return ''; var z = Math.max(1, +o.z || 1), x = o.x == null ? 50 : +o.x, y = o.y == null ? 50 : +o.y;
+  return 'inset:auto;width:' + (z * 100) + '%;height:' + (z * 100) + '%;left:' + (-(z - 1) * x) + '%;top:' + (-(z - 1) * y) + '%;object-position:' + x + '% ' + y + '%'; };
+window.RV.imgEstilo = imgEstilo;
+var ph = function (id, estilo) { var d = SLOTS[id], o = OV[id], src = (o && o.src) || d.src;
+  return '<figure class="rv-ph" style="' + (estilo || '') + '"><img src="' + esc(src) + '" alt="" style="' + imgEstilo(o) + '"></figure>'; };
 var get = function (a, p) { var q = new URLSearchParams(Object.assign({ action: a }, p || {})); return fetch(API + '?' + q, { cache: 'no-store' }).then(function (r) { return r.json(); }); };
 var safe = function (p) { return p.catch(function () { return null; }); };
 
@@ -61,8 +82,8 @@ function donut(parts, tam, centro) {
 }
 function barrasH(d, fmt) { var mx = Math.max.apply(null, d.map(function (x) { return x.v; }).concat([1])); return '<div class="rv-barras">' + d.map(function (x) { return '<div class="b"><span>' + esc(x.l) + '</span><i style="width:' + (x.v / mx * 100).toFixed(1) + '%"></i><b>' + (fmt ? fmt(x.v) : N(x.v)) + '</b></div>'; }).join('') + '</div>'; }
 var arco = function () { return [].slice.call(arguments).map(function (a) { return '<div class="rv-arc" style="left:' + a[0] + 'mm;top:' + a[1] + 'mm;width:' + a[2] + 'mm;height:' + a[2] + 'mm"></div>'; }).join(''); };
-var foto = function (n, estilo, cap) { return '<figure class="rv-ph" style="' + (estilo || '') + '"><img src="' + FOTO(n) + '" alt="">' + (cap ? '<figcaption>' + esc(cap) + '</figcaption>' : '') + '</figure>'; };
-var fotoSite = function (nome, estilo) { return '<figure class="rv-ph" style="' + (estilo || '') + '"><img src="' + SITE + 'novo/fotos/' + nome + '.webp" alt=""></figure>'; };
+var fotoOLD = function (n, estilo, cap) { return '<figure class="rv-ph" style="' + (estilo || '') + '"><img src="' + FOTO(n) + '" alt="">' + (cap ? '<figcaption>' + esc(cap) + '</figcaption>' : '') + '</figure>'; };
+var fotoSiteOLD = function (nome, estilo) { return '<figure class="rv-ph" style="' + (estilo || '') + '"><img src="' + SITE + 'novo/fotos/' + nome + '.webp" alt=""></figure>'; };
 
 /* ---------- montagem ---------- */
 function montar(D) {
@@ -74,20 +95,20 @@ function montar(D) {
   var hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   var A = D.acc || {}, tem = function (n, min) { return n != null && n >= (min || 1); };
 
-  add({ tipo: 'capa', html: function () { return '<div class="orb" style="width:130mm;height:130mm;left:-40mm;top:-55mm"></div><div class="orb" style="width:22mm;height:22mm;left:44mm;top:24mm"></div>' + fotoSite('inicio') + '<div class="tit"><div class="k">Supercopa AFC · Afonso Cláudio / ES</div><div class="a">Relatório<br>das Edições</div><div class="b">2021–2026</div></div><div class="marca"><img src="' + SITE + 'novo/logo-branco.png" alt="Supercopa AFC"></div>'; } });
+  add({ tipo: 'capa', html: function () { return '<div class="orb" style="width:130mm;height:130mm;left:-40mm;top:-55mm"></div><div class="orb" style="width:22mm;height:22mm;left:44mm;top:24mm"></div>' + ph('inicio') + '<div class="tit"><div class="k">Supercopa AFC · Afonso Cláudio / ES</div><div class="a">Relatório<br>das Edições</div><div class="b">2021–2026</div></div><div class="marca"><img src="' + SITE + 'novo/logo-branco.png" alt="Supercopa AFC"></div>'; } });
   var ind = { tipo: 'std', sec: '', html: function () { return ''; } }; add(ind);
 
   /* A Supercopa */
   var S1 = 'A Supercopa';
-  add({ tipo: 'div', sec: S1, html: function () { return fotoSite('historia') + '<div class="t">' + S1 + '</div><div class="s">Seis edições de esporte, integração e crescimento</div>'; } });
-  add({ sec: S1, titulo: 'Quem somos', html: function () { return '<div class="rv-blob" style="width:200mm;height:260mm;left:-110mm;top:-30mm"></div>' + foto(10, 'position:absolute;left:12mm;top:22mm;width:92mm;height:170mm;border-radius:46mm 46mm 6mm 6mm') + '<div style="position:absolute;left:116mm;right:18mm;top:20mm"><h1 class="rv-h">Quem somos</h1><p class="rv-lead">Do primeiro jogo ao maior campeonato multiesporte da Região das Montanhas.</p><div class="rv-col"><p>A Supercopa de Afonso Cláudio é o principal campeonato multiesporte da cidade, realizado anualmente desde 2021. Nasceu da vontade de reunir a comunidade em torno do esporte, promovendo competição, integração e valorização dos atletas locais.</p><p>Começou no vôlei, com ' + TIMES[0] + ' equipes, e dobrou de tamanho já na segunda edição. Em 2026 o torneio ganha o basquete e chega a <b>' + TIMES[5] + ' equipes</b>: 12 no vôlei e 6 no basquete.</p><p>Cada equipe inscreve ' + PESS + ' pessoas entre atletas e comissão técnica. A cada edição o campeonato recebe times de mais cidades do Espírito Santo e de estados vizinhos, movimenta o comércio local e leva o nome de Afonso Cláudio para milhares de pessoas nas redes sociais.</p></div></div>'; } });
+  add({ tipo: 'div', sec: S1, html: function () { return ph('historia') + '<div class="t">' + S1 + '</div><div class="s">Seis edições de esporte, integração e crescimento</div>'; } });
+  add({ sec: S1, titulo: 'Quem somos', html: function () { return '<div class="rv-blob" style="width:200mm;height:260mm;left:-110mm;top:-30mm"></div>' + ph('f10', 'position:absolute;left:12mm;top:22mm;width:92mm;height:170mm;border-radius:46mm 46mm 6mm 6mm') + '<div style="position:absolute;left:116mm;right:18mm;top:20mm"><h1 class="rv-h">Quem somos</h1><p class="rv-lead">Do primeiro jogo ao maior campeonato multiesporte da Região das Montanhas.</p><div class="rv-col"><p>A Supercopa de Afonso Cláudio é o principal campeonato multiesporte da cidade, realizado anualmente desde 2021. Nasceu da vontade de reunir a comunidade em torno do esporte, promovendo competição, integração e valorização dos atletas locais.</p><p>Começou no vôlei, com ' + TIMES[0] + ' equipes, e dobrou de tamanho já na segunda edição. Em 2026 o torneio ganha o basquete e chega a <b>' + TIMES[5] + ' equipes</b>: 12 no vôlei e 6 no basquete.</p><p>Cada equipe inscreve ' + PESS + ' pessoas entre atletas e comissão técnica. A cada edição o campeonato recebe times de mais cidades do Espírito Santo e de estados vizinhos, movimenta o comércio local e leva o nome de Afonso Cláudio para milhares de pessoas nas redes sociais.</p></div></div>'; } });
   add({ sec: S1, titulo: 'Linha do tempo', html: function () {
     var it = [['2021 · 1ª edição', 'A Supercopa nasce em Afonso Cláudio, reunindo ' + TIMES[0] + ' times da cidade e da região pela primeira vez. Campeão: Vôlei VNI.'], ['2022 · 2ª edição', 'O número de equipes dobra para ' + TIMES[1] + '. Times da Grande Vitória passam a disputar o título. Campeão: RPB Vôlei.'], ['2023 · 3ª edição', 'Chegam equipes de Itaperuna (RJ) e de mais cidades capixabas. Campeão: Equipe UVI.'], ['2024 · 4ª edição', 'Manhuaçu (MG) entra no mapa e a estrutura do evento cresce. Campeão: Liverpool Vôlei.'], ['2025 · 5ª edição', 'Edição comemorativa e a primeira com premiação em dinheiro: R$ 1.000 ao campeão e R$ 500 ao vice. Campeão: ES Vôlei.'], ['2026 · 6ª edição', 'Pela primeira vez, vôlei e basquete juntos, com ' + TIMES[5] + ' equipes. O basquete estreou em julho com São Pedro campeão; o vôlei decide o título em 28 e 29 de novembro.']];
-    return arco([190, -50, 160]) + '<div class="rv-in"><h1 class="rv-h">Linha do tempo</h1><div class="rv-tl" style="width:230mm;margin-top:6mm">' + it.map(function (x) { return '<div class="it"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div></div>' + foto(21, 'position:absolute;right:0;top:0;bottom:0;width:48mm;border-radius:0'); } });
+    return arco([190, -50, 160]) + '<div class="rv-in"><h1 class="rv-h">Linha do tempo</h1><div class="rv-tl" style="width:230mm;margin-top:6mm">' + it.map(function (x) { return '<div class="it"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div></div>' + ph('f21', 'position:absolute;right:0;top:0;bottom:0;width:48mm;border-radius:0'); } });
 
   /* Números */
   var S2 = 'As edições em números';
-  add({ tipo: 'div', sec: S2, cor: '#0b2a8f', cor2: '#22c3ee', html: function () { return fotoSite('jogos') + '<div class="t">' + S2 + '</div><div class="s">Crescimento, abrangência e alcance</div>'; } });
+  add({ tipo: 'div', sec: S2, cor: '#0b2a8f', cor2: '#22c3ee', html: function () { return ph('jogos') + '<div class="t">' + S2 + '</div><div class="s">Crescimento, abrangência e alcance</div>'; } });
   add({ tipo: 'cor', sec: S2, titulo: 'Transformação em números', html: function () {
     return '<div class="rv-in"><h1 class="rv-h">Transformação em números</h1><p style="width:200mm">De ' + TIMES[0] + ' equipes em 2021 para ' + TIMES[5] + ' em 2026. Os números abaixo somam as seis edições do campeonato.</p><div class="rv-cols-4" style="margin-top:6mm">' +
       [[tot.times, 'participações de equipes', 'somando todas as edições'], [N(tot.atl), 'vagas de atletas e comissão', PESS + ' pessoas por equipe'], [tot.cid, 'cidades representadas', 'ES, RJ, MG e SP'], [C(tot.alc), 'visualizações no Instagram', 'de 2021 a 2025']].map(function (k) { return '<div class="rv-kpi"><div class="n">' + k[0] + '</div><div class="l">' + k[1] + '</div><p>' + k[2] + '</p></div>'; }).join('') + '</div>' +
@@ -96,7 +117,7 @@ function montar(D) {
     var x3 = (TIMES[5] * PESS) / (TIMES[0] * PESS);
     return arco([-30, 120, 150]) + '<div class="rv-in"><h1 class="rv-h">Crescimento sem parar</h1><div style="display:grid;grid-template-columns:1fr 92mm;gap:12mm"><div><p class="rv-lead">Em seis anos, o campeonato triplicou de tamanho.</p><p>Foram <b>' + TIMES[0] + ' equipes</b> na primeira edição e <b>' + TIMES[5] + '</b> na sexta. Em 2022 o torneio dobrou para ' + TIMES[1] + ' equipes e se manteve nesse patamar até 2025, consolidando a estrutura. Em 2026, com a chegada do basquete, o número de pessoas inscritas chega a <b>' + N(TIMES[5] * PESS) + '</b>, ' + x3.toFixed(0) + ' vezes mais que em 2021.</p>' +
       '<div class="rv-cols" style="margin-top:6mm"><div class="rv-kpi"><div class="n">' + x3.toFixed(0) + '×</div><div class="l">mais pessoas em quadra</div><p>' + (TIMES[0] * PESS) + ' em 2021 · ' + (TIMES[5] * PESS) + ' em 2026</p></div><div class="rv-kpi"><div class="n">+' + Math.round((TIMES[5] / TIMES[4] - 1) * 100) + '%</div><div class="l">de 2025 para 2026</div><p>' + TIMES[4] + ' para ' + TIMES[5] + ' equipes com a estreia do basquete</p></div></div></div>' +
-      '<div class="rv-card"><div class="rv-h2">Equipes por edição</div>' + barrasH(ANOS.map(function (a, i) { return { l: String(a), v: TIMES[i] }; })) + '</div></div></div>' + foto(14, 'position:absolute;left:16mm;bottom:12mm;width:120mm;height:50mm'); } });
+      '<div class="rv-card"><div class="rv-h2">Equipes por edição</div>' + barrasH(ANOS.map(function (a, i) { return { l: String(a), v: TIMES[i] }; })) + '</div></div></div>' + ph('f14', 'position:absolute;left:16mm;bottom:12mm;width:120mm;height:50mm'); } });
   add({ sec: S2, titulo: 'Abrangência', html: function () {
     return '<div class="rv-in"><h1 class="rv-h">Cidades que já vieram</h1><div style="display:grid;grid-template-columns:105mm 1fr;gap:12mm"><div><p>O campeonato cresce também no mapa: foram <b>' + tot.cid + ' cidades</b> com equipes ao longo das seis edições, do interior do Espírito Santo à Grande Vitória, e ainda Itaperuna (RJ), Manhuaçu (MG) e São Paulo (SP) em 2026.</p><div class="rv-h2" style="margin-top:4mm">Cidades por edição</div>' + bars(ANOS.map(function (a, i) { return { l: a, v: CID[a].length, hi: i === 5 }; }), { h: 50 }) + '</div><div>' +
       ANOS.slice().reverse().map(function (a) { return '<div style="margin-bottom:4mm"><div class="rv-h2" style="margin-bottom:1mm">' + a + '</div><div class="rv-chips">' + CID[a].map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('') + '</div></div>'; }).join('') + '</div></div></div>'; } });
@@ -105,7 +126,7 @@ function montar(D) {
 
   /* Alcance e audiência */
   var S3 = 'Alcance e audiência';
-  add({ tipo: 'div', sec: S3, cor: '#7c3aed', cor2: '#22c3ee', html: function () { return fotoSite('galeria') + '<div class="t">' + S3 + '</div><div class="s">Instagram, site e aplicativo</div>'; } });
+  add({ tipo: 'div', sec: S3, cor: '#7c3aed', cor2: '#22c3ee', html: function () { return ph('galeria') + '<div class="t">' + S3 + '</div><div class="s">Instagram, site e aplicativo</div>'; } });
   add({ sec: S3, titulo: 'Instagram', cor: '#7c3aed', html: function () {
     return arco([200, -60, 160]) + '<div class="rv-in"><h1 class="rv-h">Instagram: alcance que explode</h1><div style="display:grid;grid-template-columns:1fr 94mm;gap:12mm"><div><p class="rv-lead">De 5 mil para 880 mil visualizações em quatro anos.</p><div class="rv-h2">Visualizações da página por edição</div>' + bars(ALCANCE.map(function (v, i) { return { l: ANOS[i], v: v, hi: i === 4 }; }), { fmt: C, h: 56 }) + '</div><div><div class="rv-kpi"><div class="n">' + C(tot.alc) + '</div><div class="l">visualizações acumuladas</div><p>soma de 2021 a 2025</p></div><div class="rv-kpi" style="margin-top:4mm"><div class="n">' + N(ALCANCE[4] / ALCANCE[0]) + '×</div><div class="l">crescimento 2021 → 2025</div><p>' + C(ALCANCE[0]) + ' em 2021 · ' + C(ALCANCE[4]) + ' em 2025</p></div><div class="rv-kpi" style="margin-top:4mm"><div class="n">+' + Math.round((ALCANCE[4] / ALCANCE[3] - 1) * 100) + '%</div><div class="l">de 2024 para 2025</div><p>' + C(ALCANCE[3]) + ' para ' + C(ALCANCE[4]) + '</p></div></div></div></div><div class="rv-nota">Números de alcance informados pela organização a partir das estatísticas do perfil oficial no Instagram. 2026 em andamento.</div>'; } });
   add({ tipo: 'cor', sec: S3, titulo: 'Site e aplicativo', cor: '#1b52e0', html: function () {
@@ -127,17 +148,17 @@ function montar(D) {
 
   /* Impacto */
   var S4 = 'Impacto na cidade';
-  add({ tipo: 'div', sec: S4, cor: '#047857', cor2: '#22c3ee', html: function () { return fotoSite('times') + '<div class="t">' + S4 + '</div><div class="s">Economia local e valorização dos atletas</div>'; } });
+  add({ tipo: 'div', sec: S4, cor: '#047857', cor2: '#22c3ee', html: function () { return ph('times') + '<div class="t">' + S4 + '</div><div class="s">Economia local e valorização dos atletas</div>'; } });
   add({ sec: S4, titulo: 'Impacto econômico', cor: '#047857', html: function () {
     var u = eco[5];
     return arco([200, -40, 150]) + '<div class="rv-in"><h1 class="rv-h">Dinheiro que circula na cidade</h1><div style="display:grid;grid-template-columns:1fr 100mm;gap:12mm"><div><p class="rv-lead">Estimativa de ' + R(tot.eco) + ' movimentados nas seis edições.</p><div class="rv-h2">Movimento estimado por edição</div>' + stack(eco.map(function (x) { return { l: x.a, p: [x.alimT, x.hospT, x.combT] }; }), ['#047857', '#10b981', '#86efac']) + '<div class="rv-leg" style="display:flex;gap:6mm"><div><i style="background:#047857"></i>Alimentação</div><div><i style="background:#10b981"></i>Hospedagem</div><div><i style="background:#86efac"></i>Combustível</div></div></div><div><div class="rv-kpi"><div class="n">' + R(u.visita) + '</div><div class="l">gasto por equipe visitante (2026)</div><p>' + R(u.visita / PESS) + ' por pessoa</p></div><div style="margin-top:4mm">' + barrasH([{ l: 'Alimentação (2 dias)', v: u.alim }, { l: 'Hospedagem (1 noite)', v: u.hosp }, { l: 'Combustível (ida e volta)', v: u.comb }], R) + '</div><div class="rv-kpi" style="margin-top:4mm"><div class="n">' + R(u.total) + '</div><div class="l">movimento estimado em 2026</div><p>' + TIMES[5] + ' equipes</p></div></div></div></div><div class="rv-nota">Estimativas com premissas médias: alimentação R$ ' + PREM.alim + ' por pessoa/dia, hospedagem R$ ' + PREM.hosp + ' por pessoa/noite, 4 carros por equipe a 10 km/L e gasolina a R$ ' + PREM.gas.toFixed(2).replace('.', ',') + '. Uma equipe de Afonso Cláudio é considerada local e não gasta com hospedagem e combustível. Não são dados auditados.</div>'; } });
   add({ sec: S4, titulo: 'Premiação', html: function () {
     return '<div class="rv-blob" style="width:260mm;height:260mm;left:60mm;top:-40mm;opacity:.7"></div><div class="rv-in"><h1 class="rv-h">Valorizando quem joga</h1><p style="width:200mm">Durante quatro edições o título valia troféu e reconhecimento. Em 2025, pela primeira vez, a Supercopa passou a premiar em dinheiro, e a regra chega a 2026 como parte da identidade do torneio.</p><div class="rv-cols-3" style="margin-top:8mm">' +
-      [['2021 a 2024', 'Troféus', 'Sem premiação em dinheiro'], ['2025 · campeão', 'R$ 1.000', 'Primeira premiação em dinheiro'], ['2025 · vice-campeão', 'R$ 500', 'Total de R$ 1.500 distribuídos']].map(function (k) { return '<div class="rv-kpi"><div class="l">' + k[0] + '</div><div class="n">' + k[1] + '</div><p>' + k[2] + '</p></div>'; }).join('') + '</div></div>' + foto(29, 'position:absolute;left:16mm;right:16mm;bottom:14mm;height:62mm'); } });
+      [['2021 a 2024', 'Troféus', 'Sem premiação em dinheiro'], ['2025 · campeão', 'R$ 1.000', 'Primeira premiação em dinheiro'], ['2025 · vice-campeão', 'R$ 500', 'Total de R$ 1.500 distribuídos']].map(function (k) { return '<div class="rv-kpi"><div class="l">' + k[0] + '</div><div class="n">' + k[1] + '</div><p>' + k[2] + '</p></div>'; }).join('') + '</div></div>' + ph('f29', 'position:absolute;left:16mm;right:16mm;bottom:14mm;height:62mm'); } });
 
   /* 2026 */
   var S5 = 'Edição 2026';
-  add({ tipo: 'div', sec: S5, cor: '#0b2a8f', cor2: '#1b52e0', html: function () { return fotoSite('destaque') + '<div class="t">' + S5 + '</div><div class="s">Vôlei e basquete, pela primeira vez juntos</div>'; } });
+  add({ tipo: 'div', sec: S5, cor: '#0b2a8f', cor2: '#1b52e0', html: function () { return ph('destaque') + '<div class="t">' + S5 + '</div><div class="s">Vôlei e basquete, pela primeira vez juntos</div>'; } });
   add({ sec: S5, titulo: 'Equipes de 2026', html: function () {
     var ts = D.times || [];
     var cad = D.cad;
@@ -186,7 +207,8 @@ function iniciar() {
   var q = new URLSearchParams(location.search), pdf = q.has('pdf');
   document.body.classList.toggle('pdf', pdf);
   var host = document.getElementById('rv'); host.innerHTML = '<div class="rv-wrap"><p style="color:#fff;text-align:center;padding:40px">Reunindo os números...</p></div>';
-  carregar().then(function (D) {
+  Promise.all([carregar(), safe(get('relatorioFotos'))]).then(function (rr) {
+    var D = rr[0], sv = rr[1] && rr[1].slots; if (!sv) { try { sv = JSON.parse(localStorage.getItem('rv_fotos') || 'null'); } catch (e) { sv = null; } } OV = sv || {};
     host.innerHTML = '<div class="rv-wrap">' + montar(D) + '</div>';
     var go = function () { window.__pronto = true; if (q.get('print') === '1') setTimeout(function () { window.print(); }, 600); };
     var imgs = [].slice.call(document.images).filter(function (i) { return !i.complete; });
