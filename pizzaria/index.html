@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pizzaria Express · Vouchers</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#b3261e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Express">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;600;700&display=swap">
+<style>
+:root{--bg:#fff7f0;--ink:#1f1410;--mut:#7a6558;--red:#b3261e;--org:#e8590c;--card:#fff;--ok:#15803d;--okbg:#dcfce7}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{padding:0 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.top{display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) 0 12px}
+.top img{height:46px;background:#fff;border-radius:12px;padding:4px 8px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.top h1{margin:0;font:800 22px 'Barlow Condensed',sans-serif;letter-spacing:.5px;text-transform:uppercase;line-height:1}.top small{display:block;color:var(--mut);font-size:12px;margin-top:3px;font-weight:600}
+.top .out{margin-left:auto;border:0;background:none;color:var(--mut);font-size:13px;text-decoration:underline;padding:8px}
+.scan{width:100%;border:0;border-radius:22px;padding:20px;background:linear-gradient(135deg,var(--org),var(--red));color:#fff;font:800 26px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:14px;box-shadow:0 12px 28px rgba(190,60,20,.38);cursor:pointer}
+.scan svg{width:34px;height:34px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sum{display:flex;gap:12px;margin:14px 0}.sum div{flex:1;background:var(--card);border-radius:18px;padding:12px 14px;box-shadow:0 4px 14px rgba(120,60,20,.1)}
+.sum b{display:block;font:800 34px 'Barlow Condensed',sans-serif;color:var(--red);line-height:1}.sum span{font-size:12px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+h2{margin:18px 2px 8px;font:800 18px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut)}
+.eq{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:8px;box-shadow:0 3px 10px rgba(120,60,20,.08)}
+.eq .n{flex:1;min-width:0;font-weight:700;font-size:17px}.eq small{display:block;font-weight:600;font-size:12px;color:var(--mut);margin-top:2px}
+.pz{display:flex;gap:6px}.pz i{width:30px;height:30px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:16px;filter:grayscale(1);opacity:.4}.pz i.on{background:var(--okbg);filter:none;opacity:1}
+.eq.full{background:#f0fdf4}
+.rec{font-size:14px;color:var(--mut);padding:2px 4px}.rec b{color:var(--ink)}
+/* login */
+.login{max-width:380px;margin:12vh auto 0;text-align:center}.login img{width:200px;background:#fff;border-radius:20px;padding:10px 16px;box-shadow:0 8px 22px rgba(0,0,0,.12)}
+.login h1{font:800 28px 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:16px 0 4px}.login p{color:var(--mut);margin:0 0 18px}
+.login input{width:100%;border:2px solid #f1d6c4;border-radius:16px;padding:16px;text-align:center;letter-spacing:14px;font-size:28px;font-weight:800;background:#fff}
+.login button{width:100%;margin-top:14px;border:0;border-radius:16px;padding:16px;font:800 18px Barlow,sans-serif;color:#fff;background:linear-gradient(135deg,var(--org),var(--red))}
+.err{color:var(--red);font-weight:700;margin-top:10px;min-height:20px}
+/* leitor */
+#cam{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column}
+#cam.on{display:flex}#cam video{flex:1;width:100%;object-fit:cover}
+#cam .fr{position:absolute;left:50%;top:44%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border:4px solid #fff;border-radius:26px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)}
+#cam .fr:after{content:"";position:absolute;left:8px;right:8px;height:3px;background:var(--org);box-shadow:0 0 14px var(--org);animation:ln 2s ease-in-out infinite alternate}@keyframes ln{from{top:8px}to{top:calc(100% - 11px)}}
+#cam .bar{position:absolute;left:0;right:0;bottom:0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,rgba(0,0,0,.8));color:#fff;text-align:center}
+#cam .bar button{border:0;border-radius:14px;padding:13px 26px;font:700 16px Barlow,sans-serif;margin:8px 6px 0;background:#fff;color:#111}
+#cam .bar input{width:100%;max-width:340px;border:0;border-radius:12px;padding:12px;font-size:16px;margin-top:8px;text-align:center}
+/* resultado */
+#res{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:#fff}
+#res.on{display:flex;animation:rIn .25s}@keyframes rIn{from{opacity:0;transform:scale(.96)}}
+#res.ok{background:linear-gradient(160deg,#16a34a,#065f2c)}#res.no{background:linear-gradient(160deg,#dc2626,#7f1111)}
+#res .ic{width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:80px;animation:pop .5s cubic-bezier(.2,1.6,.4,1)}@keyframes pop{from{transform:scale(0)}}
+#res h2{color:#fff;font:800 40px 'Barlow Condensed',sans-serif;letter-spacing:1px;margin:18px 0 6px;text-transform:uppercase}
+#res .eqn{font:800 34px 'Barlow Condensed',sans-serif;text-transform:uppercase}#res p{margin:8px 0 0;font-size:17px;opacity:.95}
+#res button{margin-top:30px;border:0;border-radius:16px;padding:16px 34px;font:800 20px Barlow,sans-serif;background:#fff;color:#111}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<section id="login" class="login hide">
+  <img src="logo.png" alt="Pizzaria Express">
+  <h1>Vouchers Supercopa</h1><p>Digite o PIN da pizzaria</p>
+  <input id="pin" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+  <div class="err" id="lerr"></div><button id="entrar">Entrar</button>
+</section>
+
+<section id="app" class="hide">
+  <div class="top"><img src="logo.png" alt=""><div><h1>Vouchers Supercopa</h1><small>2 pizzas por equipe</small></div><button class="out" id="sair">Sair</button></div>
+  <button class="scan" id="ler"><svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M7 12h10"/></svg>Ler QR code</button>
+  <div class="sum"><div><b id="tot">0</b><span>pizzas entregues</span></div><div><b id="eqf">0</b><span>equipes completas</span></div></div>
+  <h2>Equipes</h2><div id="lista"></div>
+  <h2>Últimas leituras</h2><div id="rec"></div>
+</section>
+
+<div id="cam"><video id="vid" playsinline muted></video><div class="fr"></div>
+  <div class="bar"><div id="camMsg">Aponte para o QR code da equipe</div><div><input id="man" placeholder="ou cole o código aqui" autocomplete="off"></div><button id="manOk">Validar código</button><button id="camX">Fechar</button></div></div>
+<div id="res"><div class="ic" id="rIc"></div><h2 id="rT"></h2><div class="eqn" id="rE"></div><p id="rP"></p><button id="rB">Próximo</button></div>
+
+<script src="jsQR.min.js"></script>
+<script>
+(function(){
+var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api',$=function(i){return document.getElementById(i)};
+var PIN='';try{PIN=localStorage.getItem('exp_pin')||''}catch(e){}
+function post(a,o){o=o||{};o.acao=a;o.pizzaria=PIN;return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)}).then(function(r){return r.json()})}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function hora(i){try{return new Date(i).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})}catch(e){return ''}}
+function dia(i){try{return new Date(i).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'})}catch(e){return ''}}
+function tela(logado){$('login').classList.toggle('hide',logado);$('app').classList.toggle('hide',!logado)}
+function entrar(){var p=$('pin').value.trim();if(!/^\d{4}$/.test(p)){$('lerr').textContent='O PIN tem 4 números.';return}
+ PIN=p;$('lerr').textContent='';post('voucherPainel').then(function(r){if(!r||!r.ok){PIN='';$('lerr').textContent=(r&&r.erro)||'Não foi possível entrar.';return}
+  try{localStorage.setItem('exp_pin',PIN)}catch(e){}tela(true);pinta(r);timer()}).catch(function(){PIN='';$('lerr').textContent='Sem conexão.'})}
+$('entrar').onclick=entrar;$('pin').addEventListener('keydown',function(e){if(e.key==='Enter')entrar()});
+$('sair').onclick=function(){try{localStorage.removeItem('exp_pin')}catch(e){}PIN='';tela(false);clearInterval(tm)};
+function pinta(r){var eq=r.equipes||[],cheias=eq.filter(function(e){return e.retiradas>=2}).length;
+ $('tot').textContent=r.total||0;$('eqf').textContent=cheias;
+ $('lista').innerHTML=eq.map(function(e){var h=(e.horas||[]).slice().reverse();
+  return '<div class="eq'+(e.retiradas>=2?' full':'')+'"><div class="n">'+esc(e.equipe)+'<small>'+(e.retiradas?e.retiradas+' de 2 · última '+hora(h[h.length-1]):'Nenhuma retirada')+'</small></div><div class="pz"><i class="'+(e.retiradas>=1?'on':'')+'">🍕</i><i class="'+(e.retiradas>=2?'on':'')+'">🍕</i></div></div>'}).join('')||'<div class="rec">Nenhuma equipe ainda.</div>';
+ $('rec').innerHTML=(r.recentes||[]).map(function(x){return '<div class="rec"><b>'+hora(x.retirado_em)+'</b> · '+dia(x.retirado_em)+' — '+esc(x.equipe)+' ('+(x.item==='pizza2'?'pizza 2':'pizza 1')+')</div>'}).join('')||'<div class="rec">Nenhuma leitura ainda.</div>'}
+var tm=null;function atualiza(){post('voucherPainel').then(function(r){if(r&&r.ok)pinta(r)}).catch(function(){})}
+function timer(){clearInterval(tm);tm=setInterval(atualiza,12000)}
+/* leitor */
+var stream=null,rodando=false,trava=false,cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true});
+function abreCam(){$('cam').classList.add('on');trava=false;$('camMsg').textContent='Aponte para o QR code da equipe';
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('camMsg').textContent='Câmera indisponível. Cole o código abaixo.';return}
+ navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false}).then(function(s){stream=s;var v=$('vid');v.srcObject=s;v.play();rodando=true;loop()}).catch(function(){$('camMsg').textContent='Sem acesso à câmera. Permita o acesso ou cole o código abaixo.'})}
+function fechaCam(){rodando=false;$('cam').classList.remove('on');if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}}
+function loop(){if(!rodando)return;var v=$('vid');
+ if(!trava&&v.readyState>=2&&v.videoWidth){var w=v.videoWidth,h=v.videoHeight,k=Math.min(1,640/w);cv.width=w*k;cv.height=h*k;cx.drawImage(v,0,0,cv.width,cv.height);
+  var im=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(im.data,im.width,im.height,{inversionAttempts:'dontInvert'});if(c&&c.data){trava=true;valida(c.data)}}
+ requestAnimationFrame(loop)}
+function valida(cod){cod=String(cod||'').trim();if(!cod)return;trava=true;$('camMsg').textContent='Validando…';
+ post('voucherLer',{codigo:cod}).then(function(r){resultado(r||{ok:false,erro:'Falha na leitura.'})}).catch(function(){resultado({ok:false,erro:'Sem conexão. Tente de novo.'})})}
+function resultado(r){var el=$('res');fechaCam();el.className='on '+(r.ok?'ok':'no');
+ if(r.ok){$('rIc').textContent='✓';$('rT').textContent='Liberar pizza';$('rE').textContent=r.equipe;$('rP').textContent=(r.item==='pizza2'?'Pizza 2':'Pizza 1')+' · registrado às '+hora(r.em);try{navigator.vibrate&&navigator.vibrate([120,60,120])}catch(e){}}
+ else if(r.usado){$('rIc').textContent='✕';$('rT').textContent='Já usado';$('rE').textContent=r.equipe||'';$('rP').textContent=(r.item==='pizza2'?'Pizza 2':'Pizza 1')+' retirada às '+hora(r.em)+' de '+dia(r.em)+'. Não entregue.';try{navigator.vibrate&&navigator.vibrate([400])}catch(e){}}
+ else{$('rIc').textContent='!';$('rT').textContent='Não validado';$('rE').textContent='';$('rP').textContent=r.erro||'QR code inválido.'}
+ atualiza()}
+$('ler').onclick=abreCam;$('camX').onclick=fechaCam;$('manOk').onclick=function(){var v=$('man').value.trim();$('man').value='';valida(v)};
+$('rB').onclick=function(){$('res').className='';abreCam()};
+$('res').addEventListener('dblclick',function(){$('res').className=''});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+if(PIN){post('voucherPainel').then(function(r){if(r&&r.ok){tela(true);pinta(r);timer()}else{PIN='';tela(false)}}).catch(function(){tela(true)})}else tela(false);
+})();
+</script>
+</body>
+</html>

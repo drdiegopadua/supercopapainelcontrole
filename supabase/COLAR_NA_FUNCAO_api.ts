@@ -1440,6 +1440,60 @@ async function telaoFotosSalvar(d: Any) {
   await sb.from("config").upsert({ chave: "telao_fotos", valor: ids ? { ids } : {}, atualizado_em: new Date().toISOString() });
   return { ok: true, ids };
 }
+// ════════ Voucher: 2 pizzas grátis por equipe (Pizzaria Express) ════════
+const VOUCHER_ITENS = ["pizza1", "pizza2"];
+const falhasPizz = { n: 0, ate: 0 };
+async function pizzariaOk(pin: Any) {
+  if (falhasPizz.n >= 10 && falhasPizz.ate > Date.now()) return false;
+  const { data } = await sb.from("config").select("valor").eq("chave", "voucher_pizzaria_pin").maybeSingle();
+  const v: Any = data && data.valor, real = typeof v === "string" ? v : ((v && v.pin) || "").toString();
+  const ok = !!real && real === (pin || "").toString().trim();
+  if (ok) { falhasPizz.n = 0; } else { falhasPizz.n = (falhasPizz.ate > Date.now() ? falhasPizz.n : 0) + 1; falhasPizz.ate = Date.now() + 10 * 60 * 1000; }
+  return ok;
+}
+async function voucherEstado(d: Any) {
+  const equipe = (d.equipe || "").toString().trim();
+  if (!(await pinOk(equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
+  const { data } = await sb.from("vouchers").select("item,retirado_em").eq("chave", chaveEq(equipe));
+  const por: Record<string, Any> = {}; (data || []).forEach((r: Any) => { por[r.item] = r; });
+  return { ok: true, equipe, itens: VOUCHER_ITENS.map((i) => ({ item: i, retirado: !!(por[i] && por[i].retirado_em), em: (por[i] && por[i].retirado_em) || null })) };
+}
+async function voucherQr(d: Any) {
+  const equipe = (d.equipe || "").toString().trim(), item = (d.item || "").toString();
+  if (!VOUCHER_ITENS.includes(item)) return { ok: false, erro: "Voucher inválido." };
+  if (!(await pinOk(equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
+  const k = chaveEq(equipe);
+  const ler = async () => (await sb.from("vouchers").select("token,retirado_em").eq("chave", k).eq("item", item).maybeSingle()).data as Any;
+  let r = await ler();
+  if (!r) {
+    const token = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    await sb.from("vouchers").insert({ chave: k, equipe, item, token });
+    r = await ler();
+  }
+  if (!r) return { ok: false, erro: "Não foi possível gerar o voucher." };
+  if (r.retirado_em) return { ok: true, retirado: true, em: r.retirado_em };
+  return { ok: true, retirado: false, codigo: "SCV." + r.token };
+}
+async function voucherLer(d: Any) {
+  if (!(await pizzariaOk(d.pizzaria))) return { ok: false, erro: "PIN da pizzaria incorreto." };
+  const token = (d.codigo || "").toString().replace(/^SCV\./, "").trim();
+  if (!/^[0-9a-f]{32}$/.test(token)) return { ok: false, erro: "QR code inválido." };
+  const agora = new Date().toISOString();
+  const { data: ok } = await sb.from("vouchers").update({ retirado_em: agora }).eq("token", token).is("retirado_em", null).select("equipe,item,retirado_em");
+  if (ok && ok.length) return { ok: true, equipe: ok[0].equipe, item: ok[0].item, em: ok[0].retirado_em };
+  const { data: r } = await sb.from("vouchers").select("equipe,item,retirado_em").eq("token", token).maybeSingle();
+  if (!r) return { ok: false, erro: "QR code não reconhecido." };
+  return { ok: false, usado: true, erro: "Este voucher já foi usado.", equipe: r.equipe, item: r.item, em: r.retirado_em };
+}
+async function voucherPainel(d: Any) {
+  if (!(await pizzariaOk(d.pizzaria))) return { ok: false, erro: "PIN da pizzaria incorreto." };
+  const [conf, { data }] = await Promise.all([listarConfirmacoes(), sb.from("vouchers").select("equipe,item,retirado_em").not("retirado_em", "is", null).order("retirado_em", { ascending: false })]);
+  const lista: Record<string, Any> = {};
+  (conf || []).forEach((c: Any) => { lista[chaveEq(c.equipe)] = { equipe: c.equipe, retiradas: 0, horas: [] }; });
+  (data || []).forEach((r: Any) => { const k = chaveEq(r.equipe); if (!lista[k]) lista[k] = { equipe: r.equipe, retiradas: 0, horas: [] }; lista[k].retiradas++; lista[k].horas.push(r.retirado_em); });
+  const equipes = Object.values(lista).sort((a: Any, b: Any) => a.equipe.localeCompare(b.equipe));
+  return { ok: true, equipes, total: (data || []).length, recentes: (data || []).slice(0, 12) };
+}
 async function galeriaRemover(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
   const { data: r } = await sb.from("galeria_fotos").select("f,t").eq("id", (d.id || "").toString()).maybeSingle();
@@ -1679,6 +1733,10 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "votarDestaque": return await votarDestaque(d);
     case "galeriaLista": return await galeriaLista();
     case "telaoFotos": return await telaoFotos();
+    case "voucherEstado": return await voucherEstado(d);
+    case "voucherQr": return await voucherQr(d);
+    case "voucherLer": return await voucherLer(d);
+    case "voucherPainel": return await voucherPainel(d);
     case "telaoAviso": return await telaoAviso();
     case "telaoAvisoSalvar": return await telaoAvisoSalvar(d);
     case "telaoFotosSalvar": return await telaoFotosSalvar(d);
