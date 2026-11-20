@@ -371,10 +371,77 @@
   .slot-banner{position:absolute;right:48px;top:4px;z-index:60;font:600 13px/1 ui-monospace,Menlo,Consolas,monospace;
         color:#fff;background:var(--slot);padding:6px 12px;border-radius:0 0 10px 10px;display:none}
   body.slots .slot-banner{display:block}
+
+  /* ===== EFEITOS E ANIMAÇÕES AMBIENTE ===== */
+  @property --p{syntax:'<percentage>';inherits:true;initial-value:0%}
+  .fxl{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .fxl i{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;animation:blob 22s ease-in-out infinite alternate}
+  .fxl i:nth-child(1){width:820px;height:820px;left:-8%;top:-30%;background:#7da4ff}
+  .fxl i:nth-child(2){width:700px;height:700px;right:-6%;top:10%;background:#9fdcff;animation-duration:27s;animation-delay:-7s;opacity:.45}
+  .fxl i:nth-child(3){width:760px;height:760px;left:30%;bottom:-45%;background:#b8a8ff;animation-duration:31s;animation-delay:-13s;opacity:.4}
+  @keyframes blob{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(150px,90px,0) scale(1.2)}}
+  .fxl .sheen{position:absolute;top:-20%;bottom:-20%;left:-40%;width:28%;border-radius:0;filter:blur(30px);opacity:1;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);animation:sheen 14s linear infinite}
+  @keyframes sheen{from{left:-40%}to{left:140%}}
+  #fxp{position:absolute;inset:0;width:1920px;height:960px}
+  .top,.bottom{z-index:6}.screens{z-index:3}
+  /* cabeçalho */
+  .brand-logo{animation:flut 6s ease-in-out infinite alternate;position:relative;overflow:hidden}
+  .brand-logo::after,.hqr .box::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.8),transparent);transform:skewX(-20deg);animation:shineb 5s ease-in-out infinite}
+  .hqr .box{position:relative;overflow:hidden;animation:qrp 3s ease-in-out infinite}
+  @keyframes shineb{0%,55%{left:-70%}100%{left:150%}}
+  @keyframes flut{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+  @keyframes qrp{50%{box-shadow:var(--raised-sm),0 0 0 8px rgba(27,82,224,.14)}}
+  .screen-title h2{animation:resp 7s ease-in-out infinite alternate}
+  @keyframes resp{from{letter-spacing:8px}to{letter-spacing:11px}}
+  .clock .time{position:relative}.clock .time.pisca{animation:none}
+  /* cartões: flutuação suave + brilho que passa */
+  .screen.active .card{animation:card 8s ease-in-out infinite alternate;animation-delay:calc(var(--k,0)*-.7s)}
+  @keyframes card{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+  .card::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:30%;border-radius:inherit;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);pointer-events:none;opacity:0;animation:cardshine 11s ease-in-out infinite;animation-delay:calc(var(--k,0)*.9s + 2s)}
+  @keyframes cardshine{0%{left:-60%;opacity:0}6%{opacity:1}22%{left:130%;opacity:1}24%,100%{left:130%;opacity:0}}
+  .card{overflow:hidden}
+  /* anéis e progressos que preenchem */
+  .group-letter,.court-icon{animation:pfill 1.5s cubic-bezier(.2,.9,.2,1) .7s both}
+  .dial .arc{animation:pfill 1.8s cubic-bezier(.2,.9,.2,1) .8s both}
+  @keyframes pfill{from{--p:0%}}
+  .ringwrap .ticks{animation:gira 60s linear infinite}
+  .ringwrap .arc{animation:giraarc 14s linear infinite}
+  .dial .ticks{animation:gira 90s linear infinite reverse}
+  @keyframes gira{to{transform:rotate(360deg)}}@keyframes giraarc{to{transform:rotate(360deg)}}
+  /* ao vivo e classificados pulsam */
+  .game.live{animation:vivo 2.2s ease-in-out infinite}
+  @keyframes vivo{50%{box-shadow:var(--pressed-sm),0 0 0 3px rgba(229,72,77,.35),0 0 28px rgba(229,72,77,.35)}}
+  .dot{position:relative}.dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid currentColor;opacity:.6;animation:ping 1.6s ease-out infinite}
+  @keyframes ping{from{transform:scale(.6);opacity:.8}to{transform:scale(2.6);opacity:0}}
+  .row.q .pos{animation:brilho 3s ease-in-out infinite}
+  @keyframes brilho{50%{box-shadow:0 4px 12px rgba(11,42,143,.4),0 0 0 6px rgba(27,82,224,.16)}}
+  .pod.first .place{animation:coroa 2.4s ease-in-out infinite}
+  @keyframes coroa{50%{transform:scale(1.14);box-shadow:0 8px 22px rgba(11,42,143,.5),0 0 0 9px rgba(255,211,77,.45)}}
+  /* barras crescem */
+  .screen.rise .li .bar i{transform-origin:left;animation:cresce 1.4s cubic-bezier(.2,.9,.2,1) .9s both}
+  @keyframes cresce{from{transform:scaleX(0)}}
+  .screen.rise .li .bar b{animation:cresceb 1.4s cubic-bezier(.2,.9,.2,1) .9s both}
+  @keyframes cresceb{from{margin-left:-1200%}}
+  /* patrocinadores e fotos */
+  .stile .logo img,.master .inner img{animation:logoflut 5s ease-in-out infinite alternate;animation-delay:calc(var(--k,0)*-.8s)}
+  @keyframes logoflut{from{transform:translateY(0) scale(1)}to{transform:translateY(-6px) scale(1.04)}}
+  .feature .frame .imgbox img{animation:kb 9s ease-in-out infinite alternate;transform-origin:50% 40%}
+  @keyframes kb{from{transform:scale(1)}to{transform:scale(1.09) translateX(-1.5%)}}
+  .thumb.on{animation:vivo2 2s ease-in-out infinite}
+  @keyframes vivo2{50%{outline-offset:-1px}}
+  /* progresso do rodapé */
+  .track .fill{background-size:200% 100%;background-image:linear-gradient(90deg,var(--accent-soft),var(--accent),#4d86ff,var(--accent-soft));animation:shimmer 2.4s linear infinite}
+  @keyframes shimmer{to{background-position:-200% 0}}
+  .track .knob{animation:knob 2s ease-in-out infinite}
+  @keyframes knob{50%{box-shadow:var(--raised-sm),0 0 0 8px rgba(27,82,224,.2)}}
+  .nav .tab.on{animation:tab 3s ease-in-out infinite}
+  @keyframes tab{50%{box-shadow:var(--pressed-sm),0 0 0 4px rgba(27,82,224,.14)}}
+  @media (prefers-reduced-motion:reduce){.fxl i,.fxl .sheen,.card,.card::after,.brand-logo,.hqr .box{animation:none!important}}
 </style>
 </head>
 <body>
 <div id="stage">
+  <div class="fxl"><i></i><i></i><i></i><div class="sheen"></div><canvas id="fxp" width="1920" height="960"></canvas></div>
   <div class="slot-banner">MODO MARCAÇÃO · tecla M esconde · laranja = dado dinâmico</div>
 
   <!-- ===================== CABEÇALHO (fixo) ===================== -->
@@ -870,6 +937,35 @@ function show(i, dir=1, origem=null){
   t0 = performance.now();
 }
 let ttr = null;
+/* =============================================================================
+   EFEITOS: partículas, contagem dos números e relógio
+   ============================================================================= */
+(function(){
+  const c = document.getElementById('fxp'), x = c.getContext('2d'), P = [];
+  const nova = ini => ({x:Math.random()*1920,y:ini?Math.random()*960:980+Math.random()*80,r:2+Math.random()*7,v:.12+Math.random()*.4,a:.18+Math.random()*.34,f:Math.random()*6.28,s:.006+Math.random()*.01,g:Math.random()<.18});
+  for(let i=0;i<70;i++) P.push(nova(true));
+  (function f(){
+    x.clearRect(0,0,1920,960);
+    P.forEach((p,i)=>{ p.y-=p.v; p.f+=p.s; p.x+=Math.sin(p.f)*.45; if(p.y<-20) P[i]=nova(false);
+      x.beginPath(); x.arc(p.x,p.y,p.r,0,6.283);
+      x.fillStyle = p.g ? 'rgba(255,205,70,'+p.a+')' : 'rgba(27,82,224,'+(p.a*.55)+')'; x.fill(); });
+    requestAnimationFrame(f);
+  })();
+})();
+// números sobem de 0 até o valor ao entrar na tela
+function animaNumeros(el){
+  el.querySelectorAll('.row .pts, .pod .score, .li .pts, .game .score, .stat b, .quiz .score').forEach(n=>{
+    if(n.dataset.cu==='1') return;
+    const txt = n.firstChild && n.firstChild.nodeType===3 ? n.firstChild.nodeValue : n.textContent;
+    const m = String(txt).match(/^(\s*)(\+?-?\d+)(.*)$/s); if(!m) return;
+    const alvo = parseInt(m[2],10), pre = m[1], suf = m[3]; if(!isFinite(alvo) || Math.abs(alvo)>99999) return;
+    const t0 = performance.now(), dur = 1100;
+    (function passo(t){ const k = Math.min(1,(t-t0)/dur), v = Math.round(alvo*(1-Math.pow(1-k,3)));
+      if(n.firstChild && n.firstChild.nodeType===3) n.firstChild.nodeValue = pre+v+suf; else n.textContent = pre+v+suf;
+      if(k<1) requestAnimationFrame(passo); })(t0);
+  });
+}
+
 function transicao(prev, el, origem, antes){
   const wrap = document.querySelector('.screens');
   const tt = document.querySelector('.screen-title');
@@ -881,6 +977,7 @@ function transicao(prev, el, origem, antes){
   if(prev){ prev.classList.remove('active','rise'); prev.classList.add('leaving'); }
   [...el.querySelectorAll('.card,.row,.game,.stile,.thumb,.pod,.li')].forEach((n,k)=>n.style.setProperty('--k',k));
   el.classList.add('entering','rise');
+  setTimeout(()=>animaNumeros(el), 600);
   if(!prev){ el.classList.remove('entering'); el.classList.add('active'); return; }
   if(origem){ wrap.style.setProperty('--cx',origem.x+'px'); wrap.style.setProperty('--cy',origem.y+'px'); wrap.classList.add('t-iris'); }
   else { wrap.classList.add('t-wipe'); if(antes) wrap.classList.add('rev'); }
