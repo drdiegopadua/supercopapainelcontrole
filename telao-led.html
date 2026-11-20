@@ -372,26 +372,107 @@
         color:#fff;background:var(--slot);padding:6px 12px;border-radius:0 0 10px 10px;display:none}
   body.slots .slot-banner{display:block}
 
-  /* ===== CHAVE ===== */
-  .bracket{display:grid;grid-template-columns:1fr 1fr 1fr 360px;gap:44px;height:100%}
-  .bcol{display:flex;flex-direction:column;justify-content:space-around;gap:14px;min-height:0;position:relative}
-  .bcol>.label{position:absolute;top:-4px;left:6px}
-  .bcol.q,.bcol.s,.bcol.f{padding-top:28px;padding-bottom:4px}
-  .bm{position:relative;padding:6px 12px 6px;border-radius:26px;background:var(--surface);box-shadow:var(--raised-sm)}
-  .bcol.q .bm::after,.bcol.s .bm::after{content:"";position:absolute;right:-44px;top:50%;width:44px;height:3px;background:var(--accent-soft)}
-  .bm.live{animation:vivo 2.2s ease-in-out infinite}
-  .bh{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
-  .bh .dot{display:inline-block;width:9px;height:9px;margin-right:6px}
-  .bt{display:grid;grid-template-columns:40px 1fr 38px;align-items:center;gap:10px;padding:2px 6px;border-radius:16px}
-  .bt.win{background:linear-gradient(90deg,rgba(27,82,224,.14),transparent);font-weight:700}.bt.lose{opacity:.5}
-  .blogo{width:40px;height:40px;border-radius:50%;background:var(--surface-hi);box-shadow:var(--raised-sm);overflow:hidden}
-  .blogo.big{width:150px;height:150px}.blogo .ph{border-radius:50%;font-size:0;gap:0}.blogo img{border-radius:50%}
-  .bn{font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bs{font-size:26px;font-weight:700;text-align:right;color:var(--accent-2);font-variant-numeric:tabular-nums}
-  .bcol.c{justify-content:center}
-  .champ{padding:34px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
-  .champ .trophy svg{width:80px;height:80px;stroke:#e0a800;fill:none;stroke-width:1.6}
-  .champ .cn{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;text-transform:uppercase;line-height:1}.champ .cn.muted{color:var(--muted);font-size:30px}
+/* =========================================================
+     TELA MATA-MATA (quartas · semi · final)
+     ========================================================= */
+  .bracket{position:relative;width:1824px;height:664px}
+  .bracket svg.lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+  .bracket .ln{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
+  .bracket .ln.won{opacity:1;stroke-width:4}
+  .bracket .nd{fill:var(--surface-hi);stroke:var(--accent);stroke-width:3}
+  .mbox{position:absolute;border-radius:30px;background:linear-gradient(145deg,var(--surface-hi),var(--surface));box-shadow:var(--raised);
+        padding:40px 16px 18px;display:flex;flex-direction:column}
+  .mtab{position:absolute;left:50%;top:-16px;transform:translateX(-50%);white-space:nowrap;padding:8px 20px;border-radius:30px;
+        background:linear-gradient(90deg,var(--accent-2),var(--accent));color:#fff;font-size:14px;font-weight:600;letter-spacing:2.5px;
+        text-transform:uppercase;box-shadow:0 8px 18px rgba(11,42,143,.35)}
+  .mteam{flex:1;display:grid;grid-template-columns:54px minmax(0,1fr) 48px;align-items:center;gap:10px;padding:0 8px;border-radius:22px;transition:.5s}
+  .mteam .mlogo{width:54px;height:54px;border-radius:50%;background:var(--surface-hi);box-shadow:var(--raised-sm)}
+  .mteam .mlogo .ph{border-radius:50%;font-size:0;gap:0}
+  .mteam .mlogo img{border-radius:50%}
+  .mteam .mname{font-size:20px;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mteam .morig{font-size:12.5px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+  .mteam .msc{width:48px;height:48px;border-radius:50%;box-shadow:var(--pressed-sm);display:flex;align-items:center;justify-content:center;
+              font-size:24px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+  .mteam.tbd .mname{color:var(--muted);font-weight:500}
+  .mteam.win{box-shadow:var(--pressed-sm)}
+  .mteam.win .msc{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(11,42,143,.45)}
+  .mteam.lose{opacity:.5}
+  .mx{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:16px;font-weight:600;margin:6px 0}
+  .mx::before,.mx::after{content:"";flex:1;height:2px;border-radius:2px;background:var(--line)}
+  .mfoot{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted);letter-spacing:1.5px;
+         text-transform:uppercase;margin-top:10px;padding:0 6px}
+  .mfoot .live{color:var(--accent-2);font-weight:600;display:flex;align-items:center;gap:6px}
+  .mfoot .live .dot{width:8px;height:8px}
+  /* final */
+  .mbox.final{padding:44px 30px 24px;align-items:stretch}
+  .final .trophy{width:120px;height:120px;margin:0 auto 6px;position:relative}
+  .final .trophy .arc{position:absolute;inset:10px;border-radius:50%;box-shadow:var(--raised-sm);
+                      background:conic-gradient(var(--accent) 0 72%, var(--accent-soft) 72% 100%)}
+  .final .trophy .in{position:absolute;inset:22px;border-radius:50%;background:var(--surface-hi);display:flex;align-items:center;justify-content:center}
+  .final .trophy svg{width:40px;height:40px;stroke:var(--accent-2);fill:none;stroke-width:1.8}
+  .final .ttl{text-align:center;font-size:44px;font-weight:800;letter-spacing:10px;line-height:1;margin:4px 0 14px;padding-left:10px;
+              background:linear-gradient(90deg,var(--accent-2),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .final .mteam{grid-template-columns:70px minmax(0,1fr) 58px}
+  .final .mteam .mlogo{width:70px;height:70px}
+  .final .mteam .mname{font-size:24px}
+  .final .mteam .msc{width:58px;height:58px;font-size:28px}
+  .champ{margin-top:14px;border-radius:24px;box-shadow:var(--pressed-sm);padding:12px 16px;display:flex;align-items:center;gap:14px}
+  .champ .mlogo{width:50px;height:50px;border-radius:50%;background:var(--surface-hi);box-shadow:var(--raised-sm);flex:none}
+  .champ .mlogo .ph{border-radius:50%;font-size:0;gap:0}
+  .champ .lbl{font-size:12px;letter-spacing:3px;color:var(--accent-2);font-weight:600;text-transform:uppercase}
+  .champ .nm{font-size:22px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* =========================================================
+     TELA CAMPEÃO (só aparece com a final encerrada)
+     ========================================================= */
+  .champion{position:relative;width:100%;height:100%;overflow:hidden;border-radius:var(--radius-xl)}
+  .champion .bgword{position:absolute;left:0;right:0;bottom:-70px;text-align:center;font-size:250px;font-weight:800;letter-spacing:20px;
+        line-height:1;color:transparent;-webkit-text-stroke:2px rgba(27,82,224,.22);pointer-events:none;white-space:nowrap}
+  .champion .headline{position:absolute;left:0;right:0;top:22px;text-align:center;font-size:180px;font-weight:800;letter-spacing:14px;line-height:1;
+        padding-left:14px;background:linear-gradient(180deg,#4d86ff 0%,var(--accent) 45%,var(--accent-2) 100%);
+        -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 10px 18px rgba(11,42,143,.25))}
+  .champion .glow{position:absolute;left:50%;top:44%;width:760px;height:760px;margin:-380px 0 0 -380px;border-radius:50%;
+        background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(189,208,255,.55) 35%,transparent 68%);animation:breathe 4s ease-in-out infinite}
+  @keyframes breathe{50%{transform:scale(1.06);opacity:.85}}
+  .champion .rays{position:absolute;left:50%;top:46%;width:1400px;height:1400px;margin:-700px 0 0 -700px;opacity:.35;
+        background:repeating-conic-gradient(from 0deg,rgba(27,82,224,.18) 0 4deg,transparent 4deg 14deg);
+        -webkit-mask:radial-gradient(circle,#000 10%,transparent 55%);mask:radial-gradient(circle,#000 10%,transparent 55%);animation:spin 60s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .champion .trophy-wrap{position:absolute;left:50%;top:140px;width:300px;margin-left:-150px;display:flex;flex-direction:column;align-items:center}
+  .champion .trophy-svg{width:240px;height:290px;filter:drop-shadow(0 22px 26px rgba(11,42,143,.35))}
+  .champion .pedestal{width:240px;height:60px;margin-top:-8px;border-radius:18px;background:linear-gradient(145deg,var(--surface-hi),var(--surface));
+        box-shadow:var(--raised);display:flex;align-items:center;justify-content:center}
+  .champion .plaque{padding:8px 18px;border-radius:10px;background:linear-gradient(90deg,var(--accent-2),var(--accent));color:#fff;
+        font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;white-space:nowrap}
+  .pennant{position:absolute;top:170px;width:270px;display:flex;flex-direction:column;align-items:center}
+  .pennant.l{left:250px}.pennant.r{right:250px}
+  .pennant .pole{width:310px;height:22px;border-radius:12px;background:linear-gradient(180deg,#f7fafb,#c6d2ee);box-shadow:var(--raised-sm);position:relative;z-index:2}
+  .pennant .pole::before,.pennant .pole::after{content:"";position:absolute;top:-4px;width:30px;height:30px;border-radius:50%;
+        background:radial-gradient(circle at 35% 30%,#4d86ff,var(--accent-2));box-shadow:var(--raised-sm)}
+  .pennant .pole::before{left:-14px}.pennant .pole::after{right:-14px}
+  .pennant .flag{width:270px;height:360px;margin-top:-8px;padding:44px 26px 70px;display:flex;flex-direction:column;align-items:center;gap:20px;
+        background:linear-gradient(160deg,var(--surface-hi),var(--surface));box-shadow:var(--raised);
+        clip-path:polygon(0 0,100% 0,100% 82%,50% 100%,0 82%);animation:sway 5s ease-in-out infinite;transform-origin:top center}
+  .pennant.r .flag{animation-delay:-2.5s}
+  @keyframes sway{50%{transform:rotate(1.2deg)}}
+  .pennant .flag .logo{width:170px;height:170px;border-radius:50%;background:var(--surface-hi);box-shadow:var(--raised-sm), 0 0 0 8px var(--surface-hi)}
+  .pennant .flag .logo .ph{border-radius:50%}
+  .pennant .flag .logo img{object-fit:contain;border-radius:50%}
+  .pennant .flag .tag{font-size:15px;font-weight:700;letter-spacing:4px;text-transform:uppercase;padding:8px 18px;border-radius:30px;box-shadow:var(--pressed-sm);color:var(--muted)}
+  .pennant.l .flag .tag{background:var(--accent);color:#fff;box-shadow:0 6px 14px rgba(11,42,143,.4)}
+  .pennant .flag .tn{font-size:24px;font-weight:700;text-align:center;line-height:1.15;max-width:220px}
+  .pennant.r{opacity:.75}
+  .champion .ribbon{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:12px}
+  .champion .ribbon .name{padding:10px 70px;font-size:44px;font-weight:800;letter-spacing:3px;color:#fff;white-space:nowrap;
+        background:linear-gradient(90deg,transparent 0,var(--accent-2) 12%,var(--accent) 50%,var(--accent-2) 88%,transparent 100%);
+        text-shadow:0 3px 10px rgba(0,0,0,.15)}
+  .champion .ribbon .meta{padding:8px 26px;border-radius:30px;font-size:18px;font-weight:600;color:var(--text);
+        background:var(--surface-hi);box-shadow:var(--raised-sm);white-space:nowrap}
+  .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .confetti i{position:absolute;top:-30px;width:12px;height:20px;border-radius:3px;animation:fall linear infinite;opacity:.9}
+  @keyframes fall{to{transform:translateY(760px) rotate(540deg)}}
+
+  
   /* ===== RESULTADO FINAL DO JOGO ===== */
   #rf{position:absolute;inset:0;z-index:40;display:none;place-items:center;background:radial-gradient(circle at 50% 45%,rgba(11,42,143,.55),rgba(3,10,50,.9));backdrop-filter:blur(6px)}
   #rf.on{display:grid;animation:rfIn .6s ease both}
@@ -552,8 +633,13 @@
     </section>
 
     <!-- CHAVE DO MATA-MATA -->
-    <section class="screen" id="tela-chave" data-title="Mata-mata" data-sub="Chaveamento da fase final">
+    <section class="screen" id="tela-matamata" data-title="Rumo à final" data-sub="Quartas · Semifinal · Final">
       <div class="bracket" id="bracket"></div>
+    </section>
+
+    <!-- CAMPEÃO (só com a final encerrada) -->
+    <section class="screen" id="tela-campeao" data-title="Temos um campeão" data-sub="Supercopa AFC de Vôlei">
+      <div class="champion" id="champion"></div>
     </section>
 
     <!-- 3. ATLETAS DESTAQUE -->
@@ -612,12 +698,14 @@ const CONFIG = {
   telas: [
     { id: 'classificacao', duracao: 25, nome: 'Tabela',   icone: 'table'  },
     { id: 'agenda',        duracao: 22, nome: 'Agenda',   icone: 'calendar'},
+    { id: 'matamata',      duracao: 22, nome: 'Mata-mata',icone: 'bracket'},
+    { id: 'campeao',       duracao: 30, nome: 'Campeão',  icone: 'cup', soComCampeao: true },
     { id: 'destaques',     duracao: 18, nome: 'Destaques',icone: 'star'   },
     { id: 'patrocinadores',duracao: 16, nome: 'Apoio',    icone: 'grid'   },
-    { id: 'chave',         duracao: 20, nome: 'Chave',    icone: 'bracket'},
     { id: 'quiz',          duracao: 18, nome: 'Quiz',     icone: 'trophy' },
     { id: 'fotos',         duracao: 24, nome: 'Fotos',    icone: 'image'  },
   ],
+  campeaoEntraNaHora: true,    // ao sair o campeão, pula direto para essa tela
   atualizarDadosACada: 30,     // segundos — recarrega PAINEL_DATA (classificação em tempo real)
   fotosTrocaACada: 4,          // segundos — troca da foto em destaque
   patrocinadoresPorPagina: 8,  // grade da direita (4 x 2)
@@ -713,20 +801,32 @@ async function carregarDados(){
   // seleção feita no app de gestão (SC Admin): sem seleção, passam todas
   if(sel && Array.isArray(sel.ids)) fotos = fotos.filter(f=>sel.ids.includes(f.id));
 
-  // chave do mata-mata
+  // mata-mata (formato do design: timeA/timeB, placarA/placarB, vencedor 'A'|'B')
   const jm = id => jg.find(j=>String(j.id).toUpperCase()===id);
-  const lado = (j,k) => { const n = nome(j,k); const def = k==='c' ? j.casaDefinida!==false : j.visitanteDefinida!==false; const fim = j.status==='finalizado'||j.status==='wo';
-    return { nome:n, def, logo: def ? logo(n) : '', sets: fim ? (k==='c'?j.setsCasa:j.setsVisitante) : null, win: fim && j.vencedor && norm(j.vencedor)===norm(n) }; };
-  const mm = id => { const j = jm(id); return j ? { id, a:lado(j,'c'), b:lado(j,'v'), status:statusDe(j), hora:j.hora||'', data:j.data||'' } : null; };
-  const quartas = ['Q1','Q2','Q3','Q4'].map(mm).filter(Boolean), semis = ['SF1','SF2'].map(mm).filter(Boolean), final = mm('FINAL');
-  const campeaoJ = final && (final.a.win ? final.a : final.b.win ? final.b : null);
-  const chave = { ativa: quartas.some(m=>m.a.def||m.b.def) || semis.some(m=>m.a.def||m.b.def), quartas, semis, final, campeao: campeaoJ };
+  const tm2 = (j,k) => { const def = k==='c' ? j.casaDefinida!==false : j.visitanteDefinida!==false;
+    return def ? { nome:nome(j,k), logo:logo(nome(j,k)), origem:cid(nome(j,k)) } : { nome:'', logo:'', origem:nome(j,k) }; };
+  const mm = id => { const j = jm(id); if(!j) return null;
+    const st = statusDe(j), fim = st==='encerrado', A = nome(j,'c'), B = nome(j,'v');
+    const vA = fim && j.vencedor && norm(j.vencedor)===norm(A), vB = fim && j.vencedor && norm(j.vencedor)===norm(B);
+    const q = /principal/i.test(j.quadra||'') ? 'Quadra principal' : /altern/i.test(j.quadra||'') ? 'Quadra alternativa' : '';
+    const dt = j.data ? String(j.data).split('-').reverse().slice(0,2).join('/') : '';
+    return { id, timeA:tm2(j,'c'), timeB:tm2(j,'v'), placarA:(fim||st==='ao_vivo')?(j.setsCasa||0):null, placarB:(fim||st==='ao_vivo')?(j.setsVisitante||0):null,
+      status:st, vencedor: vA?'A':vB?'B':null, hora:j.hora||'', data:dt, quadra:q }; };
+  const mataMata = { quartas:['Q1','Q2','Q3','Q4'].map(mm).filter(Boolean), semis:['SF1','SF2'].map(mm).filter(Boolean), final:mm('FINAL')||{} };
+  if(new URLSearchParams(location.search).get('demoCampeao')==='1'){
+    const ns = grupos.flatMap(g=>g.times.map(x=>x.nome)).slice(0,8);
+    const T = n => ({nome:n||'Time',logo:logo(n),origem:cid(n)});
+    const F = (a,b,pa,pb,x)=>Object.assign({timeA:T(a),timeB:T(b),placarA:pa,placarB:pb,status:'encerrado',vencedor:pa>pb?'A':'B',hora:'',data:'28/11',quadra:'Quadra principal'},x||{});
+    mataMata.quartas=[F(ns[0],ns[1],2,0),F(ns[2],ns[3],2,1),F(ns[4],ns[5],0,2),F(ns[6],ns[7],2,1)];
+    mataMata.semis=[F(ns[0],ns[2],2,1,{data:'29/11'}),F(ns[5],ns[6],2,0,{data:'29/11'})];
+    mataMata.final=F(ns[0],ns[5],3,1,{data:'29/11 · 16h'});
+  }
   window.__TM = TM;
   return {
     evento:{ nome:'Supercopa AFC de Vôlei', status: haVivo ? 'Ao vivo · Afonso Cláudio' : 'Afonso Cláudio · 28 e 29 de novembro',
       logo:SITE+'novo/logo-azul.png', appQrcode:qr(APP), appLink:'supercopaafc.com.br', appChamada:'Baixe o app da Supercopa',
       logosRodape:[ {nome:'Prefeitura',logo:SITE+'novo/parceiros/prefeitura-afonso-claudio.png'}, {nome:'ICM',logo:SITE+'novo/parceiros/instituto-cultural-das-montanhas.png'} ] },
-    grupos, patrocinadores, destaques, agenda, quiz, fotos, chave };
+    grupos, patrocinadores, destaques, agenda, quiz, fotos, mataMata };
 }
 
 /* =============================================================================
@@ -744,6 +844,7 @@ const ICONS = {
   grid:  '<svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="1.6"/><circle cx="17" cy="7" r="1.6"/><circle cx="7" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/><circle cx="12" cy="12" r="1.6"/></svg>',
   trophy:'<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/></svg>',
   calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/></svg>',
+  cup:'<svg viewBox="0 0 24 24"><path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 5M17 6h3a3 3 0 0 1-3 5M12 15v3M8 21h8M9 18h6"/></svg>',
   bracket:'<svg viewBox="0 0 24 24"><path d="M3 5h5v5H3zM3 14h5v5H3zM16 9.5h5v5h-5zM8 7.5h3v9H8M11 12h5"/></svg>',
   court:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/><circle cx="12" cy="12" r="2.5"/></svg>',
   image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>',
@@ -902,18 +1003,131 @@ function renderDestaques(d){
     </div>`).join('');
 }
 
-function renderChave(d){
-  const c = d.chave; if(!c || !c.ativa){ $('#bracket').innerHTML=''; return; }
-  const lado = (t,ganha) => `<div class="bt ${t.win?'win':''} ${ganha&&!t.win?'lose':''}"><div class="blogo imgbox">${t.def?img(t.logo,'logo',''):''}</div><div class="bn">${esc(t.nome)}</div><div class="bs">${t.sets==null?'':t.sets}</div></div>`;
-  const card = (m,rot) => m ? `<div class="bm ${m.status==='ao_vivo'?'live':''}"><div class="bh"><span>${rot}</span><span>${m.status==='ao_vivo'?'<i class="dot"></i>Ao vivo':esc(m.hora)}</span></div>${lado(m.a, m.a.win||m.b.win)}${lado(m.b, m.a.win||m.b.win)}</div>` : '';
-  $('#bracket').innerHTML = `
-    <div class="bcol q"><div class="label">Quartas de final</div>${c.quartas.map((m,i)=>card(m,'Quarta '+(i+1))).join('')}</div>
-    <div class="bcol s"><div class="label">Semifinais</div>${c.semis.map((m,i)=>card(m,'Semifinal '+(i+1))).join('')}</div>
-    <div class="bcol f"><div class="label">Grande final</div>${card(c.final,'Final')}</div>
-    <div class="bcol c"><div class="champ card"><div class="label">Campeão</div>
-      <div class="trophy">${ICONS.trophy}</div>
-      ${c.campeao ? `<div class="blogo big imgbox">${img(c.campeao.logo,'logo','')}</div><div class="cn">${esc(c.campeao.nome)}</div>` : `<div class="cn muted">A definir</div>`}</div></div>`;
+/* ---------- Mata-mata ----------
+   Posições fixas no palco (área 1824 x 664). Q = quartas, S = semi, F = final */
+const BK = {
+  Q: { w:300, h:296, pos:[[0,8],[0,360],[1524,8],[1524,360]] },
+  S: { w:300, h:296, pos:[[372,184],[1152,184]] },
+  F: { w:384, h:640, x:720, y:12 },
+};
+function mTeam(t, sc, cls, slot){
+  t = t || {};
+  const tbd = !t.nome;
+  return `<div class="mteam ${cls} ${tbd?'tbd':''}">
+    <div class="mlogo imgbox" data-slot="${slot}.logo">${img(t.logo,'logo','')}</div>
+    <div style="min-width:0"><div class="mname" data-slot="${slot}.nome">${esc(t.nome||'A definir')}</div>
+      <div class="morig" data-slot="${slot}.origem">${esc(t.origem||'')}</div></div>
+    <div class="msc">${sc ?? '–'}</div></div>`;
 }
+function mBox(m, fase, i, x, y, w, h, extra=''){
+  m = m || {};
+  const done = m.status==='encerrado', live = m.status==='ao_vivo';
+  const v = done ? m.vencedor : null;
+  const base = fase==='final' ? 'mataMata.final' : `mataMata.${fase}[${i}]`;
+  const tab = fase==='final' ? (m.data||'Final') : `${fase==='quartas'?'Quartas':'Semi'} ${i+1}${m.data?' · '+m.data:''}`;
+  const st = live ? '<span class="live"><span class="dot"></span>Ao vivo</span>' : done ? '<span>Encerrado</span>' : `<span>${esc(m.hora||'')}</span>`;
+  return `<div class="mbox ${fase==='final'?'final':''}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">
+    <div class="mtab" data-slot="${base}.data">${esc(tab)}</div>
+    ${extra}
+    ${mTeam(m.timeA, (done||live)?m.placarA:null, v==='A'?'win':v==='B'?'lose':'', base+'.timeA')}
+    <div class="mx">×</div>
+    ${mTeam(m.timeB, (done||live)?m.placarB:null, v==='B'?'win':v==='A'?'lose':'', base+'.timeB')}
+    ${fase!=='final' ? `<div class="mfoot"><span data-slot="${base}.quadra">${esc(m.quadra||'')}</span>${st}</div>` : ''}
+  </div>`;
+}
+function renderMataMata(d){
+  const mm = d.mataMata || {}, q = mm.quartas||[], sf = mm.semis||[], f = mm.final||{};
+  const {Q,S,F} = BK;
+  const yMid = (y,h)=>y+h/2;
+  // linhas de ligação (ficam em destaque quando o jogo de origem já tem vencedor)
+  const won = m => m && m.status==='encerrado' && m.vencedor;
+  const L = [];
+  const sx1 = S.pos[0][0], sx2 = S.pos[1][0]+S.w;
+  const sy = S.pos[0][1], sTop = sy+S.h*0.36, sBot = sy+S.h*0.70;
+  // quartas -> semis
+  [[0,0,'L',sTop],[1,0,'L',sBot],[2,1,'R',sTop],[3,1,'R',sBot]].forEach(([qi,si,side,ty])=>{
+    const [x,y]=Q.pos[qi], my=yMid(y,Q.h);
+    if(side==='L'){ const x0=x+Q.w, xm=(x0+sx1)/2;
+      L.push([`M${x0} ${my} H${xm-14} Q${xm} ${my} ${xm} ${my+(ty>my?14:-14)} V${ty+(ty>my?-14:14)} Q${xm} ${ty} ${xm+14} ${ty} H${sx1}`, won(q[qi])]); }
+    else { const x0=x, xm=(sx2+x0)/2;
+      L.push([`M${x0} ${my} H${xm+14} Q${xm} ${my} ${xm} ${my+(ty>my?14:-14)} V${ty+(ty>my?-14:14)} Q${xm} ${ty} ${xm-14} ${ty} H${sx2}`, won(q[qi])]); }
+  });
+  // semis -> final
+  const fy = F.y+F.h*0.5;
+  L.push([`M${S.pos[0][0]+S.w} ${yMid(sy,S.h)} H${F.x}`, won(sf[0])]);
+  L.push([`M${S.pos[1][0]} ${yMid(sy,S.h)} H${F.x+F.w}`, won(sf[1])]);
+  const svg = `<svg class="lines" viewBox="0 0 1824 664">${L.map(([dd,w])=>`<path class="ln ${w?'won':''}" d="${dd}"/>`).join('')}</svg>`;
+
+  const champ = (f.status==='encerrado' && f.vencedor) ? (f.vencedor==='A'?f.timeA:f.timeB) : null;
+  const trophy = `<div class="trophy"><div class="arc"></div><div class="in">${ICONS.cup}</div></div><div class="ttl">FINAL</div>`;
+  let html = svg;
+  q.slice(0,4).forEach((m,i)=>{ const [x,y]=Q.pos[i]; html += mBox(m,'quartas',i,x,y,Q.w,Q.h); });
+  for(let i=0;i<4;i++) if(!q[i]){ const [x,y]=Q.pos[i]; html += mBox({},'quartas',i,x,y,Q.w,Q.h); }
+  [0,1].forEach(i=>{ const [x,y]=S.pos[i]; html += mBox(sf[i],'semis',i,x,y,S.w,S.h); });
+  html += mBox(f,'final',0,F.x,F.y,F.w,F.h,trophy).replace(/<\/div>\s*$/, `
+    <div class="champ" data-slot="mataMata.final.vencedor">
+      <div class="mlogo imgbox">${img(champ?.logo,'logo','')}</div>
+      <div style="min-width:0"><div class="lbl">Campeão</div><div class="nm">${esc(champ?.nome||'A definir')}</div></div>
+    </div>
+    <div class="mfoot"><span data-slot="mataMata.final.quadra">${esc(f.quadra||'')}</span><span data-slot="mataMata.final.hora">${f.status==='ao_vivo'?'Ao vivo':esc(f.hora||'')}</span></div>
+  </div>`);
+  $('#bracket').innerHTML = html;
+}
+
+/* ---------- Campeão ---------- */
+function getCampeao(d){
+  const f = (d && d.mataMata && d.mataMata.final) || {};
+  if(f.status!=='encerrado' || !f.vencedor) return null;
+  return { campeao: f.vencedor==='A'?f.timeA:f.timeB, vice: f.vencedor==='A'?f.timeB:f.timeA,
+           placar: f.vencedor==='A' ? `${f.placarA} x ${f.placarB}` : `${f.placarB} x ${f.placarA}`, final: f };
+}
+const TROPHY_SVG = `<svg class="trophy-svg" viewBox="0 0 200 250">
+  <defs>
+    <linearGradient id="tg" x1="0" x2="1"><stop offset="0" stop-color="#a87400"/><stop offset=".35" stop-color="#ffd34d"/><stop offset=".55" stop-color="#fff4c4"/><stop offset=".75" stop-color="#e0a800"/><stop offset="1" stop-color="#8a5d00"/></linearGradient>
+    <linearGradient id="tg2" x1="0" x2="1"><stop offset="0" stop-color="#9fb1ba"/><stop offset=".5" stop-color="#f4f8fa"/><stop offset="1" stop-color="#8fa2ac"/></linearGradient>
+  </defs>
+  <path d="M52 30 C18 30 14 78 58 96" fill="none" stroke="url(#tg)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M148 30 C182 30 186 78 142 96" fill="none" stroke="url(#tg)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M46 18 H154 V60 C154 104 128 128 100 130 C72 128 46 104 46 60 Z" fill="url(#tg)"/>
+  <ellipse cx="100" cy="18" rx="54" ry="8" fill="#ffe89a"/>
+  <path d="M100 52 l7 14 15 2 -11 10 3 15 -14 -7 -14 7 3 -15 -11 -10 15 -2z" fill="#fff" opacity=".9"/>
+  <path d="M88 130 H112 L108 170 H92 Z" fill="url(#tg2)"/>
+  <ellipse cx="100" cy="172" rx="30" ry="7" fill="url(#tg)"/>
+  <path d="M70 178 H130 L138 214 H62 Z" fill="url(#tg2)"/>
+  <rect x="54" y="212" width="92" height="20" rx="4" fill="url(#tg)"/>
+</svg>`;
+function confetti(n=46){
+  const cs=['#1b52e0','#0b2a8f','#bdd0ff','#ffffff','#4d86ff','#ffd34d'];
+  let h='';
+  for(let i=0;i<n;i++){
+    const l=Math.random()*100, dl=-Math.random()*8, du=5+Math.random()*6, w=8+Math.random()*8, c=cs[i%cs.length];
+    h+=`<i style="left:${l}%;width:${w}px;height:${w*1.6}px;background:${c};animation-duration:${du}s;animation-delay:${dl}s"></i>`;
+  }
+  return `<div class="confetti">${h}</div>`;
+}
+function renderCampeao(d){
+  const c = getCampeao(d);
+  if(!c){ $('#champion').innerHTML=''; return; }
+  const f = c.final, ev = d.evento||{};
+  $('#champion').innerHTML = `
+    <div class="rays"></div><div class="glow"></div>
+    <div class="headline">CAMPEÃO</div>
+    <div class="bgword">SUPERCOPA</div>
+    ${confetti()}
+    <div class="pennant l"><div class="pole"></div><div class="flag">
+      <div class="logo imgbox" data-slot="campeão = final.timeA|timeB (vencedor).logo">${img(c.campeao.logo,'logo','LOGO')}</div>
+      <div class="tag">Campeão</div><div class="tn" data-slot="campeão.nome">${esc(c.campeao.nome)}</div></div></div>
+    <div class="pennant r"><div class="pole"></div><div class="flag">
+      <div class="logo imgbox" data-slot="vice.logo">${img(c.vice.logo,'logo','LOGO')}</div>
+      <div class="tag">Vice</div><div class="tn" data-slot="vice.nome">${esc(c.vice.nome)}</div></div></div>
+    <div class="trophy-wrap">${TROPHY_SVG}
+      <div class="pedestal"><div class="plaque" data-slot="evento.edicao">${esc(ev.edicao || ev.nome || 'Supercopa')}</div></div></div>
+    <div class="ribbon">
+      <div class="name" data-slot="campeão.nome">${esc(c.campeao.nome)}</div>
+      <div class="meta" data-slot="mataMata.final (placar · data · quadra)">Final ${esc(c.placar)} · ${esc(f.data||'')} · ${esc(f.quadra||'')}</div>
+    </div>`;
+}
+
 function renderQuiz(d){
   const q = d.quiz || {}, rk = (q.ranking||[]);
   const max = Math.max(1, ...rk.map(r=>r.pontos||0));
@@ -967,7 +1181,7 @@ function renderFotos(d){
 function renderTudo(){
   if(!DATA) return;
   renderFixos(DATA); renderClassificacao(DATA); renderAgenda(DATA); renderPatrocinadores(DATA);
-  renderDestaques(DATA); renderChave(DATA); renderQuiz(DATA); renderFotos(DATA);
+  renderDestaques(DATA); renderMataMata(DATA); renderCampeao(DATA); renderQuiz(DATA); renderFotos(DATA);
 }
 
 /* =============================================================================
@@ -995,7 +1209,8 @@ function disponivel(id){
   if(id==='classificacao') return (d.grupos||[]).length>0;
   if(id==='destaques')     return (d.destaques||[]).length>0;
   if(id==='quiz')          return ((d.quiz||{}).ranking||[]).length>0;
-  if(id==='chave')         return !!(d.chave && d.chave.ativa);
+  if(id==='matamata'){ const m=d.mataMata||{}; return [].concat(m.quartas||[],m.semis||[],[m.final||{}]).some(x=>x&&((x.timeA&&x.timeA.nome)||(x.timeB&&x.timeB.nome))); }
+  if(id==='campeao')       return !!getCampeao(d);
   if(id==='fotos')         return (d.fotos||[]).length>0;
   return true;
 }
@@ -1141,8 +1356,16 @@ addEventListener('keydown', e=>{
 let mt; addEventListener('mousemove',()=>{document.body.classList.add('cursor');clearTimeout(mt);mt=setTimeout(()=>document.body.classList.remove('cursor'),2500)});
 
 /* ---------- Inicialização ---------- */
+function irCampeao(){
+  if(rfAtivo){ setTimeout(irCampeao,2000); return; }   // espera o cartão de resultado terminar
+  const k = CONFIG.telas.findIndex(t=>t.id==='campeao'); if(k>=0 && k!==cur){ paused=false; show(k,1); }
+}
 async function atualizar(){
-  try{ DATA = await carregarDados(); renderTudo(); }
+  try{
+    const tinha = DATA ? !!getCampeao(DATA) : null;
+    DATA = await carregarDados(); renderTudo();
+    if(tinha===false && CONFIG.campeaoEntraNaHora && getCampeao(DATA)) irCampeao();
+  }
   catch(err){ console.error('[Painel] falha ao carregar dados', err); }
 }
 window.addEventListener("load", async function init(){
