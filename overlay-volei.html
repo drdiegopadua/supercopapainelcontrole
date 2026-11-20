@@ -12,8 +12,9 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#fff}
 #board{position:absolute;opacity:0;transform:translateY(24px);transition:opacity .5s,transform .5s}
 #board.on{opacity:1;transform:none}
-.cab{display:flex;align-items:center;gap:16px;height:46px;padding:0 20px 0 12px;background:#071a5c;border-top:4px solid #f5b800;color:#ffd34d;font-weight:800;font-size:26px;letter-spacing:2px;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%);width:max-content}
-.cab img{height:34px}
+.cab{display:flex;align-items:center;gap:16px;height:62px;padding:0 24px 0 14px;background:#071a5c;border-top:4px solid #f5b800;color:#ffd34d;font-weight:800;font-size:26px;letter-spacing:2px;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%);width:max-content}
+.cab img{height:62px;margin:-8px 4px -8px 0;filter:drop-shadow(0 0 10px rgba(255,211,77,.55));animation:logoP 3.2s ease-in-out infinite}
+@keyframes logoP{50%{transform:scale(1.07);filter:drop-shadow(0 0 18px rgba(255,211,77,.9))}}
 .cab .set{background:#f5b800;color:#0b1a55;padding:2px 14px;font-size:24px}
 .lin{display:grid;grid-template-columns:76px 420px 38px 74px 120px;align-items:stretch;height:84px;background:linear-gradient(90deg,#071a5c,#0b2a8f);border-bottom:2px solid rgba(255,255,255,.12)}
 .lin:last-of-type{border-bottom:0}
@@ -85,8 +86,9 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 /* estilo FINO: uma faixa só, no topo ou embaixo */
 #board.fino{display:flex;align-items:stretch}
 #board.fino .cab{clip-path:none;height:auto;padding:0 18px;font-size:22px;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;border-top:0;border-left:5px solid #f5b800}
-#board.fino .cab img{height:26px}
-#board.fino .lin{height:84px;border-bottom:0;border-left:2px solid rgba(255,255,255,.15);grid-template-columns:76px 330px 34px 70px 112px}
+#board.fino .cab{display:grid;grid-template-columns:auto auto;column-gap:14px;row-gap:2px;align-content:center;justify-items:start}
+#board.fino .cab img{height:100px;margin:0;grid-row:1/4}
+#board.fino .lin{height:96px;border-bottom:0;border-left:2px solid rgba(255,255,255,.15);grid-template-columns:76px 330px 34px 70px 112px}
 #board.fino .nm{font-size:40px}#board.fino .rod{display:none}
 /* estilo MÍNIMO: só os dois times e os pontos */
 #board.minimo .cab,#board.minimo .rod{display:none}
