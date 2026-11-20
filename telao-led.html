@@ -84,9 +84,42 @@
 
   /* ---------- ÁREA DAS TELAS ---------- */
   .screens{position:absolute;left:48px;right:48px;top:148px;bottom:148px}
-  .screen{position:absolute;inset:0;opacity:0;transform:translateY(24px) scale(.985);
-          transition:opacity .8s ease, transform .8s ease;pointer-events:none}
-  .screen.active{opacity:1;transform:none}
+  /* ===== TRANSIÇÃO DE TELAS: cortina diagonal de luz (automático) e íris que abre a partir do botão clicado ===== */
+  @property --x{syntax:'<percentage>';inherits:true;initial-value:-20%}
+  @property --r{syntax:'<length>';inherits:true;initial-value:0px}
+  .screens{--cx:50%;--cy:100%;perspective:1800px}
+  .screen{position:absolute;inset:0;opacity:0;visibility:hidden;pointer-events:none}
+  .screen.active,.screen.leaving,.screen.entering{opacity:1;visibility:visible}
+  .screen.active{pointer-events:auto}
+  .screen.leaving{z-index:1;animation:saindo 1.05s cubic-bezier(.77,0,.18,1) forwards}
+  .screen.entering{z-index:2}
+  @keyframes saindo{to{transform:scale(.93);filter:blur(6px) saturate(.7);opacity:.35}}
+  .screens.t-wipe .screen.entering{clip-path:polygon(0 0,calc(var(--x) + 14%) 0,var(--x) 100%,0 100%)}
+  .screens.t-wipe.rev .screen.entering{clip-path:polygon(100% 0,calc(100% - var(--x) - 14%) 0,calc(100% - var(--x)) 100%,100% 100%)}
+  .screens.t-iris .screen.entering{clip-path:circle(var(--r) at var(--cx) var(--cy))}
+  .screens.t-wipe.go{animation:tx 1.05s cubic-bezier(.77,0,.18,1) forwards}
+  .screens.t-iris.go{animation:ti 1.15s cubic-bezier(.65,0,.2,1) forwards}
+  @keyframes tx{from{--x:-16%}to{--x:116%}}
+  @keyframes ti{from{--r:0px}to{--r:2500px}}
+  /* faixa de luz que acompanha a borda da cortina */
+  #wipe{position:absolute;top:-40px;bottom:-40px;left:calc(var(--x) + 7%);width:170px;margin-left:-85px;transform:skewX(-19deg);opacity:0;pointer-events:none;z-index:6;
+        background:linear-gradient(90deg,transparent,rgba(255,255,255,.95) 38%,#ffd34d 50%,#1b52e0 62%,transparent);
+        filter:blur(1.5px);box-shadow:0 0 70px 14px rgba(27,82,224,.55)}
+  .screens.t-wipe.go #wipe{opacity:1}
+  .screens.t-wipe.rev #wipe{left:calc(100% - var(--x) - 7%);transform:skewX(19deg)}
+  /* anel de luz da íris */
+  #ring{position:absolute;border-radius:50%;pointer-events:none;z-index:6;opacity:0;width:calc(var(--r)*2);height:calc(var(--r)*2);left:calc(var(--cx) - var(--r));top:calc(var(--cy) - var(--r));
+        border:7px solid rgba(255,255,255,.92);box-shadow:0 0 0 6px rgba(255,211,77,.8),0 0 90px 20px rgba(27,82,224,.65),inset 0 0 90px rgba(27,82,224,.5)}
+  .screens.t-iris.go #ring{opacity:1}
+  /* cartões entram em cascata, em perspectiva */
+  .screen.rise :is(.card,.row,.game,.stile,.thumb,.pod,.li){animation:rise .85s cubic-bezier(.2,.9,.2,1) both;animation-delay:calc(var(--k,0)*42ms + 380ms)}
+  @keyframes rise{from{opacity:0;transform:translateY(46px) rotateX(14deg) scale(.95);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+  .screen-title{animation:none}.screen-title.troca h2,.screen-title.troca p{animation:titIn .8s cubic-bezier(.2,.9,.2,1) both}.screen-title.troca p{animation-delay:.08s}
+  @keyframes titIn{from{opacity:0;transform:translateY(-18px);letter-spacing:22px;filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+  .nav .tab.off{opacity:.4;cursor:not-allowed}
+  .nav .tab{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+  .nav .tab:hover{transform:translateY(-3px)}.nav .tab:active{transform:scale(.94);box-shadow:var(--pressed-sm)}
+  body.cursor .nav .tab{cursor:pointer}
 
   .card{background:linear-gradient(145deg,var(--surface-hi),var(--surface));border-radius:var(--radius-xl);
         box-shadow:var(--raised);position:relative}
@@ -177,7 +210,7 @@
   .court-name{font-size:26px;font-weight:600}
   .court-sub{font-size:14px;color:var(--muted)}
   .games{display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;padding:4px 6px 14px;margin:0 -6px}
-  .game{flex:1 1 0;min-height:0;max-height:96px;display:grid;grid-template-columns:92px minmax(0,1fr) 116px minmax(0,1fr);align-items:center;gap:12px;
+  .game{flex:1 1 0;min-height:0;max-height:104px;display:grid;grid-template-columns:92px minmax(0,1fr) 150px minmax(0,1fr);align-items:center;gap:12px;
         padding:10px 18px;border-radius:24px;background:var(--surface);box-shadow:var(--raised-sm)}
   .game.live{box-shadow:var(--pressed-sm)}
   .game.done{opacity:.6}
@@ -196,7 +229,7 @@
   .game.live .score{color:var(--accent-2)}
   .game .vs{width:48px;height:48px;margin:0 auto;border-radius:50%;box-shadow:var(--pressed-sm);display:flex;align-items:center;justify-content:center;
             font-size:14px;font-weight:700;color:var(--muted)}
-  .game .fase{font-size:11.5px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .game .fase{display:inline-block;font-size:14.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:var(--surface-hi);padding:3px 12px;border-radius:14px;box-shadow:var(--pressed-sm);margin-top:7px;white-space:nowrap}
   .court .empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:18px}
   .appcard{padding:34px 30px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px}
   .appcard h3{font-size:28px;font-weight:700;line-height:1.15}
@@ -369,6 +402,7 @@
 
   <!-- ===================== TELAS ===================== -->
   <main class="screens">
+    <div id="wipe"></div><div id="ring"></div>
 
     <!-- 1. CLASSIFICAÇÃO -->
     <section class="screen" id="tela-classificacao" data-title="Classificação" data-sub="Fase de grupos · tempo real">
@@ -482,9 +516,9 @@ async function carregarDados(){
   const J = (a,p) => S(fetch(API+'?'+new URLSearchParams({action:a,...(p||{})}),{cache:'no-store'}).then(r=>r.json()));
   const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
   const qr = u => 'https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=0&data='+encodeURIComponent(u);
-  const [t, tm, ao, de, rk, gl, gj] = await Promise.all([
+  const [t, tm, ao, de, rk, gl, gj, sel] = await Promise.all([
     J('torneio',{modalidade:'volei'}), J('timesPublicos'), J('partidasAoVivo'), J('destaques'), J('ranking_quiz'), J('galeriaLista'),
-    S(fetch(SITE+'galeria/galeria.json',{cache:'no-store'}).then(r=>r.json()))
+    S(fetch(SITE+'galeria/galeria.json',{cache:'no-store'}).then(r=>r.json())), J('telaoFotos')
   ]);
   if(!t || !t.ok) throw new Error('torneio indisponível');
   // times: escudo e cidade
@@ -552,8 +586,10 @@ async function carregarDados(){
     link:'supercopaafc.com.br', premio:'O campeão será premiado no intervalo entre as semifinais', qrcode:qr(APP), ranking };
 
   // fotos: enviadas pelo app + galeria oficial
-  const fotos = [].concat(((gl&&gl.fotos)||[]).map(f=>({url:f.f,legenda:f.cap||'Supercopa AFC'})),
-                          ((gj&&gj.fotos)||[]).map(f=>({url:SITE+String(f.f).replace(/^\//,''),legenda:f.cap||'Supercopa AFC'})));
+  let fotos = [].concat(((gl&&gl.fotos)||[]).map(f=>({id:String(f.id),url:f.f,legenda:f.cap||'Supercopa AFC'})),
+                        ((gj&&gj.fotos)||[]).map(f=>({id:'s-'+f.id,url:SITE+String(f.f).replace(/^\//,''),legenda:f.cap||'Supercopa AFC'})));
+  // seleção feita no app de gestão (SC Admin): sem seleção, passam todas
+  if(sel && Array.isArray(sel.ids)) fotos = fotos.filter(f=>sel.ids.includes(f.id));
 
   return {
     evento:{ nome:'Supercopa AFC de Vôlei', status: haVivo ? 'Ao vivo · Afonso Cláudio' : 'Afonso Cláudio · 28 e 29 de novembro',
@@ -802,6 +838,13 @@ if(fixa){ const i = CONFIG.telas.findIndex(t=>t.id===fixa); if(i>=0){ cur=i; pau
 
 function buildNav(){
   $('#nav').innerHTML = CONFIG.telas.map((t,i)=>`<div class="tab" data-i="${i}">${ICONS[t.icone]}<span>${t.nome}</span></div>`).join('');
+  $('#nav').addEventListener('click', e=>{
+    const tab = e.target.closest('.tab'); if(!tab) return;
+    const i = +tab.dataset.i; if(i === cur) return;
+    if(!disponivel(CONFIG.telas[i].id)) return;
+    const r = tab.getBoundingClientRect(), w = document.querySelector('.screens').getBoundingClientRect(), sc = $('#stage').getBoundingClientRect().width/1920;
+    show(i, i>cur?1:-1, { x:(r.left+r.width/2-w.left)/sc, y:(r.top+r.height/2-w.top)/sc, rev:i<cur });
+  });
 }
 function disponivel(id){
   const d = DATA; if(!d) return true;
@@ -811,19 +854,38 @@ function disponivel(id){
   if(id==='fotos')         return (d.fotos||[]).length>0;
   return true;
 }
-function show(i, dir=1){
+function show(i, dir=1, origem=null){
   const n = CONFIG.telas.length; i = (i + n) % n;
+  const antes = i < cur && dir < 0 || (origem && origem.rev);
   for(let k=0; k<n && !disponivel(CONFIG.telas[i].id); k++) i = (i + dir + n) % n;
   cur = i;
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const prevEl = document.querySelector('.screen.active');
   const el = document.getElementById('tela-'+CONFIG.telas[cur].id);
-  el.classList.add('active');
   $('#screenTitle').textContent = el.dataset.title;
   $('#screenSub').textContent = el.dataset.sub;
-  document.querySelectorAll('#nav .tab').forEach((t,k)=>t.classList.toggle('on',k===cur));
+  document.querySelectorAll('#nav .tab').forEach((t,k)=>{t.classList.toggle('on',k===cur);t.classList.toggle('off',!disponivel(CONFIG.telas[k].id))});
   $('#nextLabel').textContent = 'Próxima: ' + CONFIG.telas[(cur+1)%CONFIG.telas.length].nome;
   if(CONFIG.telas[cur].id==='patrocinadores'){ if(sponsVisto) sponsPage++; sponsVisto = true; DATA && renderPatrocinadores(DATA); }
+  transicao(prevEl, el, origem, antes);
   t0 = performance.now();
+}
+let ttr = null;
+function transicao(prev, el, origem, antes){
+  const wrap = document.querySelector('.screens');
+  const tt = document.querySelector('.screen-title');
+  tt.classList.remove('troca'); void tt.offsetWidth; tt.classList.add('troca');
+  if(prev === el) return;
+  clearTimeout(ttr);
+  wrap.classList.remove('go','t-wipe','t-iris','rev');
+  document.querySelectorAll('.screen.leaving,.screen.entering').forEach(x=>x.classList.remove('leaving','entering'));
+  if(prev){ prev.classList.remove('active','rise'); prev.classList.add('leaving'); }
+  [...el.querySelectorAll('.card,.row,.game,.stile,.thumb,.pod,.li')].forEach((n,k)=>n.style.setProperty('--k',k));
+  el.classList.add('entering','rise');
+  if(!prev){ el.classList.remove('entering'); el.classList.add('active'); return; }
+  if(origem){ wrap.style.setProperty('--cx',origem.x+'px'); wrap.style.setProperty('--cy',origem.y+'px'); wrap.classList.add('t-iris'); }
+  else { wrap.classList.add('t-wipe'); if(antes) wrap.classList.add('rev'); }
+  void wrap.offsetWidth; wrap.classList.add('go');
+  ttr = setTimeout(()=>{ wrap.classList.remove('go','t-wipe','t-iris','rev'); el.classList.remove('entering'); el.classList.add('active'); document.querySelectorAll('.screen.leaving').forEach(x=>x.classList.remove('leaving')); }, 1200);
 }
 function tick(now){
   const dur = CONFIG.telas[cur].duracao*1000;

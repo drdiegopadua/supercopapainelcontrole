@@ -1415,6 +1415,17 @@ async function galeriaEnviar(d: Any) {
   if (error) { await sb.storage.from(GAL_BUCKET).remove([reg.f, reg.t]); return { ok: false, erro: error.message }; }
   return { ok: true, id, f: galUrl(reg.f), t: galUrl(reg.t) };
 }
+async function telaoFotos() {
+  const { data } = await sb.from("config").select("valor").eq("chave", "telao_fotos").maybeSingle();
+  const v: Any = (data && data.valor) || {};
+  return { ok: true, ids: Array.isArray(v.ids) ? v.ids : null };   // null = passam todas as fotos
+}
+async function telaoFotosSalvar(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const ids = Array.isArray(d.ids) ? d.ids.map((x: Any) => String(x).slice(0, 40)).slice(0, 500) : null;
+  await sb.from("config").upsert({ chave: "telao_fotos", valor: ids ? { ids } : {}, atualizado_em: new Date().toISOString() });
+  return { ok: true, ids };
+}
 async function galeriaRemover(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
   const { data: r } = await sb.from("galeria_fotos").select("f,t").eq("id", (d.id || "").toString()).maybeSingle();
@@ -1653,6 +1664,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "removerEquipe": return await removerEquipe(d);
     case "votarDestaque": return await votarDestaque(d);
     case "galeriaLista": return await galeriaLista();
+    case "telaoFotos": return await telaoFotos();
+    case "telaoFotosSalvar": return await telaoFotosSalvar(d);
     case "galeriaEnviar": return await galeriaEnviar(d);
     case "galeriaRemover": return await galeriaRemover(d);
     case "chat": return await chatListar(d);
