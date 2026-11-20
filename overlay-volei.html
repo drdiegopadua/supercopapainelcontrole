@@ -46,6 +46,42 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 @keyframes setchg{0%,100%{transform:none}30%{transform:scale(1.25) rotate(-2deg)}}
 .sv i.on{animation:saque 1.4s ease-in-out infinite}
 @keyframes saque{50%{transform:scale(1.35);box-shadow:0 0 22px #ffd34d}}
+/* ---- entrada em cascata ao aparecer ---- */
+#board.on .cab{animation:cabIn .7s cubic-bezier(.2,.9,.2,1) both}
+#board.on .lin:nth-of-type(1){animation:linIn .7s cubic-bezier(.2,.9,.2,1) .12s both}
+#board.on .lin:nth-of-type(2){animation:linIn .7s cubic-bezier(.2,.9,.2,1) .26s both}
+#board.on .rod{animation:linIn .6s ease .4s both}
+@keyframes cabIn{from{opacity:0;transform:translateX(-60px);clip-path:polygon(0 0,0 0,0 100%,0 100%)}}
+@keyframes linIn{from{opacity:0;transform:translateX(-90px)}}
+#board.on .esc img,#board.on .esc b{animation:escIn .8s cubic-bezier(.2,1.5,.4,1) .5s both}
+@keyframes escIn{from{transform:scale(0) rotate(-120deg)}}
+#board.on .nm{animation:nmIn .8s cubic-bezier(.2,.9,.2,1) .45s both}
+@keyframes nmIn{from{opacity:0;letter-spacing:12px}}
+/* brilho que passa pelas faixas */
+.lin{overflow:hidden}
+.lin::before{content:"";position:absolute;top:0;bottom:0;left:-30%;width:18%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-20deg);pointer-events:none;z-index:2;animation:shine 7s ease-in-out infinite 1.5s}
+.lin:nth-of-type(2)::before{animation-delay:1.9s}
+@keyframes shine{0%{left:-30%}22%,100%{left:130%}}
+.cab{position:relative}
+.cab::before{content:"";position:absolute;top:0;bottom:0;left:-30%;width:18%;background:linear-gradient(100deg,transparent,rgba(255,224,130,.4),transparent);transform:skewX(-20deg);animation:shine 7s ease-in-out infinite 1.2s}
+/* ponto marcado: brilho dourado na faixa e no nome */
+.lin.up{animation:glow 1.2s ease-out}
+@keyframes glow{0%{box-shadow:inset 0 0 0 0 rgba(255,211,77,0)}20%{box-shadow:inset 0 0 70px 0 rgba(255,211,77,.65)}100%{box-shadow:inset 0 0 0 0 rgba(255,211,77,0)}}
+.lin.up .nm{animation:nmhit 1s ease-out}
+@keyframes nmhit{0%{color:#ffd34d;transform:translateX(10px)}100%{color:#fff;transform:none}}
+.pt.flash::after{content:"";position:absolute;inset:0;border:4px solid #ffd34d;animation:anel .9s ease-out forwards;pointer-events:none}
+.pt{position:relative}
+@keyframes anel{from{opacity:1;transform:scale(.7)}to{opacity:0;transform:scale(1.35)}}
+/* ponto de set / ponto do jogo */
+.cab .sit{display:none;background:#e5484d;color:#fff;padding:2px 14px;font-size:22px;letter-spacing:3px;animation:sit 1s ease-in-out infinite}
+.cab .sit.on{display:inline-block}
+.cab .sit.jogo{background:#ffd34d;color:#0b1a55}
+@keyframes sit{50%{opacity:.55;transform:scale(1.06)}}
+/* faixa de destaque quando um set termina */
+#ban{position:absolute;left:0;bottom:100%;margin-bottom:10px;white-space:nowrap;padding:8px 26px;background:linear-gradient(90deg,#f5b800,#ffd34d);color:#0b1a55;font-weight:800;font-size:34px;letter-spacing:3px;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 16px) 100%,0 100%);opacity:0;transform:translateX(-120%)}
+#ban.on{animation:ban 4.5s cubic-bezier(.2,.9,.2,1) both}
+@keyframes ban{0%{opacity:1;transform:translateX(-120%)}12%,82%{opacity:1;transform:none}100%{opacity:0;transform:translateX(-30%)}}
+#board.topo #ban{bottom:auto;top:100%;margin:10px 0 0}
 /* estilo FINO: uma faixa só, no topo ou embaixo */
 #board.fino{display:flex;align-items:stretch}
 #board.fino .cab{clip-path:none;height:auto;padding:0 18px;font-size:22px;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;border-top:0;border-left:5px solid #f5b800}
@@ -61,10 +97,11 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 <body>
 <div id="stage">
  <div id="board">
-  <div class="cab"><img src="https://www.supercopaafc.com.br/novo/logo-branco.png" alt=""><span id="fase">Vôlei</span><span class="set" id="set">SET 1</span></div>
+  <div class="cab"><img src="https://www.supercopaafc.com.br/novo/logo-branco.png" alt=""><span id="fase">Vôlei</span><span class="set" id="set">SET 1</span><span class="sit" id="sit"></span></div>
   <div class="lin"><div class="esc" id="eA"></div><div class="nm" id="nA"></div><div class="sv"><i id="sA"></i></div><div class="st" id="vA">0</div><div class="pt" id="pA">0</div></div>
   <div class="lin"><div class="esc" id="eB"></div><div class="nm" id="nB"></div><div class="sv"><i id="sB"></i></div><div class="st" id="vB">0</div><div class="pt" id="pB">0</div></div>
   <div class="rod" id="rod"></div>
+  <div id="ban"></div>
  </div>
 </div>
 <script>
@@ -98,6 +135,15 @@ function mostra(e){
  set('pA',e.pontosCasa||0,true);set('pB',e.pontosVisitante||0,true);set('vA',e.setsCasa||0);set('vB',e.setsVisitante||0);
  $('sA').className=!fim&&e.sacando==='A'?'on':'';$('sB').className=!fim&&e.sacando==='B'?'on':'';
  var hs=(e.historicoSets||[]);$('rod').innerHTML=hs.map(function(s,i){return '<span>'+(i+1)+'º set <b>'+s.a+' x '+s.b+'</b></span>'}).join('');
+ // ponto de set / ponto do jogo (set decisivo = 3º, vai a 15; diferença de 2)
+ var alvo=(e.setAtual===3)?15:25,pa=e.pontosCasa||0,pb=e.pontosVisitante||0,lid=pa>pb?'A':pb>pa?'B':'',mx=Math.max(pa,pb),sit='',jogo=false;
+ if(!fim&&lid&&mx>=alvo-1&&mx>Math.min(pa,pb)){sit='PONTO DE SET';if((lid==='A'?e.setsCasa:e.setsVisitante)>=1){sit='PONTO DO JOGO';jogo=true}}
+ var se=$('sit');se.textContent=sit;se.classList.toggle('on',!!sit);se.classList.toggle('jogo',jogo);
+ // faixa quando um set é fechado (só depois do primeiro carregamento)
+ var sc=(e.setsCasa||0),sv=(e.setsVisitante||0);
+ if(ult.sc!==undefined&&(sc>ult.sc||sv>ult.sv)){var ban=$('ban');ban.textContent=fim?'Fim de jogo · '+(sc>sv?e.equipeCasa:e.equipeVisitante):'Set para '+(sc>ult.sc?e.equipeCasa:e.equipeVisitante);ban.classList.remove('on');void ban.offsetWidth;ban.classList.add('on')}
+ ult.sc=sc;ult.sv=sv;
+ board.classList.toggle('topo',POS.indexOf('topo')===0);
  board.classList.add('on');posiciona();
 }
 function quadras(){return get('torneio',{modalidade:'volei'}).then(function(t){(t.jogos||[]).forEach(function(j){QMAP[String(j.id).toUpperCase()]=String(j.quadra||'').toLowerCase()})}).catch(function(){})}
@@ -105,12 +151,16 @@ function escolhe(lista){ // jogo em andamento (filtra pela quadra, se ?quadra=pr
  var l=(lista||[]).filter(function(p){return p.status==='em_andamento'||p.status==='sets_completos'});
  if(QUA)l=l.filter(function(p){return (QMAP[String(p.id).toUpperCase()]||'').indexOf(QUA)>=0});
  l.sort(function(a,b){return String(b.atualizadoEm||'')>String(a.atualizadoEm||'')?1:-1});return l[0]&&l[0].id}
-var DEMO_E=[{equipeCasa:'Alpha Vôlei',equipeVisitante:'CT das Montanhas',setAtual:2,pontosCasa:14,pontosVisitante:11,setsCasa:1,setsVisitante:0,sacando:'A',historicoSets:[{a:25,b:21}],status:'em_andamento'}];
+var DEMO_E=[{equipeCasa:'Alpha Vôlei',equipeVisitante:'CT das Montanhas',setAtual:2,pontosCasa:21,pontosVisitante:19,setsCasa:1,setsVisitante:0,sacando:'A',historicoSets:[{a:25,b:21}],status:'em_andamento'}];
 function testeAoVivo(){ // jogos de teste da súmula não entram na lista ao vivo: procura TESTE1..TESTE4
  var ids=['TESTE1','TESTE2','TESTE3','TESTE4'];
  return Promise.all(ids.map(function(i){return get('partida',{id:i}).then(function(r){return r&&r.ok&&r.estado&&r.estado.status==='em_andamento'?i:null}).catch(function(){return null})})).then(function(l){return l.filter(Boolean)[0]})}
 function ciclo(){
- if(DEMO){var e=DEMO_E[0];e.pontosCasa+=Math.random()<.5?1:0;e.pontosVisitante+=Math.random()<.5?1:0;e.sacando=Math.random()<.5?'A':'B';return mostra(e)}
+ if(DEMO){var e=DEMO_E[0],r=Math.random()<.55;if(r)e.pontosCasa++;else e.pontosVisitante++;e.sacando=r?'A':'B';
+  var al=e.setAtual===3?15:25,m=Math.max(e.pontosCasa,e.pontosVisitante);
+  if(m>=al&&Math.abs(e.pontosCasa-e.pontosVisitante)>=2){if(e.pontosCasa>e.pontosVisitante)e.setsCasa++;else e.setsVisitante++;e.historicoSets.push({a:e.pontosCasa,b:e.pontosVisitante});e.pontosCasa=e.pontosVisitante=0;e.setAtual++;if(e.setsCasa>=2||e.setsVisitante>=2){e.status='finalizada'}}
+  if(e.status==='finalizada'&&!DEMO_E.f){DEMO_E.f=Date.now()}else if(DEMO_E.f&&Date.now()-DEMO_E.f>8000){DEMO_E[0]={equipeCasa:'Alpha Vôlei',equipeVisitante:'CT das Montanhas',setAtual:1,pontosCasa:18,pontosVisitante:20,setsCasa:0,setsVisitante:0,sacando:'A',historicoSets:[],status:'em_andamento'};DEMO_E.f=0}
+  return mostra(e)}
  var p=ID?Promise.resolve(ID):Q.has('teste')?testeAoVivo():get('partidasAoVivo').then(function(r){return escolhe(r.partidas)});
  return p.then(function(id){if(!id)return mostra(null);return get('partida',{id:id}).then(function(r){mostra(r&&r.ok?r.estado:null)})}).catch(function(){})
 }
