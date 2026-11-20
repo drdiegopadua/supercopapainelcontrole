@@ -1415,6 +1415,20 @@ async function galeriaEnviar(d: Any) {
   if (error) { await sb.storage.from(GAL_BUCKET).remove([reg.f, reg.t]); return { ok: false, erro: error.message }; }
   return { ok: true, id, f: galUrl(reg.f), t: galUrl(reg.t) };
 }
+async function telaoAviso() {
+  const { data } = await sb.from("config").select("valor").eq("chave", "telao_aviso").maybeSingle();
+  const v: Any = (data && data.valor) || {};
+  const ativo = !!v.ativo && !!v.texto && (!v.ate || new Date() < new Date(v.ate));
+  return { ok: true, ativo, texto: v.texto || "", ate: v.ate || null };
+}
+async function telaoAvisoSalvar(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const texto = (d.texto || "").toString().trim().replace(/\s+/g, " ").slice(0, 220);
+  const min = parseInt(d.minutos) || 0;
+  const ate = d.ativo && min > 0 ? new Date(Date.now() + min * 60000).toISOString() : null;
+  await sb.from("config").upsert({ chave: "telao_aviso", valor: { texto, ativo: !!d.ativo && !!texto, ate }, atualizado_em: new Date().toISOString() });
+  return { ok: true, ...(await telaoAviso()) };
+}
 async function telaoFotos() {
   const { data } = await sb.from("config").select("valor").eq("chave", "telao_fotos").maybeSingle();
   const v: Any = (data && data.valor) || {};
@@ -1665,6 +1679,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "votarDestaque": return await votarDestaque(d);
     case "galeriaLista": return await galeriaLista();
     case "telaoFotos": return await telaoFotos();
+    case "telaoAviso": return await telaoAviso();
+    case "telaoAvisoSalvar": return await telaoAvisoSalvar(d);
     case "telaoFotosSalvar": return await telaoFotosSalvar(d);
     case "galeriaEnviar": return await galeriaEnviar(d);
     case "galeriaRemover": return await galeriaRemover(d);
