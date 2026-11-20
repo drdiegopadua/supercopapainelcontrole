@@ -11,4 +11,4 @@ create table if not exists vouchers (
 );
 alter table vouchers enable row level security;   -- só a função "api" lê e grava
 -- PIN de acesso do app da pizzaria (troque por outro se quiser)
-insert into config (chave, valor) values ('voucher_pizzaria_pin', '{"pin":"5381"}'::jsonb) on conflict (chave) do nothing;
+insert into config (chave, valor) values ('voucher_pizzaria_pin', '{"pin":"2026"}'::jsonb) on conflict (chave) do nothing;

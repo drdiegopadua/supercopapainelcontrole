@@ -2,68 +2,72 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Pizzaria Express · Vouchers</title>
+<title>Voucher Pizzaria Express · Supercopa</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#b3261e">
+<meta name="theme-color" content="#0b2a8f">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Express">
+<meta name="apple-mobile-web-app-title" content="Pizzaria">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;600;700&display=swap">
 <style>
-:root{--bg:#fff7f0;--ink:#1f1410;--mut:#7a6558;--red:#b3261e;--org:#e8590c;--card:#fff;--ok:#15803d;--okbg:#dcfce7}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
-body{padding:0 16px calc(24px + env(safe-area-inset-bottom,0px))}
-.top{display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) 0 12px}
-.top img{height:46px;background:#fff;border-radius:12px;padding:4px 8px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.top h1{margin:0;font:800 22px 'Barlow Condensed',sans-serif;letter-spacing:.5px;text-transform:uppercase;line-height:1}.top small{display:block;color:var(--mut);font-size:12px;margin-top:3px;font-weight:600}
-.top .out{margin-left:auto;border:0;background:none;color:var(--mut);font-size:13px;text-decoration:underline;padding:8px}
-.scan{width:100%;border:0;border-radius:22px;padding:20px;background:linear-gradient(135deg,var(--org),var(--red));color:#fff;font:800 26px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:14px;box-shadow:0 12px 28px rgba(190,60,20,.38);cursor:pointer}
-.scan svg{width:34px;height:34px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.sum{display:flex;gap:12px;margin:14px 0}.sum div{flex:1;background:var(--card);border-radius:18px;padding:12px 14px;box-shadow:0 4px 14px rgba(120,60,20,.1)}
-.sum b{display:block;font:800 34px 'Barlow Condensed',sans-serif;color:var(--red);line-height:1}.sum span{font-size:12px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:1px}
-h2{margin:18px 2px 8px;font:800 18px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut)}
-.eq{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:8px;box-shadow:0 3px 10px rgba(120,60,20,.08)}
+:root{--b1:#1b52e0;--b2:#0b2a8f;--b3:#071a5c;--gold:#ffd34d;--ink:#fff;--mut:#9fb2e8;--glass:rgba(255,255,255,.08);--line:rgba(255,255,255,.16);--ok:#22c55e;--no:#e5484d;--display:'Barlow Condensed','Arial Narrow',Impact,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:var(--ink);font-family:Barlow,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:radial-gradient(120% 70% at 85% -10%,#2a63f0 0%,transparent 55%),radial-gradient(100% 60% at -10% 110%,#1b3fb8 0%,transparent 50%),linear-gradient(180deg,#0b2a8f,#071a5c 60%,#050f3a);background-attachment:fixed;padding:0 16px calc(28px + env(safe-area-inset-bottom,0px))}
+.top{display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) 0 14px}
+.top .sc{height:50px}
+.top .tt{flex:1;min-width:0}
+.top h1{margin:0;font:800 24px var(--display);letter-spacing:1.5px;text-transform:uppercase;line-height:1}.top small{display:block;color:var(--gold);font-size:11px;margin-top:4px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.top .out{border:1px solid var(--line);background:var(--glass);color:var(--mut);font-size:12px;border-radius:30px;padding:8px 14px;font-weight:700}
+.par{display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:10px 16px;margin-bottom:14px;box-shadow:0 10px 26px rgba(0,0,0,.25)}
+.par img{height:46px}.par span{font-size:12px;font-weight:700;color:#475569;letter-spacing:1px;text-transform:uppercase;line-height:1.3}
+.scan{width:100%;border:0;border-radius:22px;padding:20px;background:linear-gradient(135deg,#ffe27a,var(--gold) 45%,#f5b800);color:#0b1a55;font:800 28px var(--display);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:14px;box-shadow:0 14px 30px rgba(245,184,0,.35),inset 0 1px 0 rgba(255,255,255,.7);cursor:pointer;position:relative;overflow:hidden}
+.scan:after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:22%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-20deg);animation:sh 4.5s ease-in-out infinite}@keyframes sh{0%,60%{left:-40%}100%{left:140%}}
+.scan svg{width:34px;height:34px;stroke:#0b1a55;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sum{display:flex;gap:12px;margin:14px 0}.sum div{flex:1;background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:12px 14px;backdrop-filter:blur(8px)}
+.sum b{display:block;font:800 38px var(--display);color:var(--gold);line-height:1}.sum span{font-size:11px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:1.5px}
+h2{margin:20px 2px 8px;font:800 17px var(--display);letter-spacing:2.5px;text-transform:uppercase;color:var(--mut)}
+.eq{display:flex;align-items:center;gap:12px;background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px;backdrop-filter:blur(8px)}
 .eq .n{flex:1;min-width:0;font-weight:700;font-size:17px}.eq small{display:block;font-weight:600;font-size:12px;color:var(--mut);margin-top:2px}
-.pz{display:flex;gap:6px}.pz i{width:30px;height:30px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:16px;filter:grayscale(1);opacity:.4}.pz i.on{background:var(--okbg);filter:none;opacity:1}
-.eq.full{background:#f0fdf4}
-.rec{font-size:14px;color:var(--mut);padding:2px 4px}.rec b{color:var(--ink)}
-/* login */
-.login{max-width:380px;margin:12vh auto 0;text-align:center}.login img{width:200px;background:#fff;border-radius:20px;padding:10px 16px;box-shadow:0 8px 22px rgba(0,0,0,.12)}
-.login h1{font:800 28px 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:16px 0 4px}.login p{color:var(--mut);margin:0 0 18px}
-.login input{width:100%;border:2px solid #f1d6c4;border-radius:16px;padding:16px;text-align:center;letter-spacing:14px;font-size:28px;font-weight:800;background:#fff}
-.login button{width:100%;margin-top:14px;border:0;border-radius:16px;padding:16px;font:800 18px Barlow,sans-serif;color:#fff;background:linear-gradient(135deg,var(--org),var(--red))}
-.err{color:var(--red);font-weight:700;margin-top:10px;min-height:20px}
-/* leitor */
+.pz{display:flex;gap:6px}.pz i{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:16px;filter:grayscale(1);opacity:.35}.pz i.on{background:rgba(34,197,94,.25);box-shadow:0 0 0 2px var(--ok);filter:none;opacity:1}
+.eq.full{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.5)}
+.rec{font-size:14px;color:var(--mut);padding:3px 4px}.rec b{color:#fff}
+.login{max-width:380px;margin:9vh auto 0;text-align:center}.login .sc{width:230px;max-width:70%}
+.login .par{justify-content:center;margin:18px auto 14px;width:max-content;max-width:100%}
+.login h1{font:800 30px var(--display);letter-spacing:1.5px;text-transform:uppercase;margin:6px 0 4px}.login p{color:var(--mut);margin:0 0 18px}
+.login input{width:100%;border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center;letter-spacing:14px;font-size:28px;font-weight:800;background:rgba(255,255,255,.1);color:#fff;outline:none}.login input:focus{border-color:var(--gold)}
+.login button{width:100%;margin-top:14px;border:0;border-radius:16px;padding:16px;font:800 20px var(--display);letter-spacing:1.5px;text-transform:uppercase;color:#0b1a55;background:linear-gradient(135deg,#ffe27a,var(--gold) 45%,#f5b800)}
+.err{color:#ff8a8d;font-weight:700;margin-top:10px;min-height:20px}
 #cam{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column}
 #cam.on{display:flex}#cam video{flex:1;width:100%;object-fit:cover}
-#cam .fr{position:absolute;left:50%;top:44%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border:4px solid #fff;border-radius:26px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)}
-#cam .fr:after{content:"";position:absolute;left:8px;right:8px;height:3px;background:var(--org);box-shadow:0 0 14px var(--org);animation:ln 2s ease-in-out infinite alternate}@keyframes ln{from{top:8px}to{top:calc(100% - 11px)}}
-#cam .bar{position:absolute;left:0;right:0;bottom:0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,rgba(0,0,0,.8));color:#fff;text-align:center}
-#cam .bar button{border:0;border-radius:14px;padding:13px 26px;font:700 16px Barlow,sans-serif;margin:8px 6px 0;background:#fff;color:#111}
+#cam .fr{position:absolute;left:50%;top:44%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border:4px solid var(--gold);border-radius:26px;box-shadow:0 0 0 100vmax rgba(5,15,58,.65)}
+#cam .fr:after{content:"";position:absolute;left:8px;right:8px;height:3px;background:var(--gold);box-shadow:0 0 14px var(--gold);animation:ln 2s ease-in-out infinite alternate}@keyframes ln{from{top:8px}to{top:calc(100% - 11px)}}
+#cam .bar{position:absolute;left:0;right:0;bottom:0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,rgba(5,15,58,.92));color:#fff;text-align:center}
+#cam .bar button{border:0;border-radius:14px;padding:13px 26px;font:800 17px var(--display);letter-spacing:1px;text-transform:uppercase;margin:8px 6px 0;background:#fff;color:#0b2a8f}
 #cam .bar input{width:100%;max-width:340px;border:0;border-radius:12px;padding:12px;font-size:16px;margin-top:8px;text-align:center}
-/* resultado */
 #res{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:#fff}
 #res.on{display:flex;animation:rIn .25s}@keyframes rIn{from{opacity:0;transform:scale(.96)}}
 #res.ok{background:linear-gradient(160deg,#16a34a,#065f2c)}#res.no{background:linear-gradient(160deg,#dc2626,#7f1111)}
 #res .ic{width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:80px;animation:pop .5s cubic-bezier(.2,1.6,.4,1)}@keyframes pop{from{transform:scale(0)}}
-#res h2{color:#fff;font:800 40px 'Barlow Condensed',sans-serif;letter-spacing:1px;margin:18px 0 6px;text-transform:uppercase}
-#res .eqn{font:800 34px 'Barlow Condensed',sans-serif;text-transform:uppercase}#res p{margin:8px 0 0;font-size:17px;opacity:.95}
-#res button{margin-top:30px;border:0;border-radius:16px;padding:16px 34px;font:800 20px Barlow,sans-serif;background:#fff;color:#111}
+#res h2{color:#fff;font:800 42px var(--display);letter-spacing:1.5px;margin:18px 0 6px;text-transform:uppercase}
+#res .eqn{font:800 36px var(--display);text-transform:uppercase;letter-spacing:1px}#res p{margin:8px 0 0;font-size:17px;opacity:.95}
+#res button{margin-top:30px;border:0;border-radius:16px;padding:16px 38px;font:800 22px var(--display);letter-spacing:1.5px;text-transform:uppercase;background:#fff;color:#0b2a8f}
 .hide{display:none!important}
 </style>
 </head>
 <body>
 <section id="login" class="login hide">
-  <img src="logo.png" alt="Pizzaria Express">
-  <h1>Vouchers Supercopa</h1><p>Digite o PIN da pizzaria</p>
+  <img class="sc" src="logo-supercopa.png" alt="Supercopa AFC">
+  <div class="par"><span>Parceria</span><img src="logo.png" alt="Pizzaria Express"></div>
+  <h1>Voucher das pizzas</h1><p>Digite o PIN da pizzaria</p>
   <input id="pin" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
   <div class="err" id="lerr"></div><button id="entrar">Entrar</button>
 </section>
 
 <section id="app" class="hide">
-  <div class="top"><img src="logo.png" alt=""><div><h1>Vouchers Supercopa</h1><small>2 pizzas por equipe</small></div><button class="out" id="sair">Sair</button></div>
+  <div class="top"><img class="sc" src="logo-supercopa.png" alt="Supercopa AFC"><div class="tt"><h1>Voucher das pizzas</h1><small>2 pizzas por equipe</small></div><button class="out" id="sair">Sair</button></div>
+  <div class="par"><img src="logo.png" alt="Pizzaria Express"><span>Pizzaria Express<br>patrocinadora da Supercopa</span></div>
   <button class="scan" id="ler"><svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M7 12h10"/></svg>Ler QR code</button>
   <div class="sum"><div><b id="tot">0</b><span>pizzas entregues</span></div><div><b id="eqf">0</b><span>equipes completas</span></div></div>
   <h2>Equipes</h2><div id="lista"></div>
