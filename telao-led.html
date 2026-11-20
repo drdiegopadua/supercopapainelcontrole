@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telão LED · Supercopa AFC de Vôlei</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<!--
+  ============================================================================
+  TELÃO LED 4 x 2 m — SUPERCOPA AFC DE VÔLEI
+  ----------------------------------------------------------------------------
+  • Palco fixo 1920 x 960 px (proporção 2:1 = 4 m x 2 m), escalado para
+    caber em qualquer resolução do player do LED.
+  • 5 telas em rodízio automático: classificação, patrocinadores,
+    atletas destaque, ranking do quiz e fotos do evento.
+  • TODOS os dados vêm do objeto PAINEL_DATA (mock no fim do arquivo).
+    Para o Claude Code: substituir a função carregarDados() pela fonte real
+    (Google Sheets / Apps Script) mantendo o mesmo formato de objeto.
+  • Cada ponto de dado está marcado com data-slot="caminho.no.objeto".
+    Tecla M liga/desliga a marcação visual (laranja tracejado).
+    Na URL: ?slots=0 desliga | ?tela=quiz abre fixo numa tela | ?pausa=1 para o rodízio.
+  • Teclas: ← → trocam de tela · Espaço pausa/retoma · M marcações · F tela cheia.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#e3ebfb;
+    --bg-2:#d3dff7;
+    --surface:#ecf1ff;
+    --surface-hi:#f7f9ff;
+    --shadow-dark:#b9c7e8;
+    --shadow-light:#ffffff;
+    --accent:#1b52e0;
+    --accent-2:#0b2a8f;
+    --accent-soft:#bdd0ff;
+    --gold:#ffd34d;
+    --text:#0a1640;
+    --muted:#6b7aa5;
+    --line:#dfe6f5;
+    --slot:#ff7a45;
+    --raised: 14px 14px 30px var(--shadow-dark), -14px -14px 30px var(--shadow-light);
+    --raised-sm: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+    --pressed: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+    --pressed-sm: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
+    --radius-xl:40px;
+    --radius-lg:28px;
+    --radius-md:20px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:#071a5c}
+  body{font-family:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--text);
+       display:flex;align-items:center;justify-content:center;cursor:none}
+  body.cursor{cursor:default}
+
+  /* ---------- PALCO 1920x960 ---------- */
+  #stage{width:1920px;height:960px;position:relative;flex:none;transform-origin:center center;
+         background:radial-gradient(1200px 700px at 15% 0%, #f2f7f9 0%, var(--bg) 55%, var(--bg-2) 100%);
+         overflow:hidden}
+  #stage::before{content:"";position:absolute;inset:0;pointer-events:none;
+         background:radial-gradient(700px 700px at 95% 110%, rgba(27,82,224,.16), transparent 70%)}
+
+  /* ---------- CABEÇALHO ---------- */
+  .top{position:absolute;left:48px;right:48px;top:30px;height:96px;display:flex;align-items:center;gap:28px;z-index:5}
+  .brand{display:flex;align-items:center;gap:22px;min-width:560px}
+  .brand-logo{width:84px;height:84px;border-radius:26px;background:var(--surface);box-shadow:var(--raised-sm);
+              display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .brand-logo img{width:100%;height:100%;object-fit:contain;padding:10px}
+  .brand h1{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:40px;font-weight:800;letter-spacing:.2px;line-height:1.1}
+  .brand .live{display:flex;align-items:center;gap:10px;font-size:18px;color:var(--muted);margin-top:6px}
+  .dot{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(27,82,224,.22);
+       animation:pulse 1.8s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 9px rgba(27,82,224,0)}}
+  .screen-title{flex:1;text-align:center}
+  .screen-title h2{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:800;letter-spacing:8px;text-transform:uppercase;color:var(--text)}
+  .screen-title p{font-size:17px;color:var(--muted);margin-top:4px}
+  .clock{min-width:600px;display:flex;justify-content:flex-end;align-items:center;gap:22px}
+  .clock .time{font-size:46px;font-weight:600;letter-spacing:1px;font-variant-numeric:tabular-nums}
+  .clock .date{font-size:17px;color:var(--muted);text-align:right;line-height:1.35}
+  .kebab{width:64px;height:64px;border-radius:50%;box-shadow:var(--raised-sm);background:var(--surface);
+         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+  .kebab i{width:6px;height:6px;border-radius:50%;background:var(--text)}
+
+  /* ---------- ÁREA DAS TELAS ---------- */
+  .screens{position:absolute;left:48px;right:48px;top:148px;bottom:148px}
+  .screen{position:absolute;inset:0;opacity:0;transform:translateY(24px) scale(.985);
+          transition:opacity .8s ease, transform .8s ease;pointer-events:none}
+  .screen.active{opacity:1;transform:none}
+
+  .card{background:linear-gradient(145deg,var(--surface-hi),var(--surface));border-radius:var(--radius-xl);
+        box-shadow:var(--raised);position:relative}
+  .pressed{box-shadow:var(--pressed);background:var(--surface)}
+  .label{font-size:15px;letter-spacing:4px;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+  /* ---------- RODAPÉ ---------- */
+  .bottom{position:absolute;left:48px;right:48px;bottom:26px;height:92px;display:flex;align-items:center;gap:36px;z-index:5}
+  .nav{display:flex;gap:14px}
+  .nav .tab{width:96px;height:84px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+            gap:8px;font-size:12.5px;color:var(--muted);background:var(--surface);box-shadow:var(--raised-sm);transition:.4s}
+  .nav .tab svg{width:26px;height:26px;stroke:var(--muted);fill:none;stroke-width:1.8}
+  .nav .tab.on{box-shadow:var(--pressed-sm);color:var(--accent-2);font-weight:600}
+  .nav .tab.on svg{stroke:var(--accent-2)}
+  .progress{flex:1;display:flex;flex-direction:column;gap:12px}
+  .progress .label{display:flex;justify-content:space-between}
+  .track{height:20px;border-radius:20px;box-shadow:var(--pressed-sm);background:var(--surface);position:relative}
+  .track .fill{position:absolute;left:4px;top:4px;bottom:4px;width:0;border-radius:20px;
+               background:linear-gradient(90deg,var(--accent-soft),var(--accent))}
+  .track .knob{position:absolute;top:50%;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;
+               background:var(--surface-hi);box-shadow:var(--raised-sm);display:flex;align-items:center;justify-content:center}
+  .track .knob::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--accent)}
+  .footer-logos{display:flex;align-items:center;gap:16px}
+  .footer-logos .flogo{width:150px;height:78px;border-radius:20px;background:var(--surface);box-shadow:var(--raised-sm);
+                       display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .footer-logos .flogo img{max-width:85%;max-height:75%;object-fit:contain}
+  .footer-logos .cap{font-size:12px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg)}
+
+  /* ---------- PLACEHOLDER DE IMAGEM ---------- */
+  .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;
+      color:var(--muted);font-size:13px;letter-spacing:3px;text-transform:uppercase;font-weight:600;
+      background:repeating-linear-gradient(135deg,rgba(143,160,170,.10) 0 12px,rgba(143,160,170,.03) 12px 24px)}
+  .ph svg{width:34%;max-width:70px;height:auto;stroke:var(--muted);fill:none;stroke-width:1.5;opacity:.7}
+  .imgbox{overflow:hidden;position:relative}
+  .imgbox>img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* =========================================================
+     TELA 1 — CLASSIFICAÇÃO
+     ========================================================= */
+  .groups{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;height:100%}
+  .group{padding:28px 18px 24px;display:flex;flex-direction:column}
+  .group-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .group-badge{display:flex;align-items:center;gap:16px}
+  .group-letter{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                font-size:34px;font-weight:700;color:#fff;
+                background:conic-gradient(var(--accent) 0 var(--p,75%), var(--accent-soft) var(--p,75%) 100%);
+                box-shadow:var(--raised-sm);position:relative}
+  .group-letter span{position:relative;z-index:1;width:54px;height:54px;border-radius:50%;background:var(--surface-hi);
+                     color:var(--text);display:flex;align-items:center;justify-content:center}
+  .group-name{font-size:24px;font-weight:600}
+  .group-sub{font-size:14px;color:var(--muted)}
+  .cols{display:grid;grid-template-columns:40px minmax(0,1fr) 44px 26px 26px 40px;gap:6px;padding:0 14px 10px;
+        font-size:13px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:center}
+  .cols span:nth-child(2){text-align:left}
+  .rows{display:flex;flex-direction:column;gap:16px;flex:1}
+  .row{display:grid;grid-template-columns:40px minmax(0,1fr) 44px 26px 26px 40px;gap:6px;align-items:center;
+       padding:12px 8px 12px 10px;border-radius:24px;background:var(--surface);box-shadow:var(--raised-sm);flex:1;
+       font-variant-numeric:tabular-nums;text-align:center;font-size:20px;transition:transform .6s}
+  .row.q{box-shadow:var(--pressed-sm)}
+  .row .pos{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;
+            box-shadow:var(--pressed-sm);color:var(--muted)}
+  .row.q .pos{background:linear-gradient(145deg,#2a6bff,var(--accent));color:#fff;box-shadow:0 4px 12px rgba(11,42,143,.4)}
+  .row .team{display:flex;align-items:center;gap:10px;text-align:left;min-width:0}
+  .row .tlogo{width:44px;height:44px;border-radius:50%;flex:none;background:var(--surface-hi);box-shadow:var(--raised-sm)}
+  .row .tlogo .ph{border-radius:50%;font-size:0;gap:0}
+  .row .tlogo img{border-radius:50%}
+  .row .tname{font-weight:700;font-size:20px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .tcity{font-size:13px;color:var(--muted);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .pts{font-size:30px;font-weight:700;color:var(--accent-2)}
+  .row .sm{color:var(--muted);font-size:18px}
+  .group-foot{margin-top:18px;display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--muted)}
+  .legend{display:flex;align-items:center;gap:8px}
+  .legend i{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+  .live-chip{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:30px;box-shadow:var(--pressed-sm);font-weight:500;color:var(--accent-2)}
+  .live-chip .dot{width:9px;height:9px}
+
+  /* =========================================================
+     TELA AGENDA DO DIA (2 quadras) + QR DO APP
+     ========================================================= */
+  .agenda{display:grid;grid-template-columns:1fr 1fr 340px;gap:36px;height:100%}
+  .court{padding:28px 30px 24px;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+  .court-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .court-badge{display:flex;align-items:center;gap:16px}
+  .court-icon{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+              background:conic-gradient(var(--accent) 0 var(--p,50%), var(--accent-soft) var(--p,50%) 100%);box-shadow:var(--raised-sm)}
+  .court-icon span{width:54px;height:54px;border-radius:50%;background:var(--surface-hi);display:flex;align-items:center;justify-content:center}
+  .court-icon svg{width:28px;height:28px;stroke:var(--accent-2);fill:none;stroke-width:1.8}
+  .court-name{font-size:26px;font-weight:600}
+  .court-sub{font-size:14px;color:var(--muted)}
+  .games{display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;padding:4px 6px 14px;margin:0 -6px}
+  .game{flex:1 1 0;min-height:0;max-height:96px;display:grid;grid-template-columns:92px minmax(0,1fr) 116px minmax(0,1fr);align-items:center;gap:12px;
+        padding:10px 18px;border-radius:24px;background:var(--surface);box-shadow:var(--raised-sm)}
+  .game.live{box-shadow:var(--pressed-sm)}
+  .game.done{opacity:.6}
+  .game .hora{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .game .st{font-size:11.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px}
+  .game.live .st{color:var(--accent-2);font-weight:600}
+  .game.live .st .dot{width:8px;height:8px}
+  .game .side{display:flex;align-items:center;gap:10px;min-width:0}
+  .game .side.b{flex-direction:row-reverse;text-align:right}
+  .game .glogo{width:46px;height:46px;border-radius:50%;flex:none;background:var(--surface-hi);box-shadow:var(--raised-sm)}
+  .game .glogo .ph{border-radius:50%;font-size:0;gap:0}
+  .game .glogo img{border-radius:50%}
+  .game .gname{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .game .mid{text-align:center}
+  .game .score{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);line-height:1}
+  .game.live .score{color:var(--accent-2)}
+  .game .vs{width:48px;height:48px;margin:0 auto;border-radius:50%;box-shadow:var(--pressed-sm);display:flex;align-items:center;justify-content:center;
+            font-size:14px;font-weight:700;color:var(--muted)}
+  .game .fase{font-size:11.5px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .court .empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:18px}
+  .appcard{padding:34px 30px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px}
+  .appcard h3{font-size:28px;font-weight:700;line-height:1.15}
+  .appcard p{font-size:16px;color:var(--muted);line-height:1.4}
+  .appcard .url{font-size:17px;font-weight:600;color:var(--accent-2)}
+  .appcard .feats{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:auto}
+  .appcard .feats span{font-size:13px;padding:8px 14px;border-radius:20px;box-shadow:var(--pressed-sm);color:var(--text)}
+  /* QR do app no cabeçalho (todas as telas) */
+  .hqr{display:flex;align-items:center;gap:14px}
+  .hqr .txt{font-size:14px;line-height:1.3;color:var(--muted);text-align:right}
+  .hqr .txt b{display:block;color:var(--accent-2);font-size:16px}
+  .hqr .box{width:92px;height:92px;border-radius:22px;box-shadow:var(--raised-sm);background:var(--surface);padding:9px}
+  .hqr .box .imgbox{width:100%;height:100%;border-radius:12px;background:#fff}
+  .hqr .box .ph{font-size:0;gap:0}
+
+  /* =========================================================
+     TELA 2 — PATROCINADORES
+     ========================================================= */
+  .spons{display:grid;grid-template-columns:620px 1fr;gap:40px;height:100%}
+  .master{padding:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+  .master .ringwrap{width:420px;height:420px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center}
+  .ringwrap .ticks{position:absolute;inset:0}
+  .ringwrap .arc{position:absolute;inset:34px;border-radius:50%;
+                 background:conic-gradient(from -40deg,var(--accent) 0 70%,var(--accent-soft) 70% 100%);
+                 box-shadow:var(--raised)}
+  .ringwrap .inner{position:absolute;inset:78px;border-radius:50%;background:linear-gradient(145deg,var(--surface-hi),var(--surface));
+                   box-shadow:var(--raised-sm), inset 0 0 0 1px rgba(255,255,255,.6);overflow:hidden;
+                   display:flex;align-items:center;justify-content:center}
+  .ringwrap .inner img{max-width:72%;max-height:60%;object-fit:contain}
+  .master h3{font-size:32px;font-weight:600;text-align:center}
+  .spons-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:34px}
+  .stile{border-radius:var(--radius-lg);display:flex;flex-direction:column;padding:22px;gap:14px}
+  .stile .logo{flex:1;border-radius:var(--radius-md);box-shadow:var(--pressed-sm);background:var(--surface);
+               display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .stile .logo img{max-width:80%;max-height:75%;object-fit:contain}
+  .stile .name{font-size:17px;font-weight:600;text-align:center}
+  .stile .tier{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);text-align:center;margin-top:-10px}
+  .page-dots{display:flex;gap:10px;min-height:14px}
+  .page-dots i{width:14px;height:14px;border-radius:50%;box-shadow:var(--pressed-sm)}
+  .page-dots i.on{background:var(--accent);box-shadow:none}
+
+  /* =========================================================
+     TELA 3 — ATLETAS DESTAQUE
+     ========================================================= */
+  .stars{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;height:100%}
+  .star{padding:30px 34px 36px;display:flex;flex-direction:column;align-items:center}
+  .star .cat{display:flex;align-items:center;justify-content:space-between;width:100%}
+  .star .cat .label{color:var(--accent-2)}
+  .dial{width:300px;height:300px;position:relative;margin:10px 0 14px}
+  .star .dial{width:390px;height:390px;margin:auto 0 22px}
+  .dial .ticks{position:absolute;inset:0}
+  .dial .arc{position:absolute;inset:26px;border-radius:50%;box-shadow:var(--raised);
+             background:conic-gradient(var(--accent) 0 var(--p), var(--accent-soft) var(--p) 100%)}
+  .dial .photo{position:absolute;inset:50px;border-radius:50%;overflow:hidden;background:var(--surface-hi);
+               box-shadow:0 0 0 8px var(--surface-hi), var(--raised-sm)}
+  .dial .photo img{width:100%;height:100%;object-fit:cover}
+  .dial .photo .ph{border-radius:50%}
+  .dial .knob{position:absolute;width:42px;height:42px;margin:-21px 0 0 -21px;border-radius:50%;background:var(--surface-hi);
+              box-shadow:var(--raised-sm);display:flex;align-items:center;justify-content:center}
+  .dial .knob::after{content:"";width:14px;height:14px;border-radius:50%;background:var(--accent)}
+  .star .nm{font-size:36px;font-weight:700;text-align:center;line-height:1.1}
+  .star .tm{font-size:18px;color:var(--muted);margin-top:6px;text-align:center}
+  .star .match{margin-top:18px;margin-bottom:auto;padding:10px 22px;border-radius:30px;box-shadow:var(--pressed-sm);font-size:16px;font-weight:500}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;margin-top:auto}
+  .stat{border-radius:20px;background:var(--surface);box-shadow:var(--raised-sm);padding:14px 6px;text-align:center}
+  .stat b{display:block;font-size:30px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+  .stat span{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .stat.hl{box-shadow:var(--pressed-sm)}
+  .stat.hl b{color:var(--accent-2)}
+
+  /* =========================================================
+     TELA 4 — RANKING DO QUIZ
+     ========================================================= */
+  .quiz{display:grid;grid-template-columns:1.05fr 1fr 330px;gap:36px;height:100%}
+  .podium{padding:30px 36px;display:flex;flex-direction:column}
+  .podium-row{flex:1;display:grid;grid-template-columns:1fr 1.3fr 1fr;align-items:center;gap:10px;padding-top:10px}
+  .pod{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .pod .dial{width:240px;height:240px;margin:0 0 16px}
+  .pod.first .dial{width:320px;height:320px}
+  .pod .dial .arc{inset:16px}
+  .pod .dial .photo{inset:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:var(--raised-sm)}
+  .pod .score{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .pod.first .score{font-size:56px}
+  .pod .unit{font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:6px}
+  .pod .place{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;
+              box-shadow:var(--raised-sm);background:var(--surface-hi);margin-bottom:12px}
+  .pod.first .place{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(11,42,143,.4)}
+  .pod .who{font-size:22px;font-weight:600;line-height:1.15}
+  .pod.first .who{font-size:28px}
+  .pod .info{font-size:14px;color:var(--muted);margin-top:4px}
+  .list{padding:30px 34px;display:flex;flex-direction:column;gap:14px}
+  .list .label{margin-bottom:4px;display:flex;justify-content:space-between}
+  .li{flex:1;display:grid;grid-template-columns:44px 1fr 110px;align-items:center;gap:16px;padding:0 6px}
+  .li .n{width:42px;height:42px;border-radius:50%;box-shadow:var(--pressed-sm);display:flex;align-items:center;justify-content:center;
+         font-weight:700;color:var(--muted)}
+  .li .who{font-size:20px;font-weight:600;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .bar{height:14px;border-radius:14px;box-shadow:var(--pressed-sm);position:relative}
+  .li .bar i{position:absolute;left:3px;top:3px;bottom:3px;border-radius:14px;background:linear-gradient(90deg,var(--accent-soft),var(--accent))}
+  .li .bar b{position:absolute;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:var(--surface-hi);box-shadow:var(--raised-sm)}
+  .li .pts{font-size:24px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+  .li .pts small{display:block;font-size:12px;color:var(--muted);font-weight:500;letter-spacing:2px}
+  .join{padding:34px 30px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px}
+  .join h3{font-size:28px;font-weight:700;line-height:1.15}
+  .join p{font-size:16px;color:var(--muted);line-height:1.4}
+  .qr{width:230px;height:230px;border-radius:28px;box-shadow:var(--pressed);padding:18px;background:var(--surface)}
+  .qr .imgbox{width:100%;height:100%;border-radius:14px;background:#fff}
+  .qr img{object-fit:contain!important}
+  .join .url{font-size:17px;font-weight:600;color:var(--accent-2)}
+  .power{width:96px;height:96px;border-radius:50%;margin-top:auto;display:flex;align-items:center;justify-content:center;
+         background:radial-gradient(circle at 35% 30%,#4d86ff,var(--accent));box-shadow:0 14px 30px rgba(11,42,143,.4),-8px -8px 20px #fff}
+  .power svg{width:40px;height:40px;stroke:#fff;fill:none;stroke-width:2.4}
+
+  /* =========================================================
+     TELA 5 — FOTOS DO EVENTO
+     ========================================================= */
+  .gallery{display:grid;grid-template-columns:1.9fr 1fr;gap:36px;height:100%}
+  .feature{padding:22px;display:flex;flex-direction:column}
+  .feature .frame{flex:1;border-radius:30px;box-shadow:var(--pressed);padding:14px;background:var(--surface);position:relative}
+  .feature .frame .imgbox{width:100%;height:100%;border-radius:20px}
+  .feature .frame .imgbox img{transition:opacity 1s}
+  .feature .cap{display:flex;justify-content:space-between;align-items:center;padding:18px 10px 4px}
+  .feature .cap h3{font-size:24px;font-weight:600}
+  .feature .cap .counter{font-size:18px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .thumbs{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:30px}
+  .thumb{border-radius:var(--radius-lg);padding:12px;transition:box-shadow .5s}
+  .thumb .imgbox{width:100%;height:100%;border-radius:18px}
+  .thumb.on{box-shadow:var(--pressed-sm)}
+  .thumb.on .imgbox{outline:4px solid var(--accent);outline-offset:-4px}
+
+  /* ---------- MARCAÇÃO DE SLOTS (dados dinâmicos) ---------- */
+  .dot{background:#e5484d!important;box-shadow:0 0 0 4px rgba(229,72,77,.22)!important}
+  .live-chip,.game.live .st{color:#e5484d!important}
+  :where([data-slot]){position:relative}
+  body.slots [data-slot]{outline:2px dashed var(--slot);outline-offset:2px}
+  body.slots [data-slot]::after{content:attr(data-slot);position:absolute;left:4px;top:-11px;z-index:50;
+        font:600 10.5px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:0;text-transform:none;
+        background:var(--slot);color:#fff;padding:3px 6px;border-radius:6px;white-space:nowrap;pointer-events:none;
+        writing-mode:horizontal-tb;transform:none}
+  .slot-banner{position:absolute;right:48px;top:4px;z-index:60;font:600 13px/1 ui-monospace,Menlo,Consolas,monospace;
+        color:#fff;background:var(--slot);padding:6px 12px;border-radius:0 0 10px 10px;display:none}
+  body.slots .slot-banner{display:block}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="slot-banner">MODO MARCAÇÃO · tecla M esconde · laranja = dado dinâmico</div>
+
+  <!-- ===================== CABEÇALHO (fixo) ===================== -->
+  <header class="top">
+    <div class="brand">
+      <div class="brand-logo imgbox" id="eventLogo" data-slot="evento.logo"></div>
+      <div>
+        <h1 data-slot="evento.nome" id="eventName">Supercopa AFC de Vôlei</h1>
+        <div class="live"><span class="dot"></span><span data-slot="evento.status" id="eventStatus">Ao vivo · Ginásio</span></div>
+      </div>
+    </div>
+    <div class="screen-title">
+      <h2 id="screenTitle">Classificação</h2>
+      <p id="screenSub">Fase de grupos</p>
+    </div>
+    <div class="clock">
+      <div class="date"><div id="dateWeek">—</div><div id="dateDay">—</div></div>
+      <div class="time" id="clock">00:00</div>
+      <div class="hqr">
+        <div class="txt"><b>Baixe o app</b>aponte a câmera</div>
+        <div class="box" data-slot="evento.appQrcode"><div class="imgbox" id="appQrSmall"></div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== TELAS ===================== -->
+  <main class="screens">
+
+    <!-- 1. CLASSIFICAÇÃO -->
+    <section class="screen" id="tela-classificacao" data-title="Classificação" data-sub="Fase de grupos · tempo real">
+      <div class="groups" id="groups"></div>
+    </section>
+
+    <!-- AGENDA DO DIA -->
+    <section class="screen" id="tela-agenda" data-title="Jogos de hoje" data-sub="Agenda do dia por quadra">
+      <div class="agenda">
+        <div class="card court" id="court0"></div>
+        <div class="card court" id="court1"></div>
+        <div class="card appcard">
+          <div class="label">App oficial</div>
+          <h3 data-slot="evento.appChamada" id="appCall">Baixe o app da Supercopa</h3>
+          <div class="qr" data-slot="evento.appQrcode"><div class="imgbox" id="appQrBig"></div></div>
+          <div class="url" data-slot="evento.appLink" id="appUrl">supercopaafc.com.br</div>
+          <p>Tabela, resultados, quiz e chat da galera na palma da mão</p>
+          <div class="feats"><span>Tabela</span><span>Ao vivo</span><span>Quiz</span><span>Chat</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. PATROCINADORES -->
+    <section class="screen" id="tela-patrocinadores" data-title="Patrocinadores" data-sub="Quem faz a Supercopa acontecer">
+      <div class="spons">
+        <div class="card master" id="master"></div>
+        <div style="position:relative">
+          <div class="spons-grid" id="sponsGrid" style="height:100%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ATLETAS DESTAQUE -->
+    <section class="screen" id="tela-destaques" data-title="Atletas destaque" data-sub="Melhores das partidas">
+      <div class="stars" id="stars"></div>
+    </section>
+
+    <!-- 4. QUIZ -->
+    <section class="screen" id="tela-quiz" data-title="Ranking do quiz" data-sub="Quiz da Supercopa · ao vivo">
+      <div class="quiz">
+        <div class="card podium">
+          <div class="label" style="display:flex;justify-content:space-between"><span>Pódio</span><span data-slot="quiz.atualizadoEm" id="quizUpd">—</span></div>
+          <div class="podium-row" id="podium"></div>
+        </div>
+        <div class="card list" id="quizList"></div>
+        <div class="card join">
+          <div class="label">Participe</div>
+          <h3 data-slot="quiz.chamada" id="quizCall">Jogue o quiz e entre no ranking!</h3>
+          <div class="qr" data-slot="quiz.qrcode"><div class="imgbox" id="quizQr"></div></div>
+          <div class="url" data-slot="quiz.link" id="quizUrl">supercopaafc.com.br/quiz</div>
+          <p data-slot="quiz.premio" id="quizPrize">Prêmio para o 1º lugar ao fim do evento</p>
+          <div class="power"><svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. FOTOS -->
+    <section class="screen" id="tela-fotos" data-title="Fotos do evento" data-sub="Os melhores momentos">
+      <div class="gallery">
+        <div class="card feature">
+          <div class="frame" data-slot="fotos[i].url"><div class="imgbox" id="featImg"></div></div>
+          <div class="cap"><h3 id="featCap" data-slot="fotos[i].legenda">—</h3><span class="counter" id="featCount">1 / 1</span></div>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== RODAPÉ (fixo) ===================== -->
+  <footer class="bottom">
+    <nav class="nav" id="nav"></nav>
+    <div class="progress">
+      <div class="label"><span id="nextLabel">Próxima tela</span><span id="nextTime">—</span></div>
+      <div class="track"><div class="fill" id="pfill"></div><div class="knob" id="pknob"></div></div>
+    </div>
+    <div class="footer-logos" id="footerLogos"></div>
+  </footer>
+</div>
+
+<script>
+/* =============================================================================
+   CONFIGURAÇÃO
+   ============================================================================= */
+const CONFIG = {
+  // Ordem e duração (segundos) de cada tela no rodízio
+  telas: [
+    { id: 'classificacao', duracao: 25, nome: 'Tabela',   icone: 'table'  },
+    { id: 'agenda',        duracao: 22, nome: 'Agenda',   icone: 'calendar'},
+    { id: 'destaques',     duracao: 18, nome: 'Destaques',icone: 'star'   },
+    { id: 'patrocinadores',duracao: 16, nome: 'Apoio',    icone: 'grid'   },
+    { id: 'quiz',          duracao: 18, nome: 'Quiz',     icone: 'trophy' },
+    { id: 'fotos',         duracao: 24, nome: 'Fotos',    icone: 'image'  },
+  ],
+  atualizarDadosACada: 30,     // segundos — recarrega PAINEL_DATA (classificação em tempo real)
+  fotosTrocaACada: 4,          // segundos — troca da foto em destaque
+  patrocinadoresPorPagina: 8,  // grade da direita (4 x 2)
+  agendaMaxJogos: 6,           // jogos visíveis por quadra (rola a partir do jogo atual)
+  mostrarSlots: false,          // marcações laranja dos dados. Em produção: false
+};
+
+/* =============================================================================
+   FONTE DE DADOS  ← CLAUDE CODE: SUBSTITUIR AQUI
+   Deve devolver um objeto no MESMO formato de PAINEL_DATA_MOCK (fim do arquivo).
+   Sugestão: Apps Script doGet() que lê as abas da planilha da Supercopa
+   (classificação, patrocinadores, destaques, quiz, fotos) e devolve JSON.
+   ============================================================================= */
+async function carregarDados(){
+  if(new URLSearchParams(location.search).get('demo')==='1') return PAINEL_DATA_MOCK;
+  const API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api', SITE='https://www.supercopaafc.com.br/', APP='https://drdiegopadua.github.io/supercopa-app/';
+  const S = p => p.catch(()=>null);
+  const J = (a,p) => S(fetch(API+'?'+new URLSearchParams({action:a,...(p||{})}),{cache:'no-store'}).then(r=>r.json()));
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const qr = u => 'https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=0&data='+encodeURIComponent(u);
+  const [t, tm, ao, de, rk, gl, gj] = await Promise.all([
+    J('torneio',{modalidade:'volei'}), J('timesPublicos'), J('partidasAoVivo'), J('destaques'), J('ranking_quiz'), J('galeriaLista'),
+    S(fetch(SITE+'galeria/galeria.json',{cache:'no-store'}).then(r=>r.json()))
+  ]);
+  if(!t || !t.ok) throw new Error('torneio indisponível');
+  // times: escudo e cidade
+  const TM = {};
+  ((tm&&tm.times)||[]).forEach(x=>{
+    let logo = x.escudo||'';
+    if(/^uni[aã]o v[oô]lei$/i.test(x.nome)) logo = SITE+'novo/escudos/uniao-volei.png';
+    if(/^ct das montanhas$/i.test(x.nome))   logo = SITE+'novo/escudos/ct-das-montanhas.png';
+    TM[norm(x.nome)] = { logo, cidade: String(x.cidade||'').replace(/\s*-\s*[A-Z]{2}$/,'') };
+  });
+  const logo = n => (TM[norm(n)]||{}).logo || '', cid = n => (TM[norm(n)]||{}).cidade || '';
+  const jg = t.jogos || [];
+  const vivos = {}; ((ao&&ao.partidas)||[]).forEach(p=>{ vivos[String(p.id).toUpperCase()] = p; });
+  const nome = (j,k) => k==='c' ? (j.casaDefinida===false ? (j.rotuloCasa||'A definir') : j.casa) : (j.visitanteDefinida===false ? (j.rotuloVisitante||'A definir') : j.visitante);
+  const FASE = {grupos:'Fase de grupos',quartas:'Quartas de final',semifinal:'Semifinal',final:'Grande final'};
+  const statusDe = j => vivos[String(j.id).toUpperCase()] ? 'ao_vivo' : (j.status==='finalizado'||j.status==='wo') ? 'encerrado' : j.status==='ao_vivo' ? 'ao_vivo' : 'agendado';
+  const haVivo = jg.some(j=>statusDe(j)==='ao_vivo');
+
+  // classificação
+  const grupos = (t.grupos||[]).filter(g=>g.tabela&&g.tabela.length).map(g=>{
+    const proximo = jg.filter(j=>j.fase==='grupos'&&j.grupo===g.grupo&&statusDe(j)==='agendado').sort((a,b)=>((a.data||'')+(a.hora||'')).localeCompare((b.data||'')+(b.hora||'')))[0];
+    return { letra:g.grupo, jogosRealizados:g.jogosFeitos||0, jogosTotal:g.jogosTotal||3, classificam:2,
+      aoVivo: jg.some(j=>j.fase==='grupos'&&j.grupo===g.grupo&&statusDe(j)==='ao_vivo'),
+      proximoJogo: g.completo ? 'Grupo encerrado' : proximo ? 'Próx.: '+(proximo.hora||'') : '',
+      times: g.tabela.map(x=>({ nome:x.equipe, cidade:cid(x.equipe), logo:logo(x.equipe), pontos:x.pontos||0, j:x.jogos||0, v:x.vitorias||0, d:x.derrotas||0, saldoSets:x.saldoSets||0 })) };
+  });
+
+  // agenda do dia (hoje; se não houver jogos hoje, o próximo dia com jogos)
+  const hoje = new Date().toISOString().slice(0,10);
+  const dias = [...new Set(jg.filter(j=>j.data).map(j=>j.data))].sort();
+  const dia = dias.includes(hoje) ? hoje : (dias.find(d=>d>hoje) || dias[dias.length-1] || '');
+  const doDia = jg.filter(j=>j.data===dia).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
+  const mapJ = j => {
+    const st = statusDe(j), v = vivos[String(j.id).toUpperCase()];
+    return { hora:j.hora||'--', fase: j.fase==='grupos' ? 'Grupo '+j.grupo : (FASE[j.fase]||j.fase), status:st,
+      placarA: v ? (v.setsCasa||0) : (j.setsCasa||0), placarB: v ? (v.setsVisitante||0) : (j.setsVisitante||0),
+      timeA:{nome:nome(j,'c'),logo:logo(nome(j,'c'))}, timeB:{nome:nome(j,'v'),logo:logo(nome(j,'v'))} };
+  };
+  let dataTxt = '';
+  if(dia){ const d = new Date(dia+'T12:00:00'); const w = d.toLocaleDateString('pt-BR',{weekday:'long'}); dataTxt = w.charAt(0).toUpperCase()+w.slice(1)+' · '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); }
+  const agenda = { data:dataTxt, quadras:[
+    { nome:'Quadra principal', jogos: doDia.filter(j=>!/altern/i.test(j.quadra||'')).map(mapJ) },
+    { nome:'Quadra alternativa', jogos: doDia.filter(j=>/altern/i.test(j.quadra||'')).map(mapJ) } ] };
+
+  // patrocinadores (logos oficiais do site)
+  const P = (slug,nm,cota)=>({ nome:nm, cota, logo:SITE+'novo/parceiros/'+slug+'.png' });
+  const patrocinadores = [
+    P('coroa-instituto','Coroa Instituto','master'),
+    P('planet-sports','Planet Sports','prata'), P('acai-do-diego','Açaí do Diego','prata'), P('casa-homem-do-campo','Casa Homem do Campo','prata'),
+    P('sicredi','Sicredi','prata'), P('express-pizzas-e-lanches','Express Pizzas e Lanches','prata'), P('izi-internet','IZI Internet','prata'),
+    P('prato-fino','Prato Fino','bronze'), P('restaurante-do-marcao','Restaurante do Marcão','bronze'), P('elite-suplementos','Elite Suplementos','bronze'),
+    P('jacare-fotografia','Jacaré Fotografia','bronze'), P('laboratorio-cda','Laboratório CDA','bronze'),
+    P('basquetebol-das-montanhas','Basquetebol das Montanhas','apoio'), P('instituto-cultural-das-montanhas','Instituto Cultural das Montanhas','apoio'),
+    P('prefeitura-afonso-claudio','Prefeitura de Afonso Cláudio','realização') ];
+
+  // destaques das partidas (os 3 mais recentes)
+  const destaques = ((de&&de.destaques)||[]).filter(x=>x.nome).slice(-3).reverse().map(x=>({
+    titulo:'Destaque da partida', fase:x.modalidade||'', nome:x.nome, time:x.equipe, posicao:'', foto:x.foto||'', partida:x.jogo||x.observacao||'' }));
+
+  // ranking do quiz (nome abreviado para o telão)
+  const abrev = n => { const p = String(n||'').trim().split(/\s+/); return p.length>1 ? p[0]+' '+p[p.length-1].charAt(0).toUpperCase()+'.' : p[0]; };
+  const fmtT = s => { s = Math.round(+s||0); return s ? Math.floor(s/60)+'m'+String(s%60).padStart(2,'0')+'s' : ''; };
+  const ranking = ((rk&&rk.ranking)||[]).map(r=>({ nome:abrev(r.nome), pontos:Math.round(+r.pct||0), acertos:r.acertos||0, total:r.total||40, tempo:fmtT(r.tempo) }));
+  const quiz = { atualizadoEm:'agora', totalParticipantes:ranking.length, chamada:'Jogue o quiz de 40 perguntas e entre no ranking!',
+    link:'supercopaafc.com.br', premio:'O campeão será premiado no intervalo entre as semifinais', qrcode:qr(APP), ranking };
+
+  // fotos: enviadas pelo app + galeria oficial
+  const fotos = [].concat(((gl&&gl.fotos)||[]).map(f=>({url:f.f,legenda:f.cap||'Supercopa AFC'})),
+                          ((gj&&gj.fotos)||[]).map(f=>({url:SITE+String(f.f).replace(/^\//,''),legenda:f.cap||'Supercopa AFC'})));
+
+  return {
+    evento:{ nome:'Supercopa AFC de Vôlei', status: haVivo ? 'Ao vivo · Afonso Cláudio' : 'Afonso Cláudio · 28 e 29 de novembro',
+      logo:SITE+'novo/logo-azul.png', appQrcode:qr(APP), appLink:'supercopaafc.com.br', appChamada:'Baixe o app da Supercopa',
+      logosRodape:[ {nome:'Prefeitura',logo:SITE+'novo/parceiros/prefeitura-afonso-claudio.png'}, {nome:'ICM',logo:SITE+'novo/parceiros/instituto-cultural-das-montanhas.png'} ] },
+    grupos, patrocinadores, destaques, agenda, quiz, fotos };
+}
+
+/* =============================================================================
+   UTILITÁRIOS
+   ============================================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ICONS = {
+  logo:  '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 15l3-4 3 3 2-2 3 3"/></svg>',
+  user:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  photo: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 8"/></svg>',
+  qr:    '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></svg>',
+  table: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>',
+  star:  '<svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  grid:  '<svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="1.6"/><circle cx="17" cy="7" r="1.6"/><circle cx="7" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/><circle cx="12" cy="12" r="1.6"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/></svg>',
+  court:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/><circle cx="12" cy="12" r="2.5"/></svg>',
+  image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>',
+};
+// Imagem com fallback para placeholder (mostra onde a imagem entra)
+function img(url, tipo='logo', texto=''){
+  const ph = `<div class="ph">${ICONS[tipo]||ICONS.logo}<span>${esc(texto)}</span></div>`;
+  if(!url) return ph;
+  return `<img src="${esc(url)}" alt="" onerror="this.outerHTML=this.dataset.ph" data-ph='${ph.replace(/'/g,"&#39;")}'>`;
+}
+// Anel de marcações (ticks) igual ao dial da referência
+function ticks(n=48, r=48, len=2.2){
+  let s='';
+  for(let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2, x1=50+Math.cos(a)*r, y1=50+Math.sin(a)*r, x2=50+Math.cos(a)*(r-len), y2=50+Math.sin(a)*(r-len);
+    s+=`<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${i%4?'#c3d1f0':'#8ea3d6'}" stroke-width="${i%4?0.5:0.8}" stroke-linecap="round"/>`;
+  }
+  return `<svg class="ticks" viewBox="0 0 100 100">${s}</svg>`;
+}
+// Posição do "knob" na ponta do arco (percentual 0-1)
+function knobPos(p, insetPct){
+  const a = p*Math.PI*2 - Math.PI/2, r = 50 - insetPct;
+  return `left:${50+Math.cos(a)*r}%;top:${50+Math.sin(a)*r}%`;
+}
+
+/* =============================================================================
+   RENDERIZAÇÃO
+   ============================================================================= */
+let DATA = null;
+
+function renderFixos(d){
+  const ev = d.evento || {};
+  $('#eventLogo').innerHTML = img(ev.logo,'logo','');
+  $('#eventName').textContent = ev.nome || 'Supercopa';
+  $('#eventStatus').textContent = ev.status || '';
+  $('#appQrSmall').innerHTML = img(ev.appQrcode,'qr','');
+  $('#appQrBig').innerHTML   = img(ev.appQrcode,'qr','QR CODE APP');
+  $('#appCall').textContent  = ev.appChamada || 'Baixe o app da Supercopa';
+  $('#appUrl').textContent   = ev.appLink || '';
+  // Logos do rodapé (realização / apoio institucional)
+  $('#footerLogos').innerHTML = `<span class="cap">Realização</span>` +
+    (ev.logosRodape||[]).map((l,i)=>`<div class="flogo imgbox" data-slot="evento.logosRodape[${i}].logo">${img(l.logo,'logo',l.nome||'LOGO')}</div>`).join('');
+}
+
+function renderClassificacao(d){
+  const gs = d.grupos || [];
+  $('#groups').innerHTML = gs.map((g,gi)=>{
+    const jogos = g.jogosRealizados ?? 0, total = g.jogosTotal || 3;
+    const prog = Math.round((jogos/total)*100);
+    const rows = (g.times||[]).map((t,ti)=>`
+      <div class="row ${ti < (g.classificam ?? 2) ? 'q':''}">
+        <div class="pos">${ti+1}</div>
+        <div class="team">
+          <div class="tlogo imgbox" data-slot="grupos[${gi}].times[${ti}].logo">${img(t.logo,'logo','')}</div>
+          <div style="min-width:0">
+            <div class="tname" data-slot="grupos[${gi}].times[${ti}].nome">${esc(t.nome)}</div>
+            <div class="tcity" data-slot="grupos[${gi}].times[${ti}].cidade">${esc(t.cidade||'')}</div>
+          </div>
+        </div>
+        <div class="pts" data-slot="…times[${ti}].pontos">${t.pontos ?? 0}</div>
+        <div class="sm" data-slot="…v">${t.v ?? 0}</div>
+        <div class="sm" data-slot="…d">${t.d ?? 0}</div>
+        <div class="sm" data-slot="…saldoSets">${(t.saldoSets>0?'+':'')+(t.saldoSets ?? 0)}</div>
+      </div>`).join('');
+    return `
+    <div class="card group">
+      <div class="group-head">
+        <div class="group-badge">
+          <div class="group-letter" style="--p:${prog}%"><span data-slot="grupos[${gi}].letra">${esc(g.letra)}</span></div>
+          <div><div class="group-name">Grupo ${esc(g.letra)}</div>
+               <div class="group-sub" data-slot="grupos[${gi}].jogosRealizados">${jogos} de ${total} jogos</div></div>
+        </div>
+        ${g.aoVivo ? `<div class="live-chip" data-slot="grupos[${gi}].aoVivo"><span class="dot"></span>Ao vivo</div>`:''}
+      </div>
+      <div class="cols"><span>#</span><span>Equipe</span><span>Pts</span><span>V</span><span>D</span><span>SS</span></div>
+      <div class="rows">${rows}</div>
+      <div class="group-foot"><span class="legend"><i></i>Classificados</span><span data-slot="grupos[${gi}].proximoJogo">${esc(g.proximoJogo||'')}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderAgenda(d){
+  const ag = d.agenda || {}, qs = ag.quadras || [];
+  [0,1].forEach(qi=>{
+    const q = qs[qi] || { nome: qi ? 'Quadra Secundária' : 'Quadra Principal', jogos: [] };
+    const jogos = q.jogos || [];
+    const feitos = jogos.filter(j=>j.status==='encerrado').length;
+    // janela: começa 1 jogo antes do primeiro não encerrado
+    const iAtual = jogos.findIndex(j=>j.status!=='encerrado');
+    const ini = Math.max(0, Math.min((iAtual<0?jogos.length:iAtual)-1, jogos.length-CONFIG.agendaMaxJogos));
+    const vis = jogos.slice(ini, ini+CONFIG.agendaMaxJogos);
+    const rows = vis.map((j,k)=>{
+      const gi = ini+k, base = `q[${qi}].jogos[${gi}]`;
+      const live = j.status==='ao_vivo', done = j.status==='encerrado';
+      const st = live ? '<span class="dot"></span>Ao vivo' : done ? 'Encerrado' : 'Próximo';
+      const mid = (live||done) ? `<div class="score" data-slot="${base}.placarA/placarB">${j.placarA ?? 0} x ${j.placarB ?? 0}</div>` : `<div class="vs">VS</div>`;
+      return `<div class="game ${live?'live':''} ${done?'done':''}">
+        <div><div class="hora" data-slot="${base}.hora">${esc(j.hora)}</div><div class="st" data-slot="${base}.status">${st}</div></div>
+        <div class="side a"><div class="glogo imgbox" data-slot="${base}.timeA.logo">${img(j.timeA?.logo,'logo','')}</div>
+             <div class="gname" data-slot="${base}.timeA.nome">${esc(j.timeA?.nome||'A definir')}</div></div>
+        <div class="mid">${mid}<div class="fase" data-slot="${base}.fase">${esc(j.fase||'')}</div></div>
+        <div class="side b"><div class="glogo imgbox" data-slot="${base}.timeB.logo">${img(j.timeB?.logo,'logo','')}</div>
+             <div class="gname" data-slot="${base}.timeB.nome">${esc(j.timeB?.nome||'A definir')}</div></div>
+      </div>`;
+    }).join('');
+    const p = jogos.length ? Math.round(feitos/jogos.length*100) : 0;
+    document.getElementById('court'+qi).innerHTML = `
+      <div class="court-head">
+        <div class="court-badge"><div class="court-icon" style="--p:${p}%"><span>${ICONS.court}</span></div>
+          <div><div class="court-name" data-slot="agenda.quadras[${qi}].nome">${esc(q.nome)}</div>
+               <div class="court-sub">${feitos} de ${jogos.length} jogos realizados</div></div></div>
+        <span class="label" data-slot="agenda.data">${esc(ag.data||'')}</span>
+      </div>
+      <div class="games">${rows || '<div class="empty">Sem jogos nesta quadra hoje</div>'}</div>`;
+  });
+}
+
+let sponsPage = 0, sponsVisto = false; // avança a página a cada nova entrada na tela
+function renderPatrocinadores(d){
+  const all = d.patrocinadores || [];
+  const master = all.find(p=>p.cota==='master') || all[0] || {};
+  const rest = all.filter(p=>p!==master);
+  $('#master').innerHTML = `
+    <div class="label">Patrocínio master</div>
+    <div class="ringwrap">${ticks(60,48,2.4)}<div class="arc"></div>
+      <div class="inner imgbox" data-slot="patrocinadores[cota=master].logo">${img(master.logo,'logo','LOGO MASTER')}</div></div>
+    <h3 data-slot="patrocinadores[cota=master].nome">${esc(master.nome||'')}</h3>
+    <div class="page-dots" id="sponsDots"></div>`;
+  const per = CONFIG.patrocinadoresPorPagina, pages = Math.max(1, Math.ceil(rest.length/per));
+  sponsPage = Math.max(0, sponsPage) % pages;
+  const slice = rest.slice(sponsPage*per, sponsPage*per+per);
+  while(slice.length < per) slice.push({});
+  $('#sponsGrid').innerHTML = slice.map((p,i)=>`
+    <div class="card stile">
+      <div class="logo imgbox" data-slot="patrocinadores[${sponsPage*per+i}].logo">${img(p.logo,'logo','LOGO')}</div>
+      <div class="name" data-slot="…nome">${esc(p.nome||'Patrocinador')}</div>
+      <div class="tier" data-slot="…cota">${esc(p.cota||'apoio')}</div>
+    </div>`).join('');
+  $('#sponsDots').innerHTML = pages>1 ? Array.from({length:pages},(_,i)=>`<i class="${i===sponsPage?'on':''}"></i>`).join('') : '';
+}
+
+function renderDestaques(d){
+  const st = (d.destaques||[]).slice(0,3);
+  const deco = 0.72; // arco apenas decorativo (sem nota)
+  $('#stars').innerHTML = st.map((a,i)=>`
+    <div class="card star">
+      <div class="cat"><span class="label" data-slot="destaques[${i}].titulo">${esc(a.titulo||'Destaque da partida')}</span>
+                       <span class="label" style="color:var(--muted)" data-slot="destaques[${i}].fase">${esc(a.fase||'')}</span></div>
+      <div class="dial" style="--p:${deco*100}%">${ticks(56,49,2.4)}<div class="arc"></div>
+        <div class="photo imgbox" data-slot="destaques[${i}].foto">${img(a.foto,'user','FOTO ATLETA')}</div>
+        <div class="knob" style="${knobPos(deco, 26/390*100 + 0.6)}"></div>
+      </div>
+      <div class="nm" data-slot="destaques[${i}].nome">${esc(a.nome)}</div>
+      <div class="tm" data-slot="destaques[${i}].time">${esc(a.time||'')}${a.posicao?' · '+esc(a.posicao):''}</div>
+      <div class="match" data-slot="destaques[${i}].partida">${esc(a.partida||'')}</div>
+    </div>`).join('');
+}
+
+function renderQuiz(d){
+  const q = d.quiz || {}, rk = (q.ranking||[]);
+  const max = Math.max(1, ...rk.map(r=>r.pontos||0));
+  $('#quizUpd').textContent = q.atualizadoEm ? 'Atualizado ' + q.atualizadoEm : '';
+  $('#quizCall').textContent = q.chamada || '';
+  $('#quizUrl').textContent = q.link || '';
+  $('#quizPrize').textContent = q.premio || '';
+  $('#quizQr').innerHTML = img(q.qrcode,'qr','QR CODE');
+  const order = [1,0,2]; // 2º, 1º, 3º
+  $('#podium').innerHTML = order.map(idx=>{
+    const r = rk[idx] || {nome:'—',pontos:0};
+    const p = (r.pontos||0)/max;
+    return `
+    <div class="pod ${idx===0?'first':''}">
+      <div class="dial" style="--p:${p*100}%">${ticks(40,49,3)}<div class="arc"></div>
+        <div class="photo"><div class="score" data-slot="quiz.ranking[${idx}].pontos">${r.pontos ?? 0}%</div><div class="unit">% de acertos</div></div>
+      </div>
+      <div class="place">${idx+1}</div>
+      <div class="who" data-slot="quiz.ranking[${idx}].nome">${esc(r.nome)}</div>
+      <div class="info" data-slot="quiz.ranking[${idx}].acertos">${r.acertos ?? 0} de ${r.total ?? 40}${r.tempo?' · '+esc(r.tempo):''}</div>
+    </div>`;
+  }).join('');
+  const rest = rk.slice(3,10);
+  $('#quizList').innerHTML = `<div class="label"><span>Classificação geral</span><span data-slot="quiz.totalParticipantes">${q.totalParticipantes ?? 0} jogadores</span></div>` +
+    rest.map((r,i)=>{
+      const p = Math.max(4,(r.pontos||0)/max*100);
+      return `<div class="li">
+        <div class="n">${i+4}</div>
+        <div><div class="who" data-slot="quiz.ranking[${i+3}].nome">${esc(r.nome)}</div>
+             <div class="bar"><i style="width:calc(${p}% - 6px)"></i><b style="left:${p}%"></b></div></div>
+        <div class="pts" data-slot="…pontos">${r.pontos ?? 0}%<small>% ACERTOS</small></div>
+      </div>`;
+    }).join('');
+}
+
+let fotoIdx = 0;
+function renderFotos(d){
+  const fs = d.fotos || [];
+  if(!fs.length){ $('#featImg').innerHTML = img('','photo','FOTO DO EVENTO'); return; }
+  fotoIdx = fotoIdx % fs.length;
+  const f = fs[fotoIdx];
+  $('#featImg').innerHTML = img(f.url,'photo','FOTO DO EVENTO');
+  $('#featCap').textContent = f.legenda || '';
+  $('#featCount').textContent = `${fotoIdx+1} / ${fs.length}`;
+  const th = [];
+  for(let k=1;k<=4;k++){ const j=(fotoIdx+k)%fs.length; th.push({f:fs[j], j}); }
+  $('#thumbs').innerHTML = th.map(({f,j})=>`
+    <div class="card thumb" data-slot="fotos[${j}].url"><div class="imgbox">${img(f.url,'photo','FOTO')}</div></div>`).join('');
+}
+
+function renderTudo(){
+  if(!DATA) return;
+  renderFixos(DATA); renderClassificacao(DATA); renderAgenda(DATA); renderPatrocinadores(DATA);
+  renderDestaques(DATA); renderQuiz(DATA); renderFotos(DATA);
+}
+
+/* =============================================================================
+   RODÍZIO DE TELAS
+   ============================================================================= */
+const params = new URLSearchParams(location.search);
+let cur = 0, t0 = performance.now(), paused = params.get('pausa')==='1';
+if(params.get('slots')==='0') CONFIG.mostrarSlots = false;
+document.body.classList.toggle('slots', CONFIG.mostrarSlots);
+const fixa = params.get('tela');
+if(fixa){ const i = CONFIG.telas.findIndex(t=>t.id===fixa); if(i>=0){ cur=i; paused=true; } }
+
+function buildNav(){
+  $('#nav').innerHTML = CONFIG.telas.map((t,i)=>`<div class="tab" data-i="${i}">${ICONS[t.icone]}<span>${t.nome}</span></div>`).join('');
+}
+function disponivel(id){
+  const d = DATA; if(!d) return true;
+  if(id==='classificacao') return (d.grupos||[]).length>0;
+  if(id==='destaques')     return (d.destaques||[]).length>0;
+  if(id==='quiz')          return ((d.quiz||{}).ranking||[]).length>0;
+  if(id==='fotos')         return (d.fotos||[]).length>0;
+  return true;
+}
+function show(i, dir=1){
+  const n = CONFIG.telas.length; i = (i + n) % n;
+  for(let k=0; k<n && !disponivel(CONFIG.telas[i].id); k++) i = (i + dir + n) % n;
+  cur = i;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById('tela-'+CONFIG.telas[cur].id);
+  el.classList.add('active');
+  $('#screenTitle').textContent = el.dataset.title;
+  $('#screenSub').textContent = el.dataset.sub;
+  document.querySelectorAll('#nav .tab').forEach((t,k)=>t.classList.toggle('on',k===cur));
+  $('#nextLabel').textContent = 'Próxima: ' + CONFIG.telas[(cur+1)%CONFIG.telas.length].nome;
+  if(CONFIG.telas[cur].id==='patrocinadores'){ if(sponsVisto) sponsPage++; sponsVisto = true; DATA && renderPatrocinadores(DATA); }
+  t0 = performance.now();
+}
+function tick(now){
+  const dur = CONFIG.telas[cur].duracao*1000;
+  const el = paused ? 0 : now - t0;
+  const p = Math.min(1, el/dur);
+  $('#pfill').style.width = `calc(${p*100}% - 8px)`;
+  $('#pknob').style.left = `calc(18px + (100% - 36px) * ${p})`;
+  $('#nextTime').textContent = paused ? 'pausado' : Math.ceil((dur-el)/1000)+'s';
+  if(!paused && el >= dur) show(cur+1);
+  requestAnimationFrame(tick);
+}
+
+/* ---------- Relógio ---------- */
+function clock(){
+  const d = new Date();
+  $('#clock').textContent = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  $('#dateWeek').textContent = d.toLocaleDateString('pt-BR',{weekday:'long'});
+  $('#dateDay').textContent = d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'});
+}
+
+/* ---------- Escala do palco para qualquer resolução ---------- */
+function fit(){
+  const s = Math.min(innerWidth/1920, innerHeight/960);
+  $('#stage').style.transform = `scale(${s})`;
+}
+
+/* ---------- Teclado ---------- */
+addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight') show(cur+1);
+  if(e.key==='ArrowLeft')  show(cur-1,-1);
+  if(e.key===' '){ paused=!paused; t0=performance.now(); }
+  if(e.key.toLowerCase()==='m') document.body.classList.toggle('slots');
+  if(e.key.toLowerCase()==='f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+});
+let mt; addEventListener('mousemove',()=>{document.body.classList.add('cursor');clearTimeout(mt);mt=setTimeout(()=>document.body.classList.remove('cursor'),2500)});
+
+/* ---------- Inicialização ---------- */
+async function atualizar(){
+  try{ DATA = await carregarDados(); renderTudo(); }
+  catch(err){ console.error('[Painel] falha ao carregar dados', err); }
+}
+window.addEventListener("load", async function init(){
+  fit(); addEventListener('resize', fit);
+  buildNav(); clock(); setInterval(clock, 1000);
+  await atualizar();
+  setInterval(atualizar, CONFIG.atualizarDadosACada*1000);
+  setInterval(()=>{ if(DATA && CONFIG.telas[cur].id==='fotos'){ fotoIdx++; renderFotos(DATA);} }, CONFIG.fotosTrocaACada*1000);
+  show(cur);
+  requestAnimationFrame(tick);
+});
+
+/* =============================================================================
+   DADOS DE EXEMPLO (MOCK) — CONTRATO DE DADOS
+   Claude Code: a fonte real deve devolver exatamente esta estrutura.
+   Campos de imagem vazios ('') mostram o placeholder listrado.
+   ============================================================================= */
+var PAINEL_DATA_MOCK = {
+  evento: {
+    nome: 'Supercopa AFC de Vôlei',
+    status: 'Ao vivo · Ginásio Municipal',
+    logo: '',                               // URL da logo da Supercopa
+    appQrcode: '',                          // imagem do QR code para baixar o app
+    appLink: 'supercopaafc.com.br',
+    appChamada: 'Baixe o app da Supercopa',
+    logosRodape: [                          // realização / apoio institucional (rodapé)
+      { nome: 'Prefeitura', logo: '' },
+      { nome: 'Sec. Esportes', logo: '' },
+      { nome: 'ICM', logo: '' },
+    ],
+  },
+
+  grupos: [ // 4 grupos x 3 times — times JÁ ORDENADOS pela classificação
+    { letra:'A', jogosRealizados:2, jogosTotal:3, classificam:2, aoVivo:true,  proximoJogo:'Próx.: 15h30',
+      times:[
+        { nome:'Time A1', cidade:'Afonso Cláudio', logo:'', pontos:6, j:2, v:2, d:0, saldoSets:4 },
+        { nome:'Time A2', cidade:'Brejetuba',      logo:'', pontos:3, j:2, v:1, d:1, saldoSets:0 },
+        { nome:'Time A3', cidade:'Laranja da Terra',logo:'',pontos:0, j:2, v:0, d:2, saldoSets:-4 },
+      ]},
+    { letra:'B', jogosRealizados:1, jogosTotal:3, classificam:2, aoVivo:false, proximoJogo:'Próx.: 16h10',
+      times:[
+        { nome:'Time B1', cidade:'Itarana',        logo:'', pontos:3, j:1, v:1, d:0, saldoSets:2 },
+        { nome:'Time B2', cidade:'Afonso Cláudio', logo:'', pontos:0, j:0, v:0, d:0, saldoSets:0 },
+        { nome:'Time B3', cidade:'Venda Nova',     logo:'', pontos:0, j:1, v:0, d:1, saldoSets:-2 },
+      ]},
+    { letra:'C', jogosRealizados:3, jogosTotal:3, classificam:2, aoVivo:false, proximoJogo:'Encerrado',
+      times:[
+        { nome:'Time C1', cidade:'Domingos Martins', logo:'', pontos:6, j:2, v:2, d:0, saldoSets:3 },
+        { nome:'Time C2', cidade:'Afonso Cláudio',   logo:'', pontos:3, j:2, v:1, d:1, saldoSets:1 },
+        { nome:'Time C3', cidade:'Conceição do Castelo', logo:'', pontos:0, j:2, v:0, d:2, saldoSets:-4 },
+      ]},
+    { letra:'D', jogosRealizados:0, jogosTotal:3, classificam:2, aoVivo:false, proximoJogo:'Próx.: 17h00',
+      times:[
+        { nome:'Time D1', cidade:'Santa Teresa', logo:'', pontos:0, j:0, v:0, d:0, saldoSets:0 },
+        { nome:'Time D2', cidade:'Itaguaçu',     logo:'', pontos:0, j:0, v:0, d:0, saldoSets:0 },
+        { nome:'Time D3', cidade:'Afonso Cláudio',logo:'', pontos:0, j:0, v:0, d:0, saldoSets:0 },
+      ]},
+  ],
+
+  patrocinadores: [ // cota: 'master' | 'ouro' | 'prata' | 'apoio'
+    { nome:'Patrocinador Master', cota:'master', logo:'' },
+    { nome:'Patrocinador 1', cota:'ouro',  logo:'' },
+    { nome:'Patrocinador 2', cota:'ouro',  logo:'' },
+    { nome:'Patrocinador 3', cota:'ouro',  logo:'' },
+    { nome:'Patrocinador 4', cota:'prata', logo:'' },
+    { nome:'Patrocinador 5', cota:'prata', logo:'' },
+    { nome:'Patrocinador 6', cota:'prata', logo:'' },
+    { nome:'Patrocinador 7', cota:'apoio', logo:'' },
+    { nome:'Patrocinador 8', cota:'apoio', logo:'' },
+    { nome:'Patrocinador 9', cota:'apoio', logo:'' },
+    { nome:'Patrocinador 10',cota:'apoio', logo:'' },
+  ],
+
+  destaques: [ // até 3 — sem nota e sem estatísticas
+    { titulo:'Destaque da partida', fase:'Grupo A', nome:'Nome da Atleta', time:'Time A1', posicao:'Ponteira', foto:'',
+      partida:'Time A1 2 x 0 Time A3' },
+    { titulo:'Destaque da partida', fase:'Grupo C', nome:'Nome do Atleta', time:'Time C1', posicao:'Oposto', foto:'',
+      partida:'Time C1 2 x 1 Time C2' },
+    { titulo:'Destaque da partida', fase:'Grupo B', nome:'Nome da Atleta', time:'Time B1', posicao:'Levantadora', foto:'',
+      partida:'Time B1 2 x 0 Time B3' },
+  ],
+
+  agenda: { // jogos do dia — status: 'encerrado' | 'ao_vivo' | 'agendado'
+    data: 'Sábado · 22/11',
+    quadras: [
+      { nome:'Quadra Principal', jogos:[
+        { hora:'08:30', fase:'Grupo A', status:'encerrado', placarA:2, placarB:0, timeA:{nome:'Time A1',logo:''}, timeB:{nome:'Time A3',logo:''} },
+        { hora:'09:40', fase:'Grupo C', status:'encerrado', placarA:2, placarB:1, timeA:{nome:'Time C1',logo:''}, timeB:{nome:'Time C2',logo:''} },
+        { hora:'10:50', fase:'Grupo A', status:'ao_vivo',   placarA:1, placarB:0, timeA:{nome:'Time A2',logo:''}, timeB:{nome:'Time A1',logo:''} },
+        { hora:'13:30', fase:'Grupo D', status:'agendado', timeA:{nome:'Time D1',logo:''}, timeB:{nome:'Time D2',logo:''} },
+        { hora:'14:40', fase:'Grupo B', status:'agendado', timeA:{nome:'Time B1',logo:''}, timeB:{nome:'Time B2',logo:''} },
+        { hora:'15:50', fase:'Grupo C', status:'agendado', timeA:{nome:'Time C3',logo:''}, timeB:{nome:'Time C1',logo:''} },
+        { hora:'17:00', fase:'Grupo D', status:'agendado', timeA:{nome:'Time D3',logo:''}, timeB:{nome:'Time D1',logo:''} },
+      ]},
+      { nome:'Quadra Secundária', jogos:[
+        { hora:'08:30', fase:'Grupo B', status:'encerrado', placarA:2, placarB:0, timeA:{nome:'Time B1',logo:''}, timeB:{nome:'Time B3',logo:''} },
+        { hora:'09:40', fase:'Grupo D', status:'ao_vivo',   placarA:0, placarB:1, timeA:{nome:'Time D2',logo:''}, timeB:{nome:'Time D3',logo:''} },
+        { hora:'10:50', fase:'Grupo C', status:'agendado', timeA:{nome:'Time C2',logo:''}, timeB:{nome:'Time C3',logo:''} },
+        { hora:'13:30', fase:'Grupo A', status:'agendado', timeA:{nome:'Time A3',logo:''}, timeB:{nome:'Time A2',logo:''} },
+        { hora:'14:40', fase:'Grupo B', status:'agendado', timeA:{nome:'Time B2',logo:''}, timeB:{nome:'Time B3',logo:''} },
+      ]},
+    ],
+  },
+
+  quiz: {
+    atualizadoEm:'há 1 min', totalParticipantes:128,
+    chamada:'Jogue o quiz e entre no ranking!', link:'supercopaafc.com.br/quiz',
+    premio:'Prêmio para o 1º lugar ao fim do evento', qrcode:'',
+    ranking:[ // ordenado do maior para o menor — mostra 10
+      { nome:'Participante 1', pontos:980, acertos:10, tempo:'1m12s' },
+      { nome:'Participante 2', pontos:940, acertos:10, tempo:'1m30s' },
+      { nome:'Participante 3', pontos:910, acertos:9,  tempo:'1m05s' },
+      { nome:'Participante 4', pontos:860, acertos:9 },
+      { nome:'Participante 5', pontos:820, acertos:9 },
+      { nome:'Participante 6', pontos:790, acertos:8 },
+      { nome:'Participante 7', pontos:740, acertos:8 },
+      { nome:'Participante 8', pontos:700, acertos:7 },
+      { nome:'Participante 9', pontos:650, acertos:7 },
+      { nome:'Participante 10',pontos:610, acertos:6 },
+    ],
+  },
+
+  fotos: [ // galeria em rodízio — url (ideal 1600x900 ou maior) + legenda
+    { url:'', legenda:'Abertura da Supercopa' },
+    { url:'', legenda:'Torcida no ginásio' },
+    { url:'', legenda:'Ataque decisivo no Grupo A' },
+    { url:'', legenda:'Premiação' },
+    { url:'', legenda:'Bastidores' },
+  ],
+};
+</script>
+</body>
+</html>
