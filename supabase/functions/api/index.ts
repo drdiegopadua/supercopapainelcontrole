@@ -1458,10 +1458,7 @@ async function voucherEstado(d: Any) {
   const por: Record<string, Any> = {}; (data || []).forEach((r: Any) => { por[r.item] = r; });
   return { ok: true, equipe, itens: VOUCHER_ITENS.map((i) => ({ item: i, retirado: !!(por[i] && por[i].retirado_em), em: (por[i] && por[i].retirado_em) || null })) };
 }
-async function voucherQr(d: Any) {
-  const equipe = (d.equipe || "").toString().trim(), item = (d.item || "").toString();
-  if (!VOUCHER_ITENS.includes(item)) return { ok: false, erro: "Voucher inválido." };
-  if (!(await pinOk(equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
+async function vQr(equipe: string, item: string) {
   const k = chaveEq(equipe);
   const ler = async () => (await sb.from("vouchers").select("token,retirado_em").eq("chave", k).eq("item", item).maybeSingle()).data as Any;
   let r = await ler();
@@ -1473,6 +1470,31 @@ async function voucherQr(d: Any) {
   if (!r) return { ok: false, erro: "Não foi possível gerar o voucher." };
   if (r.retirado_em) return { ok: true, retirado: true, em: r.retirado_em };
   return { ok: true, retirado: false, codigo: "SCV." + r.token };
+}
+async function voucherQr(d: Any) {
+  const equipe = (d.equipe || "").toString().trim(), item = (d.item || "").toString();
+  if (!VOUCHER_ITENS.includes(item)) return { ok: false, erro: "Voucher inválido." };
+  if (!(await pinOk(equipe, d.pin))) return { ok: false, erro: "PIN incorreto. Confirme o PIN da sua equipe." };
+  return await vQr(equipe, item);
+}
+// Comissão organizadora: 2 pizzas também. O QR é gerado no SC Admin (login de organização + PIN da comissão).
+const COMISSAO = "Comissão Organizadora";
+const falhasCom = { n: 0, ate: 0 };
+async function voucherComissao(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  if (falhasCom.n >= 8 && falhasCom.ate > Date.now()) return { ok: false, erro: "Muitas tentativas. Aguarde alguns minutos." };
+  const { data: cf } = await sb.from("config").select("valor").eq("chave", "voucher_comissao_pin").maybeSingle();
+  const v: Any = cf && cf.valor, real = (typeof v === "string" ? v : (v && v.pin)) || "5912";
+  if (real !== (d.pin || "").toString().trim()) { falhasCom.n = (falhasCom.ate > Date.now() ? falhasCom.n : 0) + 1; falhasCom.ate = Date.now() + 10 * 60 * 1000; return { ok: false, erro: "PIN da comissão incorreto." }; }
+  falhasCom.n = 0;
+  const item = (d.item || "").toString();
+  if (!item) {
+    const { data } = await sb.from("vouchers").select("item,retirado_em").eq("chave", chaveEq(COMISSAO));
+    const por: Record<string, Any> = {}; (data || []).forEach((r: Any) => { por[r.item] = r; });
+    return { ok: true, itens: VOUCHER_ITENS.map((i) => ({ item: i, retirado: !!(por[i] && por[i].retirado_em), em: (por[i] && por[i].retirado_em) || null })) };
+  }
+  if (!VOUCHER_ITENS.includes(item)) return { ok: false, erro: "Voucher inválido." };
+  return await vQr(COMISSAO, item);
 }
 async function voucherLer(d: Any) {
   if (!(await pizzariaOk(d.pizzaria))) return { ok: false, erro: "PIN da pizzaria incorreto." };
@@ -1490,7 +1512,8 @@ async function voucherPainel(d: Any) {
   const [conf, { data }] = await Promise.all([listarConfirmacoes(), sb.from("vouchers").select("equipe,item,retirado_em").not("retirado_em", "is", null).order("retirado_em", { ascending: false })]);
   const lista: Record<string, Any> = {};
   (conf || []).forEach((c: Any) => { lista[chaveEq(c.equipe)] = { equipe: c.equipe, retiradas: 0, horas: [] }; });
-  (data || []).forEach((r: Any) => { const k = chaveEq(r.equipe); if (!lista[k]) lista[k] = { equipe: r.equipe, retiradas: 0, horas: [] }; lista[k].retiradas++; lista[k].horas.push(r.retirado_em); });
+  lista[chaveEq(COMISSAO)] = { equipe: COMISSAO, comissao: true, retiradas: 0, horas: [] };
+  (data || []).forEach((r: Any) => { const k = chaveEq(r.equipe); if (!lista[k]) lista[k] = { equipe: r.equipe, comissao: k===chaveEq(COMISSAO), retiradas: 0, horas: [] }; lista[k].retiradas++; lista[k].horas.push(r.retirado_em); });
   const equipes = Object.values(lista).sort((a: Any, b: Any) => a.equipe.localeCompare(b.equipe));
   return { ok: true, equipes, total: (data || []).length, recentes: (data || []).slice(0, 12) };
 }
@@ -1736,6 +1759,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "voucherEstado": return await voucherEstado(d);
     case "voucherQr": return await voucherQr(d);
     case "voucherLer": return await voucherLer(d);
+    case "voucherComissao": return await voucherComissao(d);
     case "voucherPainel": return await voucherPainel(d);
     case "telaoAviso": return await telaoAviso();
     case "telaoAvisoSalvar": return await telaoAvisoSalvar(d);
