@@ -976,7 +976,6 @@ function renderPatrocinadores(d){
   const per = CONFIG.patrocinadoresPorPagina, pages = Math.max(1, Math.ceil(rest.length/per));
   sponsPage = Math.max(0, sponsPage) % pages;
   const slice = rest.slice(sponsPage*per, sponsPage*per+per);
-  while(slice.length < per) slice.push({});
   $('#sponsGrid').innerHTML = slice.map((p,i)=>`
     <div class="card stile">
       <div class="logo imgbox" data-slot="patrocinadores[${sponsPage*per+i}].logo">${img(p.logo,'logo','LOGO')}</div>
