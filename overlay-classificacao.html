@@ -126,9 +126,9 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 
 .tabela thead tr{border-bottom:1px solid rgba(255,255,255,.1)}
 .tabela thead th{
-  font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  font-size:17px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
   color:rgba(255,255,255,.35);
-  padding:0 8px 8px;
+  padding:0 12px 10px;
   text-align:center;
 }
 .tabela thead th.th-equipe{text-align:left;padding-left:0}
@@ -146,15 +146,15 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .tabela tbody tr.pos-3 .td-pos{color:rgba(255,255,255,.45)}
 
 .tabela tbody td{
-  padding:10px 8px;
-  font-size:22px;font-weight:700;
+  padding:14px 12px;
+  font-size:30px;font-weight:700;
   color:rgba(255,255,255,.75);
   text-align:center;vertical-align:middle;
 }
 
 /* coluna posição */
 .td-pos{
-  font-size:18px;font-weight:900;width:28px;
+  font-size:26px;font-weight:900;width:36px;
   text-align:center;padding-left:0;
 }
 
@@ -162,25 +162,25 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .td-equipe{text-align:left;padding-left:0}
 .team-row{display:flex;align-items:center;gap:10px}
 .team-badge{
-  width:36px;height:36px;border-radius:50%;
+  width:48px;height:48px;border-radius:50%;
   background:rgba(0,0,0,.35);
   border:1px solid rgba(255,255,255,.12);
   display:flex;align-items:center;justify-content:center;
   overflow:hidden;flex-shrink:0;
 }
-.team-badge img{width:30px;height:30px;object-fit:contain}
-.badge-init{font-size:12px;font-weight:900;color:rgba(255,255,255,.4);font-family:'Barlow Condensed',sans-serif}
+.team-badge img{width:40px;height:40px;object-fit:contain}
+.badge-init{font-size:15px;font-weight:900;color:rgba(255,255,255,.4);font-family:'Barlow Condensed',sans-serif}
 .td-name{
-  font-size:22px;font-weight:800;
+  font-size:30px;font-weight:800;
   color:rgba(255,255,255,.85);
   letter-spacing:.3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  max-width:260px;
+  max-width:320px;
 }
 
 /* coluna pontos em destaque */
 .td-pts{
-  font-size:26px;font-weight:900;
+  font-size:36px;font-weight:900;
   color:#fff;
 }
 .tabela tbody tr.pos-1 .td-pts{color:#f5b800}
@@ -191,9 +191,8 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
   border-radius:8px;
 }
 
-/* separadores na thead */
-.th-sep{border-left:1px solid rgba(255,255,255,.08);padding-left:12px!important}
-.td-sep{border-left:1px solid rgba(255,255,255,.05);padding-left:12px!important}
+/* destaque pontos */
+.td-pts{border-left:2px solid rgba(27,82,224,.3);padding-left:16px!important}
 
 /* ── rodapé ── */
 #footer{
@@ -271,10 +270,7 @@ function grupoHtml(g){
       +'<td>'+t.jogos+'</td>'
       +'<td>'+t.vitorias+'</td>'
       +'<td>'+t.derrotas+'</td>'
-      +'<td class="th-sep td-sep">'+t.setsPro+'</td>'
-      +'<td>'+t.setsContra+'</td>'
-      +'<td>'+t.saldoSets+'</td>'
-      +'<td class="th-sep td-sep td-pts">'+t.pontos+'</td>'
+      +'<td class="td-pts">'+t.pontos+'</td>'
     +'</tr>';
   });
 
@@ -293,10 +289,7 @@ function grupoHtml(g){
         +'<th title="Jogos">J</th>'
         +'<th title="Vitórias">V</th>'
         +'<th title="Derrotas">D</th>'
-        +'<th class="th-sep" title="Sets Pró">SP</th>'
-        +'<th title="Sets Contra">SC</th>'
-        +'<th title="Saldo de Sets">Sal</th>'
-        +'<th class="th-sep" title="Pontos">PTS</th>'
+        +'<th title="Pontos">PTS</th>'
       +'</tr></thead>'
       +'<tbody>'+rows+'</tbody>'
     +'</table>'
