@@ -239,44 +239,22 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:'Barlow',sy
 <div id="toast"></div>
 
 <script>
-/* ══ AUTH INTERCEPTOR (mesma lógica da mesa.html) ══ */
+/* ══ AUTH INTERCEPTOR — injeta credenciais se já houver sessão ativa, sem exigir login ══ */
 (function(){
   const API_HOST='hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
   const ACOES=['criarPartida','ponto','pontoMenos','timeout','cartao','substituicao','definirEscalacaoSet','definirCapitaoQuadra','atualizarObservacoes','removerEvento','desfazerPonto','processarEventosLote','finalizarPartida','reabrirPartida','excluirPartida'];
   function sessao(){try{const a=JSON.parse(sessionStorage.getItem('supercopa_auth')||'null');return a&&a.usuario?{usuario:a.usuario,senha:a.senha}:null}catch(e){return null}}
-  function pedirLogin(){
-    if(document.getElementById('scLoginOv'))return;
-    const ov=document.createElement('div');ov.id='scLoginOv';
-    ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,8,22,.97);display:grid;place-items:center;padding:20px;font-family:system-ui,sans-serif';
-    ov.innerHTML='<form style="width:100%;max-width:340px;background:#111830;border:1px solid rgba(255,255,255,.1);padding:24px;border-radius:16px"><h3 style="margin:0 0 4px;color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:22px">🏐 Placar Manual</h3><p style="margin:0 0 16px;font-size:13px;color:rgba(255,255,255,.5)">Use seu usuário e senha do painel.</p><input id="scU" placeholder="Usuário" autocomplete="username" style="width:100%;padding:13px;margin-bottom:8px;border:2px solid rgba(255,255,255,.12);border-radius:10px;font-size:16px;box-sizing:border-box;background:#0d1222;color:#fff"><input id="scP" type="password" placeholder="Senha" autocomplete="current-password" style="width:100%;padding:13px;margin-bottom:8px;border:2px solid rgba(255,255,255,.12);border-radius:10px;font-size:16px;box-sizing:border-box;background:#0d1222;color:#fff"><div id="scE" style="min-height:18px;color:#e5484d;font-size:13px;margin-bottom:6px"></div><button style="width:100%;padding:14px;border:0;border-radius:10px;background:linear-gradient(135deg,#1b52e0,#0b2a8f);color:#fff;font-weight:700;font-size:16px;cursor:pointer">Entrar</button></form>';
-    document.body.appendChild(ov);
-    ov.querySelector('form').onsubmit=async(ev)=>{
-      ev.preventDefault();
-      const u=document.getElementById('scU').value.trim(),p=document.getElementById('scP').value,e=document.getElementById('scE');
-      e.textContent='Entrando…';
-      try{
-        const r=await window._fetchOrig('https://'+API_HOST,{method:'POST',body:JSON.stringify({acao:'loginPainel',auth:{usuario:u,senha:p}})}).then(x=>x.json());
-        if(!r||!r.ok){e.textContent=(r&&r.erro)||'Usuário ou senha incorretos.';return}
-        sessionStorage.setItem('supercopa_auth',JSON.stringify({usuario:r.usuario,senha:p,papel:r.papel}));
-        ov.remove();carregarJogos();
-      }catch(x){e.textContent='Sem conexão. Tente de novo.'}
-    };
-  }
   window._fetchOrig=window.fetch.bind(window);
   window.fetch=function(u,o){
     try{
       const s=String(u);
       if(s.indexOf(API_HOST)>=0&&o&&o.method==='POST'&&typeof o.body==='string'){
         const b=JSON.parse(o.body);
-        if(ACOES.indexOf(b.acao)>=0&&!b.auth){const a=sessao();if(a){b.auth=a;o=Object.assign({},o,{body:JSON.stringify(b)})}else setTimeout(pedirLogin,0)}
+        if(ACOES.indexOf(b.acao)>=0&&!b.auth){const a=sessao();if(a){b.auth=a;o=Object.assign({},o,{body:JSON.stringify(b)})}}
       }
     }catch(e){}
-    return window._fetchOrig(u,o).then(r=>{
-      try{if(String(u).indexOf(API_HOST)>=0)r.clone().json().then(j=>{if(j&&j.precisaLogin){try{sessionStorage.removeItem('supercopa_auth')}catch(_){}pedirLogin()}}).catch(()=>{})}catch(e){}
-      return r;
-    });
+    return window._fetchOrig(u,o);
   };
-  document.addEventListener('DOMContentLoaded',()=>{if(!sessao())pedirLogin()});
 })();
 
 /* ══ CONSTANTES ══ */
