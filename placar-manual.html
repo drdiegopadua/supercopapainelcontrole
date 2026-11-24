@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Placar Manual · Supercopa AFC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,700&family=Barlow:wght@500;700;800&family=Anton&display=swap">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:'Barlow',system-ui,sans-serif;background:#050816;color:#fff}
+
+/* ── variáveis ── */
+:root{
+  --b1:#1b52e0;--b2:#0b2a8f;--b3:#071a5c;
+  --gold:#f4c542;--red:#e5484d;--green:#22c55e;
+  --card:rgba(255,255,255,.07);--border:rgba(255,255,255,.1);
+  --muted:rgba(255,255,255,.45);
+}
+
+/* ── layout base ── */
+.screen{display:none;height:100dvh;flex-direction:column;overflow:hidden}
+.screen.active{display:flex}
+
+/* ── topbar ── */
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 16px 10px;background:linear-gradient(180deg,rgba(7,26,92,.9),transparent);flex-shrink:0;position:relative}
+.topbar-logo{width:32px;height:32px;object-fit:contain}
+.topbar-title{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:.5px;flex:1}
+.topbar-title small{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.2px}
+
+/* ── sync badge ── */
+#syncBadge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid;cursor:pointer;transition:all .2s;flex-shrink:0}
+#syncBadge.ok   {background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:var(--green)}
+#syncBadge.pend {background:rgba(244,197,66,.12);border-color:rgba(244,197,66,.35);color:var(--gold)}
+#syncBadge.err  {background:rgba(229,72,77,.12);border-color:rgba(229,72,77,.35);color:var(--red)}
+
+/* ══ TELA SELEÇÃO ══ */
+#scr-sel{background:linear-gradient(160deg,#040c2c,#071a5c 60%,#040c2c)}
+.sel-body{flex:1;overflow-y:auto;padding:0 14px 24px;-webkit-overflow-scrolling:touch}
+.sel-header{padding:20px 0 12px;text-align:center}
+.sel-header h1{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:.5px}
+.sel-header p{font-size:13px;color:var(--muted);margin:0}
+.sel-section{font-size:10px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:1.2px;margin:18px 0 8px}
+.sel-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:background .15s,transform .1s;display:flex;align-items:center;gap:12px}
+.sel-card:active{background:rgba(255,255,255,.12);transform:scale(.98)}
+.sel-card-info{flex:1;min-width:0}
+.sel-card-teams{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sel-card-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.sel-card-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;flex-shrink:0}
+.badge-live{background:rgba(229,72,77,.18);border:1px solid rgba(229,72,77,.4);color:var(--red)}
+.badge-ready{background:rgba(27,82,224,.18);border:1px solid rgba(27,82,224,.4);color:#6ea6ff}
+.sel-card-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
+.sel-loading{text-align:center;padding:40px 0;color:var(--muted);font-size:13px}
+.sel-empty{text-align:center;padding:32px 0;color:var(--muted)}
+.sel-empty-ic{font-size:36px;margin-bottom:8px}
+.sel-btn-reload{margin-top:16px;border:1px solid var(--border);background:var(--card);color:#fff;border-radius:12px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;width:100%}
+
+/* modal saca primeiro */
+#modalSaca{display:none;position:fixed;inset:0;background:rgba(5,8,22,.85);z-index:1000;align-items:flex-end;justify-content:center;padding:16px}
+#modalSaca.show{display:flex}
+.modal-sheet{background:#111830;border:1px solid var(--border);border-radius:20px 20px 16px 16px;width:100%;max-width:420px;padding:20px 20px 32px;animation:sheetUp .3s ease}
+@keyframes sheetUp{from{transform:translateY(80px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-sheet h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;margin:0 0 4px;text-align:center}
+.modal-sheet p{font-size:13px;color:var(--muted);text-align:center;margin:0 0 20px}
+.saca-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.saca-btn{padding:16px 12px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:all .15s;text-align:center}
+.saca-btn:active{transform:scale(.96)}
+.saca-btn.selecionado{background:linear-gradient(135deg,var(--b1),var(--b2));border-color:transparent;box-shadow:0 4px 16px rgba(27,82,224,.4)}
+.modal-btn-cancel{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer}
+
+/* ══ TELA PLACAR ══ */
+#scr-score{background:#050816;position:relative}
+.score-game-info{padding:8px 16px 0;text-align:center;flex-shrink:0}
+.score-game-title{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px}
+.score-sets{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px}
+.score-set-pill{background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;color:var(--muted)}
+.score-set-pill.active{background:rgba(27,82,224,.2);border-color:rgba(27,82,224,.5);color:#6ea6ff}
+.score-set-pill.won{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:var(--green)}
+
+/* duas colunas de placar */
+.score-cols{display:grid;grid-template-columns:1fr 1fr;flex:1;gap:1px;background:rgba(255,255,255,.06);overflow:hidden}
+.score-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;background:#050816;padding:12px 8px;position:relative}
+.score-col.saque::after{content:'▶ SAQUE';position:absolute;top:8px;right:8px;font-size:9px;font-weight:800;color:var(--gold);letter-spacing:.5px}
+.score-col-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-align:center;color:var(--muted);letter-spacing:.3px;margin-bottom:4px;padding:0 4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score-num{font-family:'Anton',sans-serif;font-size:clamp(72px,20vw,110px);line-height:1;color:#fff;letter-spacing:-2px;text-align:center;transition:transform .08s ease,color .1s}
+.score-num.flash{transform:scale(1.12);color:var(--gold)}
+.score-num.sub{transform:scale(.9);color:var(--red)}
+.score-sets-col{display:flex;gap:5px;margin-top:6px;min-height:22px}
+.set-won{width:20px;height:20px;border-radius:6px;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.4);display:grid;place-items:center;font-size:9px;font-weight:800;color:var(--green)}
+
+/* botões de ponto */
+.score-btns{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.06);flex-shrink:0}
+.btn-ponto{border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:.5px;transition:background .1s,transform .08s;padding:0;height:clamp(60px,13vw,80px);display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;overflow:hidden}
+.btn-ponto:active{transform:scale(.96)}
+.btn-ponto.btn-mais{background:linear-gradient(135deg,#0d3a8f,#1b52e0);color:#fff}
+.btn-ponto.btn-mais:active{background:linear-gradient(135deg,#1b52e0,#3b7af5)}
+.btn-ponto.btn-menos{background:#0d0f1f;color:var(--muted);font-size:18px}
+.btn-ponto.btn-menos:active{background:#151829;color:#fff}
+
+/* barra inferior */
+.score-bar{display:flex;gap:8px;padding:10px 14px;background:#070a1c;flex-shrink:0;border-top:1px solid var(--border)}
+.bar-btn{flex:1;padding:12px 8px;border-radius:12px;border:none;cursor:pointer;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;transition:all .15s}
+.bar-btn:active{transform:scale(.97)}
+.bar-btn-sec{background:var(--card);border:1px solid var(--border);color:#fff}
+.bar-btn-danger{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.35);color:var(--red)}
+.bar-btn-primary{background:linear-gradient(135deg,var(--b1),var(--b2));color:#fff}
+
+/* status pill */
+.status-pill{display:flex;align-items:center;gap:6px;border-radius:999px;padding:5px 13px;font-size:12px;font-weight:800;cursor:pointer;border:none;transition:all .2s}
+.status-pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.2s infinite}
+.status-live{background:rgba(229,72,77,.18);border:1px solid rgba(229,72,77,.4);color:var(--red)}
+.status-paused{background:rgba(244,197,66,.12);border:1px solid rgba(244,197,66,.3);color:var(--gold)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* toast */
+#toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);left:50%;transform:translateX(-50%) translateY(20px);background:#1b2340;border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;white-space:nowrap;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{background:#2a0d0e;border-color:rgba(229,72,77,.4);color:var(--red)}
+#toast.ok{background:#0a2318;border-color:rgba(34,197,94,.35);color:var(--green)}
+
+/* modal fim de jogo */
+#modalFim{display:none;position:fixed;inset:0;background:rgba(5,8,22,.9);z-index:1001;align-items:flex-end;justify-content:center;padding:16px}
+#modalFim.show{display:flex}
+</style>
+</head>
+<body>
+
+<!-- ── TELA SELEÇÃO ── -->
+<div id="scr-sel" class="screen active">
+  <div class="topbar">
+    <img src="logo-branco.png" class="topbar-logo" onerror="this.style.display='none'">
+    <div class="topbar-title">Placar Manual<small>Supercopa AFC 2026</small></div>
+    <div id="syncBadge" class="ok" style="display:none">●</div>
+    <a id="btnOverlay" href="overlay-volei.html?estilo=fino" target="_blank"
+       style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:#fff;text-decoration:none;flex-shrink:0">
+      📺 Overlay
+    </a>
+  </div>
+  <div class="sel-body">
+    <div class="sel-header">
+      <h1>Escolha o jogo</h1>
+      <p>Selecione para iniciar ou retomar a marcação</p>
+    </div>
+    <div id="selList"><div class="sel-loading">Carregando partidas…</div></div>
+    <button class="sel-btn-reload" onclick="carregarJogos()">↺ Atualizar lista</button>
+  </div>
+</div>
+
+<!-- ── MODAL: quem saca primeiro ── -->
+<div id="modalSaca">
+  <div class="modal-sheet">
+    <h3>Quem saca primeiro?</h3>
+    <p>Escolha o time que inicia sacando no Set 1</p>
+    <div class="saca-opts">
+      <button class="saca-btn" id="sacaBtnA" onclick="confirmarSaca('A')"></button>
+      <button class="saca-btn" id="sacaBtnB" onclick="confirmarSaca('B')"></button>
+    </div>
+    <button class="modal-btn-cancel" onclick="fecharModalSaca()">Cancelar</button>
+  </div>
+</div>
+
+<!-- ── TELA PLACAR ── -->
+<div id="scr-score" class="screen">
+  <div class="topbar">
+    <button onclick="voltarSelecao()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 6px 0 0;line-height:1">‹</button>
+    <div class="topbar-title">
+      <div id="scGameTitle" style="font-size:13px">Jogo</div>
+      <small id="scGameSub"></small>
+    </div>
+    <button id="statusBtn" class="status-pill status-live" onclick="togglePausa()">
+      <span class="dot"></span><span id="statusTxt">AO VIVO</span>
+    </button>
+    <div id="syncBadge2" class="ok" style="margin-left:4px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid;cursor:pointer" onclick="flushQueue()">✓</div>
+  </div>
+
+  <div class="score-game-info">
+    <div class="score-game-title" id="scPhase">Fase de Grupos</div>
+    <div class="score-sets" id="scSets"></div>
+  </div>
+
+  <div class="score-cols">
+    <!-- Casa -->
+    <div class="score-col" id="colA">
+      <div class="score-col-name" id="nomeA">Time A</div>
+      <div class="score-num" id="numA">0</div>
+      <div class="score-sets-col" id="setsA"></div>
+    </div>
+    <!-- Visitante -->
+    <div class="score-col" id="colB">
+      <div class="score-col-name" id="nomeB">Time B</div>
+      <div class="score-num" id="numB">0</div>
+      <div class="score-sets-col" id="setsB"></div>
+    </div>
+  </div>
+
+  <!-- Botões de ponto -->
+  <div class="score-btns">
+    <button class="btn-ponto btn-mais" ontouchstart="" onclick="marcarPonto('A')">
+      +1 <span style="font-size:14px;opacity:.6">ponto</span>
+    </button>
+    <button class="btn-ponto btn-mais" ontouchstart="" onclick="marcarPonto('B')">
+      +1 <span style="font-size:14px;opacity:.6">ponto</span>
+    </button>
+    <button class="btn-ponto btn-menos" ontouchstart="" onclick="desfazerPonto('A')">
+      ↩ desfazer
+    </button>
+    <button class="btn-ponto btn-menos" ontouchstart="" onclick="desfazerPonto('B')">
+      ↩ desfazer
+    </button>
+  </div>
+
+  <!-- Barra inferior -->
+  <div class="score-bar">
+    <button class="bar-btn bar-btn-sec" onclick="togglePausa()">⏸ Pausa</button>
+    <button class="bar-btn bar-btn-sec" onclick="abrirOverlay()" title="Abrir overlay">📺</button>
+    <button class="bar-btn bar-btn-danger" onclick="confirmarFim()">🏁 Encerrar</button>
+  </div>
+</div>
+
+<!-- ── MODAL FIM DE JOGO ── -->
+<div id="modalFim">
+  <div class="modal-sheet">
+    <h3>Encerrar partida?</h3>
+    <p id="modalFimInfo" style="color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;margin:0 0 16px"></p>
+    <div class="saca-opts">
+      <button class="saca-btn" onclick="finalizarPartida()" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);border-color:transparent">
+        ✅ Sim, encerrar
+      </button>
+      <button class="saca-btn" onclick="document.getElementById('modalFim').classList.remove('show')">
+        ✖ Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ══ AUTH INTERCEPTOR (mesma lógica da mesa.html) ══ */
+(function(){
+  const API_HOST='hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+  const ACOES=['criarPartida','ponto','pontoMenos','timeout','cartao','substituicao','definirEscalacaoSet','definirCapitaoQuadra','atualizarObservacoes','removerEvento','desfazerPonto','processarEventosLote','finalizarPartida','reabrirPartida','excluirPartida'];
+  function sessao(){try{const a=JSON.parse(sessionStorage.getItem('supercopa_auth')||'null');return a&&a.usuario?{usuario:a.usuario,senha:a.senha}:null}catch(e){return null}}
+  function pedirLogin(){
+    if(document.getElementById('scLoginOv'))return;
+    const ov=document.createElement('div');ov.id='scLoginOv';
+    ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,8,22,.97);display:grid;place-items:center;padding:20px;font-family:system-ui,sans-serif';
+    ov.innerHTML='<form style="width:100%;max-width:340px;background:#111830;border:1px solid rgba(255,255,255,.1);padding:24px;border-radius:16px"><h3 style="margin:0 0 4px;color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:22px">🏐 Placar Manual</h3><p style="margin:0 0 16px;font-size:13px;color:rgba(255,255,255,.5)">Use seu usuário e senha do painel.</p><input id="scU" placeholder="Usuário" autocomplete="username" style="width:100%;padding:13px;margin-bottom:8px;border:2px solid rgba(255,255,255,.12);border-radius:10px;font-size:16px;box-sizing:border-box;background:#0d1222;color:#fff"><input id="scP" type="password" placeholder="Senha" autocomplete="current-password" style="width:100%;padding:13px;margin-bottom:8px;border:2px solid rgba(255,255,255,.12);border-radius:10px;font-size:16px;box-sizing:border-box;background:#0d1222;color:#fff"><div id="scE" style="min-height:18px;color:#e5484d;font-size:13px;margin-bottom:6px"></div><button style="width:100%;padding:14px;border:0;border-radius:10px;background:linear-gradient(135deg,#1b52e0,#0b2a8f);color:#fff;font-weight:700;font-size:16px;cursor:pointer">Entrar</button></form>';
+    document.body.appendChild(ov);
+    ov.querySelector('form').onsubmit=async(ev)=>{
+      ev.preventDefault();
+      const u=document.getElementById('scU').value.trim(),p=document.getElementById('scP').value,e=document.getElementById('scE');
+      e.textContent='Entrando…';
+      try{
+        const r=await window._fetchOrig('https://'+API_HOST,{method:'POST',body:JSON.stringify({acao:'loginPainel',auth:{usuario:u,senha:p}})}).then(x=>x.json());
+        if(!r||!r.ok){e.textContent=(r&&r.erro)||'Usuário ou senha incorretos.';return}
+        sessionStorage.setItem('supercopa_auth',JSON.stringify({usuario:r.usuario,senha:p,papel:r.papel}));
+        ov.remove();carregarJogos();
+      }catch(x){e.textContent='Sem conexão. Tente de novo.'}
+    };
+  }
+  window._fetchOrig=window.fetch.bind(window);
+  window.fetch=function(u,o){
+    try{
+      const s=String(u);
+      if(s.indexOf(API_HOST)>=0&&o&&o.method==='POST'&&typeof o.body==='string'){
+        const b=JSON.parse(o.body);
+        if(ACOES.indexOf(b.acao)>=0&&!b.auth){const a=sessao();if(a){b.auth=a;o=Object.assign({},o,{body:JSON.stringify(b)})}else setTimeout(pedirLogin,0)}
+      }
+    }catch(e){}
+    return window._fetchOrig(u,o).then(r=>{
+      try{if(String(u).indexOf(API_HOST)>=0)r.clone().json().then(j=>{if(j&&j.precisaLogin){try{sessionStorage.removeItem('supercopa_auth')}catch(_){}pedirLogin()}}).catch(()=>{})}catch(e){}
+      return r;
+    });
+  };
+  document.addEventListener('DOMContentLoaded',()=>{if(!sessao())pedirLogin()});
+})();
+
+/* ══ CONSTANTES ══ */
+const API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+const get=(a,p={})=>fetch(API+'?'+new URLSearchParams(Object.assign({action:a},p)),{cache:'no-store'}).then(r=>r.json());
+const post=(b)=>fetch(API,{method:'POST',body:JSON.stringify(b)}).then(r=>r.json());
+
+/* ══ ESTADO ══ */
+var S={
+  jogoId:null,
+  nomeA:'',nomeB:'',
+  setA:0,setB:0,
+  pontosA:0,pontosB:0,
+  sacando:'A',
+  status:'em_andamento', // em_andamento | pausado | finalizado
+  setAtual:1,
+  historicoParciais:[],
+  partidaId:null
+};
+var fila=[];          // {tipo,equipe} pendentes
+var flushTimer=null;
+var syncEmVoo=false;
+var conectado=true;
+var jogoSelecionado=null; // {id, casa, visitante, fase, horario, jaIniciada}
+
+/* ══ TOAST ══ */
+var _toastT;
+function toast(msg,tipo){
+  const el=document.getElementById('toast');
+  clearTimeout(_toastT);
+  el.textContent=msg;
+  el.className='show '+(tipo||'');
+  _toastT=setTimeout(()=>{el.className=''},2800);
+}
+
+/* ══ SYNC BADGE ══ */
+function atualizarSync(){
+  ['syncBadge','syncBadge2'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(!conectado){el.className=el.className.replace(/ok|pend|err/g,'')+' err';el.textContent='Sem conexão'}
+    else if(fila.length){el.className=el.className.replace(/ok|pend|err/g,'')+' pend';el.textContent=fila.length+' pend.'}
+    else{el.className=el.className.replace(/ok|pend|err/g,'')+' ok';el.textContent='✓ Sync'}
+  });
+}
+
+/* ══ CARREGAR JOGOS ══ */
+async function carregarJogos(){
+  const list=document.getElementById('selList');
+  list.innerHTML='<div class="sel-loading">Carregando partidas…</div>';
+  try{
+    const [tv,live]=await Promise.all([
+      get('torneio',{modalidade:'volei'}).catch(()=>({jogos:[]})),
+      get('partidasAoVivo').catch(()=>({partidas:[]}))
+    ]);
+    const jogos=(tv.jogos||[]).filter(j=>j.status!=='finalizado'&&j.status!=='wo'&&j.casaDefinida!==false&&j.visitanteDefinida!==false);
+    const idsLive=new Set((live.partidas||[]).map(p=>p.id));
+    if(!jogos.length){
+      list.innerHTML='<div class="sel-empty"><div class="sel-empty-ic">🏐</div><p>Nenhum jogo disponível no momento.</p></div>';
+      return;
+    }
+    const aoVivo=jogos.filter(j=>idsLive.has(j.id)||j.status==='ao_vivo');
+    const outros=jogos.filter(j=>!idsLive.has(j.id)&&j.status!=='ao_vivo');
+    let html='';
+    if(aoVivo.length){
+      html+='<div class="sel-section">🔴 Ao vivo</div>';
+      aoVivo.forEach(j=>{html+=cardJogo(j,true)});
+    }
+    html+='<div class="sel-section">📋 Próximos / Aguardando início</div>';
+    if(outros.length)outros.forEach(j=>{html+=cardJogo(j,false)});
+    else html+='<div style="color:var(--muted);font-size:12px;padding:8px 0">Todos os jogos já foram iniciados.</div>';
+    list.innerHTML=html;
+  }catch(ex){
+    list.innerHTML='<div class="sel-empty"><div class="sel-empty-ic">⚠️</div><p>Erro ao carregar. Verifique a conexão.</p></div>';
+    console.error(ex);
+  }
+}
+
+function cardJogo(j,live){
+  const fase=j.fase==='grupos'?'Grupo '+j.grupo:j.fase==='final'?'Grande Final':j.fase==='semifinal'?'Semifinal':'Quartas';
+  const hora=j.hora?j.hora+'h':'';
+  const dataFmt=j.data?j.data.split('-').reverse().slice(0,2).join('/'):'';
+  const meta=[dataFmt,hora,fase].filter(Boolean).join(' · ');
+  const badge=live?'<span class="sel-card-badge badge-live">● AO VIVO</span>':'<span class="sel-card-badge badge-ready">Iniciar</span>';
+  return `<div class="sel-card" onclick="selecionarJogo('${j.id}','${esc(j.casa)}','${esc(j.visitante)}',${live},'${esc(fase)}')">
+    <div class="sel-card-info">
+      <div class="sel-card-teams">${esc(j.casa)} × ${esc(j.visitante)}</div>
+      <div class="sel-card-meta">${meta}</div>
+    </div>
+    ${badge}
+    <div class="sel-card-arrow">›</div>
+  </div>`;
+}
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[c]))}
+
+/* ══ SELEÇÃO E INÍCIO ══ */
+var _pendJogoId,_pendNomeA,_pendNomeB,_pendFase,_pendJaIniciada;
+function selecionarJogo(id,casa,visitante,jaIniciada,fase){
+  _pendJogoId=id;_pendNomeA=casa;_pendNomeB=visitante;_pendFase=fase;_pendJaIniciada=jaIniciada;
+  if(jaIniciada){
+    iniciarOuRetomar();
+  }else{
+    document.getElementById('sacaBtnA').textContent=casa;
+    document.getElementById('sacaBtnB').textContent=visitante;
+    document.getElementById('modalSaca').classList.add('show');
+  }
+}
+
+var _sacaPrimeiro='A';
+function confirmarSaca(lado){
+  _sacaPrimeiro=lado;
+  document.querySelectorAll('.saca-btn').forEach(b=>b.classList.remove('selecionado'));
+  document.getElementById('sacaBtn'+lado).classList.add('selecionado');
+  setTimeout(()=>{
+    document.getElementById('modalSaca').classList.remove('show');
+    iniciarOuRetomar();
+  },200);
+}
+function fecharModalSaca(){document.getElementById('modalSaca').classList.remove('show')}
+
+async function iniciarOuRetomar(){
+  const id=_pendJogoId,casa=_pendNomeA,visitante=_pendNomeB,fase=_pendFase,jaIniciada=_pendJaIniciada;
+  toast('⏳ Carregando…');
+  if(jaIniciada){
+    // tentar carregar estado existente
+    try{
+      const r=await get('partida',{id});
+      if(r&&r.ok&&r.estado){
+        abrirTelaPlacar(id,r.estado,fase);
+        return;
+      }
+    }catch(ex){}
+  }
+  // criar partida nova
+  try{
+    const r=await post({
+      acao:'criarPartida',
+      id,
+      equipeA:casa,
+      equipeB:visitante,
+      arbitro1:'',arbitro2:'',apontador:'Placar Manual',
+      sacaPrimeiro:_sacaPrimeiro,
+      elencoCasa:{titulares:[],reservas:[],capitao:null,libero:null},
+      elencoVisitante:{titulares:[],reservas:[],capitao:null,libero:null},
+      capitaoCasa:null,capitaoVisitante:null
+    });
+    if(!r.ok)throw new Error(r.erro||'Erro ao criar partida');
+    // confirmar escalação set 1 (para liberar pontuação sem escalação)
+    try{await post({acao:'definirEscalacaoSet',id,rotacaoCasa:[],rotacaoVisitante:[]})}catch(_){}
+    abrirTelaPlacar(id,r.estado||{id,equipeCasa:casa,equipeVisitante:visitante,pontosCasa:0,pontosVisitante:0,setsCasa:0,setsVisitante:0,setAtual:1,sacando:_sacaPrimeiro,status:'em_andamento',historicoSets:[]},fase);
+  }catch(ex){
+    toast('❌ '+ex.message,'err');
+  }
+}
+
+/* ══ ABRIR TELA PLACAR ══ */
+function abrirTelaPlacar(id,estado,fase){
+  S.jogoId=id;
+  S.partidaId=estado.id||id;
+  S.nomeA=estado.equipeCasa||_pendNomeA||'Time A';
+  S.nomeB=estado.equipeVisitante||_pendNomeB||'Time B';
+  S.pontosA=estado.pontosCasa||0;
+  S.pontosB=estado.pontosVisitante||0;
+  S.setA=estado.setsCasa||0;
+  S.setB=estado.setsVisitante||0;
+  S.sacando=estado.sacando||'A';
+  S.status=estado.status==='em_andamento'?'em_andamento':'pausado';
+  S.setAtual=estado.setAtual||1;
+  S.historicoParciais=estado.historicoSets||[];
+  fila=[];syncEmVoo=false;
+  document.getElementById('scGameTitle').textContent=S.nomeA+' × '+S.nomeB;
+  document.getElementById('scGameSub').textContent=fase||'Vôlei';
+  document.getElementById('scPhase').textContent=fase||'Supercopa AFC 2026';
+  document.getElementById('scr-sel').classList.remove('active');
+  document.getElementById('scr-score').classList.add('active');
+  document.getElementById('syncBadge2').style.display='block';
+  renderPlacar();
+  toast('✅ Jogo carregado!','ok');
+}
+
+/* ══ RENDER PLACAR ══ */
+function renderPlacar(){
+  document.getElementById('nomeA').textContent=S.nomeA;
+  document.getElementById('nomeB').textContent=S.nomeB;
+  document.getElementById('numA').textContent=S.pontosA;
+  document.getElementById('numB').textContent=S.pontosB;
+  // sets ganhos
+  document.getElementById('setsA').innerHTML=Array.from({length:S.setA}).map(()=>'<div class="set-won">✓</div>').join('');
+  document.getElementById('setsB').innerHTML=Array.from({length:S.setB}).map(()=>'<div class="set-won">✓</div>').join('');
+  // saque
+  document.getElementById('colA').classList.toggle('saque',S.sacando==='A');
+  document.getElementById('colB').classList.toggle('saque',S.sacando==='B');
+  // status
+  const paused=S.status==='pausado';
+  const btn=document.getElementById('statusBtn');
+  btn.className='status-pill '+(paused?'status-paused':'status-live');
+  document.getElementById('statusTxt').textContent=paused?'PAUSADO':'AO VIVO';
+  // sets histórico
+  const sets=[];
+  for(let i=0;i<Math.max(S.setA+S.setB,1);i++){
+    const p=S.historicoParciais[i];
+    if(p)sets.push(`<span class="score-set-pill ${i===S.setAtual-1?'active':''}">${p.a}×${p.b}</span>`);
+    else if(i===S.setAtual-1)sets.push(`<span class="score-set-pill active">Set ${S.setAtual}</span>`);
+  }
+  document.getElementById('scSets').innerHTML=sets.join('');
+  atualizarSync();
+}
+
+/* ══ MARCAÇÃO DE PONTOS ══ */
+function marcarPonto(eq){
+  if(S.status==='finalizado'){toast('Partida encerrada.','err');return}
+  if(S.status==='pausado'){S.status='em_andamento'}
+  // otimista
+  if(eq==='A')S.pontosA++;else S.pontosB++;
+  S.sacando=eq;
+  // verificar fim de set
+  verificarSetAutomatico();
+  renderPlacar();
+  flashNum(eq);
+  enfileirar({tipo:'ponto',equipe:eq});
+}
+
+function desfazerPonto(eq){
+  if(S.status==='finalizado'){toast('Partida encerrada.','err');return}
+  if(eq==='A'&&S.pontosA>0)S.pontosA--;
+  else if(eq==='B'&&S.pontosB>0)S.pontosB--;
+  else{toast('Placar já está em 0.','err');return}
+  renderPlacar();
+  enfileirar({tipo:'pontoMenos',equipe:eq});
+}
+
+function verificarSetAutomatico(){
+  const a=S.pontosA,b=S.pontosB,limite=S.setAtual===5?15:25;
+  const liderando=a>=limite||b>=limite;
+  const diferenca=Math.abs(a-b)>=2;
+  if(liderando&&diferenca){
+    // set encerrado
+    if(a>b)S.setA++;else S.setB++;
+    S.historicoParciais.push({a,b});
+    S.pontosA=0;S.pontosB=0;
+    S.setAtual++;
+    // verificar fim de jogo (3 sets)
+    if(S.setA>=3||S.setB>=3){
+      S.status='finalizado';
+      setTimeout(()=>{confirmarFim()},600);
+    } else {
+      toast('Set encerrado! '+(a>b?S.nomeA:S.nomeB)+' venceu.','ok');
+      // confirmar escalação do próximo set automaticamente
+      try{post({acao:'definirEscalacaoSet',id:S.partidaId,rotacaoCasa:[],rotacaoVisitante:[]})}catch(_){}
+    }
+  }
+}
+
+function flashNum(eq){
+  const el=document.getElementById('num'+eq);
+  el.classList.remove('flash','sub');
+  void el.offsetWidth;
+  el.classList.add('flash');
+  setTimeout(()=>el.classList.remove('flash'),300);
+}
+
+/* ══ FILA OFFLINE ══ */
+function enfileirar(acao){
+  fila.push(acao);
+  atualizarSync();
+  clearTimeout(flushTimer);
+  flushTimer=setTimeout(flushQueue,300);
+}
+
+async function flushQueue(){
+  if(syncEmVoo||!fila.length)return;
+  syncEmVoo=true;
+  const lote=[...fila];
+  fila=[];
+  atualizarSync();
+  try{
+    const r=await post({
+      acao:'processarEventosLote',
+      id:S.partidaId,
+      loteId:'pm_'+Date.now(),
+      eventos:lote.map(e=>({tipo:e.tipo,dados:{equipe:e.equipe}}))
+    });
+    if(!r.ok){
+      // colocar de volta na fila
+      fila=lote.concat(fila);
+      conectado=false;
+    } else {
+      conectado=true;
+      // atualizar estado do servidor
+      if(r.estado){sincronizarEstadoServidor(r.estado)}
+    }
+  }catch(ex){
+    fila=lote.concat(fila);
+    conectado=false;
+  }
+  syncEmVoo=false;
+  atualizarSync();
+  if(fila.length)flushTimer=setTimeout(flushQueue,2000);
+}
+
+function sincronizarEstadoServidor(est){
+  // só atualiza se a fila estiver vazia (evita sobrescrever estado local pendente)
+  if(fila.length)return;
+  S.pontosA=est.pontosCasa||0;
+  S.pontosB=est.pontosVisitante||0;
+  S.setA=est.setsCasa||0;
+  S.setB=est.setsVisitante||0;
+  S.sacando=est.sacando||S.sacando;
+  S.setAtual=est.setAtual||1;
+  S.historicoParciais=est.historicoSets||S.historicoParciais;
+  renderPlacar();
+}
+
+// retry periódico quando offline
+setInterval(()=>{if(fila.length&&!syncEmVoo)flushQueue()},5000);
+
+/* ══ STATUS ══ */
+function togglePausa(){
+  if(S.status==='finalizado')return;
+  S.status=S.status==='em_andamento'?'pausado':'em_andamento';
+  renderPlacar();
+  toast(S.status==='pausado'?'⏸ Pausado':'▶ Ao vivo');
+}
+
+/* ══ ENCERRAR ══ */
+function confirmarFim(){
+  const venc=S.setA>S.setB?S.nomeA:S.setB>S.setA?S.nomeB:'Empate';
+  document.getElementById('modalFimInfo').textContent='Vencedor: '+venc+' ('+S.setA+'-'+S.setB+')';
+  document.getElementById('modalFim').classList.add('show');
+}
+
+async function finalizarPartida(){
+  document.getElementById('modalFim').classList.remove('show');
+  // primeiro enviar fila pendente
+  if(fila.length)await flushQueue();
+  try{
+    const r=await post({acao:'finalizarPartida',id:S.partidaId});
+    if(r.ok||r.estado){
+      S.status='finalizado';
+      toast('🏁 Partida encerrada!','ok');
+      renderPlacar();
+      setTimeout(voltarSelecao,2000);
+    }else{
+      toast('❌ Erro: '+(r.erro||'desconhecido'),'err');
+    }
+  }catch(ex){
+    toast('❌ '+ex.message,'err');
+  }
+}
+
+/* ══ NAVEGAÇÃO ══ */
+function voltarSelecao(){
+  if(fila.length){toast('⚠️ Há pontos não sincronizados!','err');return}
+  document.getElementById('scr-score').classList.remove('active');
+  document.getElementById('scr-sel').classList.add('active');
+  document.getElementById('syncBadge2').style.display='none';
+  carregarJogos();
+}
+
+function abrirOverlay(){window.open('overlay-volei.html?estilo=fino','_blank')}
+
+/* ══ INIT ══ */
+document.addEventListener('DOMContentLoaded',()=>{
+  carregarJogos();
+  // previne zoom duplo toque
+  document.addEventListener('dblclick',e=>e.preventDefault());
+});
+</script>
+</body>
+</html>
