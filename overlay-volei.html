@@ -94,6 +94,41 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 #board.minimo .cab,#board.minimo .rod{display:none}
 #board.minimo .lin{height:70px;grid-template-columns:64px 340px 34px 64px 100px}
 #board.minimo .nm{font-size:38px}#board.minimo .pt{font-size:62px}
+/* ── ESTILO CINEMA ─────────────────────────────────────────────── */
+#board.cinema{border-radius:14px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.08);min-width:580px}
+#board.cinema .cab{clip-path:none;height:56px;border-top:none;border-bottom:3px solid #f5b800;padding:0 22px;gap:16px;background:rgba(4,12,48,.98);font-size:19px;letter-spacing:2px}
+#board.cinema .cab img{height:40px;margin:0 4px 0 0;filter:drop-shadow(0 0 10px rgba(255,211,77,.55));animation:logoP 3.2s ease-in-out infinite}
+#board.cinema .cab>.set{background:none;padding:4px 14px;border-radius:999px;border:1px solid rgba(245,184,0,.4);font-size:15px;letter-spacing:1px;color:#ffd34d}
+#board.cinema .cab>.set.chg{animation:setchg .8s}
+#board.cinema .sit{font-size:14px;padding:3px 14px;letter-spacing:2.5px}
+#board.cinema .lin{height:82px;grid-template-columns:68px 1fr 26px 58px 96px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(135deg,rgba(7,26,92,.97),rgba(2,10,38,.99));overflow:hidden}
+#board.cinema .esc{background:rgba(255,255,255,.07);border-right:1px solid rgba(255,255,255,.07)}
+#board.cinema .esc b{font-size:30px;color:rgba(255,255,255,.65)}
+#board.cinema .esc img{max-width:52px;max-height:52px}
+#board.cinema .nm{font-size:42px;letter-spacing:.5px}
+#board.cinema .sv i{width:16px;height:16px;box-shadow:0 0 18px #ffd34d}
+#board.cinema .st{font-size:36px;background:transparent;color:rgba(255,255,255,.32)}
+#board.cinema .pt{font-size:68px;background:#f5b800;color:#0b1a55;transition:background .4s}
+#board.cinema .lin.trailing .pt{background:rgba(255,255,255,.88);color:#0b1a55}
+#board.cinema .rod{background:rgba(2,8,30,.98);height:36px;font-size:17px;padding:0 22px;gap:14px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.08)}
+#board.cinema .rod span b{color:rgba(255,255,255,.82)}
+/* ban fica no rodapé do card em modo cinema */
+#board.cinema #ban{bottom:0;top:auto;margin:0;clip-path:none;padding:12px 26px;font-size:34px}
+/* ── animações de entrada cinema ─── */
+#board.cinema.on .cab{animation:ciCabIn .65s cubic-bezier(.2,.9,.2,1) both}
+#board.cinema.on .lin:nth-of-type(1){animation:ciRowIn .65s cubic-bezier(.2,.9,.2,1) .1s both}
+#board.cinema.on .lin:nth-of-type(2){animation:ciRowIn .65s cubic-bezier(.2,.9,.2,1) .22s both}
+#board.cinema.on .rod{animation:ciRowIn .5s ease .34s both}
+#board.cinema.on .esc img,#board.cinema.on .esc b{animation:escIn .8s cubic-bezier(.2,1.5,.4,1) .5s both}
+#board.cinema.on .nm{animation:nmIn .8s cubic-bezier(.2,.9,.2,1) .45s both}
+@keyframes ciCabIn{from{opacity:0;transform:translateY(-20px)}}
+@keyframes ciRowIn{from{opacity:0;transform:translateX(-55px)}}
+/* glow no ponto marcado */
+#board.cinema .lin.up{animation:ciGlow 1.4s ease-out}
+@keyframes ciGlow{0%,100%{box-shadow:none}25%{box-shadow:inset 0 0 70px rgba(255,211,77,.6),inset 4px 0 0 #f5b800}}
+/* shimmer passa nos rows */
+#board.cinema .lin::before{animation:shine 7s ease-in-out infinite 1.5s}
+#board.cinema .lin:nth-of-type(2)::before{animation-delay:1.9s}
 </style>
 </head>
 <body>
@@ -146,6 +181,7 @@ function mostra(e){
  if(ult.sc!==undefined&&(sc>ult.sc||sv>ult.sv)){var ban=$('ban');ban.textContent=fim?'Fim de jogo · '+(sc>sv?e.equipeCasa:e.equipeVisitante):'Set para '+(sc>ult.sc?e.equipeCasa:e.equipeVisitante);ban.classList.remove('on');void ban.offsetWidth;ban.classList.add('on')}
  ult.sc=sc;ult.sv=sv;
  board.classList.toggle('topo',POS.indexOf('topo')===0);
+ if(EST==='cinema'){var _ls=document.querySelectorAll('.lin'),_pa=e.pontosCasa||0,_pb=e.pontosVisitante||0;_ls[0]&&_ls[0].classList.toggle('trailing',_pa<_pb);_ls[1]&&_ls[1].classList.toggle('trailing',_pb<_pa)}
  board.classList.add('on');posiciona();
 }
 function quadras(){return get('torneio',{modalidade:'volei'}).then(function(t){(t.jogos||[]).forEach(function(j){QMAP[String(j.id).toUpperCase()]=String(j.quadra||'').toLowerCase()})}).catch(function(){})}
