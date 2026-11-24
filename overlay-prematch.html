@@ -59,7 +59,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 
 #panel-casa{
   position:absolute;left:0;top:76px;
-  width:820px;bottom:92px;
+  width:790px;bottom:92px;
   overflow:hidden;
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
@@ -72,7 +72,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 
 #panel-vis{
   position:absolute;right:0;top:76px;
-  width:820px;bottom:92px;
+  width:790px;bottom:92px;
   overflow:hidden;
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
@@ -173,7 +173,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 /* ═══════════ CENTRO ═══════════ */
 #center{
   position:absolute;
-  left:820px;right:820px;
+  left:790px;right:790px;
   top:76px;bottom:92px;
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
@@ -199,8 +199,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 
 #vs{
   position:relative;z-index:2;
-  font-size:200px;font-weight:900;font-style:italic;
-  line-height:.85;letter-spacing:-8px;
+  font-size:176px;font-weight:900;font-style:italic;
+  line-height:.85;letter-spacing:-4px;
   background:linear-gradient(160deg,#ffffff 0%,#c0d4ff 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   filter:drop-shadow(0 0 32px rgba(27,82,224,.45));
@@ -342,11 +342,11 @@ function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v}
 function show(id){var e=document.getElementById(id);if(e)e.style.display=''}
 function hide(id){var e=document.getElementById(id);if(e)e.style.display='none'}
 
-// ajusta font-size para caber no painel (820px - 96px padding = 724px útil)
+// ajusta font-size para caber no painel (790px - 96px padding = 694px útil)
 // Barlow Condensed: char width ≈ 0.52 × fontSize (conservador)
 function scaleName(id,name){
   var el=document.getElementById(id);if(!el)return;
-  var usable=724,len=name.length,size=140;
+  var usable=694,len=name.length,size=140;
   while(size>36&&len*size*0.52>usable)size-=4;
   el.style.fontSize=size+'px';
 }
