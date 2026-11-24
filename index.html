@@ -2380,6 +2380,8 @@ function checkAuth() {
     document.getElementById('sidebar').style.display = '';
     document.getElementById('content').style.display = '';
     aplicarPapel_();
+    // Sync credentials to localStorage so placar-manual (new tab) can authenticate
+    try{const _a=sessionStorage.getItem('supercopa_auth');if(_a)localStorage.setItem('supercopa_auth',_a)}catch(_){}
   }
 }
 
@@ -2396,7 +2398,9 @@ async function doLogin(e) {
   }
   if (res && res.ok) {
     sessionStorage.setItem('supercopa_logged', 'true');
-    sessionStorage.setItem('supercopa_auth', JSON.stringify({ usuario: res.usuario, senha: pass, papel: res.papel }));
+    const _authData = JSON.stringify({ usuario: res.usuario, senha: pass, papel: res.papel });
+    sessionStorage.setItem('supercopa_auth', _authData);
+    try{localStorage.setItem('supercopa_auth', _authData)}catch(_){}
     if (!res.offline) lembrarLoginOffline_(user, pass, res);
     errorEl.classList.remove('show');
     document.getElementById('login-screen').classList.add('hidden');
