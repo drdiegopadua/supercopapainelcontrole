@@ -13,10 +13,12 @@
   Fundo transparente — fonte Browser Source no OBS (1920×1080)
 */
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
 
 #stage{
-  position:absolute;inset:0;
+  position:absolute;left:0;top:0;
+  width:1920px;height:1080px;
+  transform-origin:0 0;
   font-family:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
   color:#fff;
   opacity:0;
@@ -25,7 +27,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
 @keyframes stageIn{to{opacity:1}}
 
 /* ── painéis laterais ── */
-.panel{position:absolute;top:0;bottom:0;width:820px;overflow:hidden}
+.panel{position:absolute;top:72px;bottom:88px;width:760px;overflow:hidden}
 .panel-casa{left:0}
 .panel-vis{right:0}
 
@@ -65,56 +67,63 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
 .panel-casa .slash{right:-3px}
 .panel-vis .slash{left:-3px}
 
-/* nome vertical do time */
+/* nome vertical do time — stripe na borda externa do painel */
 .team-name{
   position:absolute;
-  top:50%;left:50%;
-  transform-origin:center center;
-  font-size:148px;font-weight:900;
+  top:0;bottom:0;
+  width:160px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:132px;font-weight:900;
   letter-spacing:4px;text-transform:uppercase;
   line-height:1;white-space:nowrap;
-  text-shadow:0 4px 32px rgba(0,0,0,.7);
+  text-shadow:0 4px 32px rgba(0,0,0,.7),0 0 60px rgba(0,0,0,.5);
   animation:nameIn .6s .4s both;
+  writing-mode:vertical-rl;
+  overflow:hidden;
+  z-index:2;
 }
+/* casa: borda esquerda (lado oposto ao centro) */
 .panel-casa .team-name{
-  transform:translate(-50%,-50%) rotate(-90deg);
+  left:16px;
+  transform:rotate(180deg);
 }
+/* visitante: borda direita */
 .panel-vis .team-name{
-  transform:translate(-50%,-50%) rotate(90deg);
+  right:16px;
 }
 @keyframes nameIn{from{opacity:0;letter-spacing:16px}to{opacity:1;letter-spacing:4px}}
 
-/* escudo do time */
+/* escudo do time — posicionado no centro do painel, sobre o nome */
 .shield-wrap{
-  position:absolute;bottom:200px;
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
   display:flex;align-items:center;justify-content:center;
-  width:220px;height:220px;
+  width:240px;height:240px;
+  z-index:3;
   animation:shieldIn .7s .5s both;
 }
-.panel-casa .shield-wrap{left:50%;transform:translateX(-50%)}
-.panel-vis .shield-wrap{left:50%;transform:translateX(-50%)}
-@keyframes shieldIn{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
-.panel-vis .shield-wrap{animation:shieldInR .7s .5s both}
-@keyframes shieldInR{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+@keyframes shieldIn{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 
 .shield{
-  width:200px;height:200px;
+  width:220px;height:220px;
   object-fit:contain;
-  filter:drop-shadow(0 8px 32px rgba(0,0,0,.8));
+  filter:drop-shadow(0 8px 40px rgba(0,0,0,.9));
 }
 .shield-initials{
-  width:200px;height:200px;border-radius:50%;
+  width:220px;height:220px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:72px;font-weight:900;
-  background:rgba(255,255,255,.12);
-  border:4px solid rgba(255,255,255,.3);
-  text-shadow:0 2px 12px rgba(0,0,0,.5);
+  font-size:80px;font-weight:900;
+  background:rgba(0,0,0,.35);
+  border:3px solid rgba(255,255,255,.25);
+  text-shadow:0 2px 16px rgba(0,0,0,.8);
+  backdrop-filter:blur(4px);
 }
 
 /* ── centro ── */
 #center{
   position:absolute;
-  left:820px;right:820px;top:0;bottom:0;
+  left:760px;right:760px;top:72px;bottom:88px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:0;
   z-index:10;
@@ -123,39 +132,37 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
 /* fundo central */
 #center-bg{
   position:absolute;inset:0;
-  background:#0a0e1a;
-  clip-path:polygon(18px 0,calc(100% - 18px) 0,100% 100%,0 100%);
+  background:linear-gradient(180deg,#0d1326 0%,#0a0e1a 100%);
+  border-left:3px solid rgba(245,184,0,.35);
+  border-right:3px solid rgba(245,184,0,.35);
 }
 
 /* data chip */
 #date-chip{
-  position:relative;z-index:1;
+  position:absolute;top:20px;left:50%;transform:translateX(-50%);
+  z-index:1;
   background:#f5b800;color:#0a0e1a;
-  font-size:36px;font-weight:900;letter-spacing:3px;
-  padding:10px 32px;
+  font-size:34px;font-weight:900;letter-spacing:3px;
+  padding:8px 28px;
   clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);
-  margin-bottom:28px;
+  white-space:nowrap;
   animation:chipIn .5s .6s both;
 }
-@keyframes chipIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+@keyframes chipIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
-/* fase/grupo */
-#fase-label{
-  position:relative;z-index:1;
-  font-size:22px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
-  color:#b9d0ff;margin-bottom:40px;
-  animation:chipIn .5s .65s both;
-}
+/* fase/grupo — removido do centro, fica só no topbar */
+#fase-label{display:none}
 
 /* VS */
 #vs{
   position:relative;z-index:1;
-  font-size:200px;font-weight:900;font-style:italic;
+  font-size:180px;font-weight:900;font-style:italic;
   line-height:.85;
   background:linear-gradient(160deg,#ffffff 30%,#b9d0ff);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   filter:drop-shadow(0 0 40px rgba(27,82,224,.6));
   animation:vsIn .6s .3s both;
+  letter-spacing:-6px;
 }
 @keyframes vsIn{from{opacity:0;transform:scale(1.4)}to{opacity:1;transform:scale(1)}}
 
@@ -244,8 +251,8 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
     <div class="stripe" style="left:55%"></div>
     <div class="slash"></div>
     <div class="shield-wrap">
-      <img class="shield" id="shield-casa" src="" alt="" onerror="this.style.display='none';document.getElementById('init-casa').style.display='flex'">
-      <div class="shield-initials" id="init-casa" style="display:none" id="init-casa"></div>
+      <img class="shield" id="shield-casa" src="" alt="" style="display:none" onerror="this.style.display='none';document.getElementById('init-casa').style.display='flex'">
+      <div class="shield-initials" id="init-casa"></div>
     </div>
     <div class="team-name" id="name-casa">TIME A</div>
   </div>
@@ -260,8 +267,8 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
     <div class="stripe" style="left:65%"></div>
     <div class="slash"></div>
     <div class="shield-wrap">
-      <img class="shield" id="shield-vis" src="" alt="" onerror="this.style.display='none';document.getElementById('init-vis').style.display='flex'">
-      <div class="shield-initials" id="init-vis" style="display:none"></div>
+      <img class="shield" id="shield-vis" src="" alt="" style="display:none" onerror="this.style.display='none';document.getElementById('init-vis').style.display='flex'">
+      <div class="shield-initials" id="init-vis"></div>
     </div>
     <div class="team-name" id="name-vis">TIME B</div>
   </div>
@@ -274,9 +281,10 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
     <div id="vs">VS</div>
     <div class="h-line"></div>
     <div id="sc-logo">
-      <img src="logo-supercopa.jpg" alt="Supercopa AFC" onerror="this.style.display='none'">
+      <img src="logo-supercopa.jpg" alt="Supercopa AFC" onerror="this.style.display='none'" style="height:60px">
       <span>Supercopa AFC</span>
     </div>
+    <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:1;font-size:16px;font-weight:700;letter-spacing:3px;color:#8ca0d0;text-transform:uppercase;white-space:nowrap;text-align:center" id="center-fase"></div>
   </div>
 
   <!-- rodapé -->
@@ -319,14 +327,14 @@ function p(k){return new URLSearchParams(location.search).get(k)||''}
 function esc(s){return s.replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}
 function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).slice(0,3).join('').toUpperCase()}
 
-// escala automática (igual ao overlay de placar)
+// escala automática com transform-origin:0 0
 (function(){
-  const W=1920,H=1080;
+  const W=1920,H=1080,st=document.getElementById('stage');
   function resize(){
     const s=Math.min(innerWidth/W,innerHeight/H);
-    document.getElementById('stage').style.transform=`scale(${s})`;
-    document.getElementById('stage').style.marginLeft=(innerWidth-W*s)/2+'px';
-    document.getElementById('stage').style.marginTop=(innerHeight-H*s)/2+'px';
+    st.style.transform=`scale(${s})`;
+    st.style.left=Math.round((innerWidth-W*s)/2)+'px';
+    st.style.top=Math.round((innerHeight-H*s)/2)+'px';
   }
   resize();window.addEventListener('resize',resize);
 })();
@@ -350,6 +358,20 @@ function applyParams(){
   set('name-vis',  vis);
   document.getElementById('init-casa').textContent = initials(casa);
   document.getElementById('init-vis').textContent  = initials(vis);
+  // escala o font-size para caber na altura do painel (920px útil)
+  // Barlow Condensed: cada char ≈ 0.52×fontSize + 4px letter-spacing
+  function scaleName(id, name){
+    const el=document.getElementById(id);
+    if(!el)return;
+    const panelH=900;
+    const len=name.length;
+    let size=132;
+    const fits=sz=>len*sz*0.52+(len-1)*4<=panelH;
+    while(size>44&&!fits(size))size-=4;
+    el.style.fontSize=size+'px';
+  }
+  scaleName('name-casa',casa);
+  scaleName('name-vis', vis);
 
   if(data){
     set('date-chip', data);
@@ -366,16 +388,17 @@ function applyParams(){
   const faseLabel = faseMap[fase] || (grupo ? 'Grupo '+grupo+' · Fase de Grupos' : 'Supercopa AFC');
   set('fase-label', faseLabel);
   set('top-fase', faseLabel);
+  set('center-fase', faseLabel);
 
   // escudos via URL param direto
-  if(escCasa){
-    const img=document.getElementById('shield-casa');
-    img.src=escCasa;img.style.display='';
+  function setShieldUrl(imgId, initId, url){
+    const img=document.getElementById(imgId);
+    img.onload=()=>{img.style.display='';const init=document.getElementById(initId);if(init)init.style.display='none'};
+    img.onerror=()=>{img.style.display='none';const init=document.getElementById(initId);if(init)init.style.display='flex'};
+    img.src=url;
   }
-  if(escVis){
-    const img=document.getElementById('shield-vis');
-    img.src=escVis;img.style.display='';
-  }
+  if(escCasa) setShieldUrl('shield-casa','init-casa',escCasa);
+  if(escVis)  setShieldUrl('shield-vis','init-vis',escVis);
 
   // escudos via API (se não fornecidos via param)
   if(!escCasa||!escVis){
@@ -396,7 +419,8 @@ async function fetchShields(casaNome, visNome, escCasaUrl, escVisUrl){
       if(!t||!t.escudo)return;
       const url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
       const img=document.getElementById(imgId);
-      img.src=url;img.style.display='';
+      img.onload=()=>{img.style.display='';const init=document.getElementById(initId);if(init)init.style.display='none';};
+      img.src=url;
     }
     applyShield(casaNome,'shield-casa','init-casa',escCasaUrl);
     applyShield(visNome, 'shield-vis', 'init-vis', escVisUrl);
