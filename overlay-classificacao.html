@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Overlay Classificação · Supercopa AFC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@500;600;700&display=swap">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font-family:'Barlow Condensed',sans-serif}
+
+#stage{
+  position:absolute;top:0;left:0;
+  width:1920px;height:1080px;
+  transform-origin:0 0;
+  background:linear-gradient(160deg,#060b1a 0%,#0b1530 50%,#07101f 100%);
+}
+
+/* ── textura de fundo ── */
+#stage::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 900px 400px at 25% 50%,rgba(27,82,224,.07) 0%,transparent 70%),
+    radial-gradient(ellipse 900px 400px at 75% 50%,rgba(27,82,224,.07) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* ── topo ── */
+#header{
+  position:absolute;top:0;left:0;right:0;height:88px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;
+  border-bottom:2px solid rgba(27,82,224,.4);
+  background:linear-gradient(90deg,rgba(27,82,224,.18) 0%,rgba(27,82,224,.06) 50%,rgba(27,82,224,.18) 100%);
+}
+.hdr-left{display:flex;align-items:center;gap:20px}
+.hdr-label{
+  font-size:13px;font-weight:700;letter-spacing:5px;text-transform:uppercase;
+  color:rgba(255,255,255,.4);
+}
+.hdr-title{
+  font-size:52px;font-weight:900;letter-spacing:4px;text-transform:uppercase;
+  color:#fff;line-height:1;
+}
+.hdr-title span{color:#1b52e0}
+.hdr-badge{
+  display:flex;align-items:center;gap:10px;
+  font-size:22px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+  color:rgba(255,255,255,.85);
+}
+.hdr-badge img{height:52px;object-fit:contain}
+.hdr-modality{
+  font-size:14px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
+  color:#f5b800;
+  background:rgba(245,184,0,.12);
+  border:1px solid rgba(245,184,0,.3);
+  border-radius:4px;
+  padding:4px 14px;
+}
+
+/* ── separador horizontal ── */
+#divh{
+  position:absolute;top:88px;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(27,82,224,.6) 20%,rgba(27,82,224,.6) 80%,transparent);
+}
+
+/* ── grade 2×2 ── */
+#grid{
+  position:absolute;top:90px;left:0;right:0;bottom:0;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  gap:0;
+}
+
+/* separador vertical */
+#grid::after{
+  content:'';
+  position:absolute;top:20px;bottom:20px;left:50%;
+  width:2px;
+  background:linear-gradient(180deg,transparent,rgba(27,82,224,.4) 20%,rgba(27,82,224,.4) 80%,transparent);
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+/* separador horizontal inferior */
+#grid::before{
+  content:'';
+  position:absolute;left:20px;right:20px;top:50%;
+  height:2px;
+  background:linear-gradient(90deg,transparent,rgba(27,82,224,.4) 20%,rgba(27,82,224,.4) 80%,transparent);
+  transform:translateY(-50%);
+  pointer-events:none;
+}
+
+/* ── célula de grupo ── */
+.grupo-cell{
+  padding:22px 40px 18px;
+  display:flex;flex-direction:column;gap:12px;
+  animation:fadeIn .5s both;
+}
+.grupo-cell:nth-child(1){animation-delay:.05s}
+.grupo-cell:nth-child(2){animation-delay:.1s}
+.grupo-cell:nth-child(3){animation-delay:.15s}
+.grupo-cell:nth-child(4){animation-delay:.2s}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.grupo-header{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:4px;
+}
+.grupo-letra{
+  display:flex;align-items:center;justify-content:center;
+  width:52px;height:52px;border-radius:12px;
+  background:linear-gradient(135deg,#1b52e0,#0b2a8f);
+  font-size:30px;font-weight:900;color:#fff;letter-spacing:0;
+  flex-shrink:0;
+  box-shadow:0 4px 20px rgba(27,82,224,.5);
+}
+.grupo-info{line-height:1.15}
+.grupo-nome{font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase}
+.grupo-sub{font-size:13px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.35)}
+
+/* ── tabela ── */
+.tabela{width:100%;border-collapse:collapse}
+
+.tabela thead tr{border-bottom:1px solid rgba(255,255,255,.1)}
+.tabela thead th{
+  font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(255,255,255,.35);
+  padding:0 8px 8px;
+  text-align:center;
+}
+.tabela thead th.th-equipe{text-align:left;padding-left:0}
+
+.tabela tbody tr{
+  border-bottom:1px solid rgba(255,255,255,.05);
+  transition:background .15s;
+}
+.tabela tbody tr:last-child{border:none}
+
+/* destaque 1º lugar */
+.tabela tbody tr.pos-1 .td-pos{color:#f5b800}
+.tabela tbody tr.pos-1 .td-name{color:#fff}
+.tabela tbody tr.pos-2 .td-pos{color:rgba(255,255,255,.7)}
+.tabela tbody tr.pos-3 .td-pos{color:rgba(255,255,255,.45)}
+
+.tabela tbody td{
+  padding:10px 8px;
+  font-size:22px;font-weight:700;
+  color:rgba(255,255,255,.75);
+  text-align:center;vertical-align:middle;
+}
+
+/* coluna posição */
+.td-pos{
+  font-size:18px;font-weight:900;width:28px;
+  text-align:center;padding-left:0;
+}
+
+/* coluna time */
+.td-equipe{text-align:left;padding-left:0}
+.team-row{display:flex;align-items:center;gap:10px}
+.team-badge{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;flex-shrink:0;
+}
+.team-badge img{width:30px;height:30px;object-fit:contain}
+.badge-init{font-size:12px;font-weight:900;color:rgba(255,255,255,.4);font-family:'Barlow Condensed',sans-serif}
+.td-name{
+  font-size:22px;font-weight:800;
+  color:rgba(255,255,255,.85);
+  letter-spacing:.3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:260px;
+}
+
+/* coluna pontos em destaque */
+.td-pts{
+  font-size:26px;font-weight:900;
+  color:#fff;
+}
+.tabela tbody tr.pos-1 .td-pts{color:#f5b800}
+
+/* destaque para líder: linha com fundo */
+.tabela tbody tr.pos-1{
+  background:rgba(245,184,0,.06);
+  border-radius:8px;
+}
+
+/* separadores na thead */
+.th-sep{border-left:1px solid rgba(255,255,255,.08);padding-left:12px!important}
+.td-sep{border-left:1px solid rgba(255,255,255,.05);padding-left:12px!important}
+
+/* ── rodapé ── */
+#footer{
+  position:absolute;bottom:0;left:0;right:0;height:0;
+}
+
+/* ── loading ── */
+#loading{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  gap:16px;
+  font-size:28px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:rgba(255,255,255,.4);
+}
+.spinner{
+  width:32px;height:32px;border-radius:50%;
+  border:3px solid rgba(27,82,224,.2);
+  border-top-color:#1b52e0;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div id="header">
+    <div class="hdr-left">
+      <div>
+        <div class="hdr-label">Supercopa AFC 2024</div>
+        <div class="hdr-title">CLASSI<span>FICAÇÃO</span></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <div class="hdr-modality" id="hdr-modality">VÔLEI</div>
+      <div class="hdr-badge">
+        <img src="logo-supercopa.jpg" alt="Supercopa AFC" onerror="this.style.display='none'">
+      </div>
+    </div>
+  </div>
+
+  <div id="divh"></div>
+
+  <div id="loading"><div class="spinner"></div>Carregando…</div>
+  <div id="grid" style="display:none"></div>
+
+</div>
+
+<script>
+var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+var shields={};
+
+function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function initials(n){return n.trim().split(/\s+/).map(function(w){return w[0]||''}).slice(0,3).join('').toUpperCase()}
+
+function badgeHtml(nome){
+  var url=shields[norm(nome)];
+  if(url)return '<div class="team-badge"><img src="'+esc(url)+'" alt="" onerror="this.parentElement.innerHTML=\'<span class=badge-init>'+esc(initials(nome))+'</span>\'"></div>';
+  return '<div class="team-badge"><span class="badge-init">'+esc(initials(nome))+'</span></div>';
+}
+
+function grupoHtml(g){
+  var rows='';
+  (g.tabela||[]).forEach(function(t){
+    var cls='pos-'+t.pos;
+    rows+='<tr class="'+cls+'">'
+      +'<td class="td-pos">'+t.pos+'</td>'
+      +'<td class="td-equipe">'
+        +'<div class="team-row">'
+          +badgeHtml(t.equipe)
+          +'<span class="td-name">'+esc(t.equipe)+'</span>'
+        +'</div>'
+      +'</td>'
+      +'<td>'+t.jogos+'</td>'
+      +'<td>'+t.vitorias+'</td>'
+      +'<td>'+t.derrotas+'</td>'
+      +'<td class="th-sep td-sep">'+t.setsPro+'</td>'
+      +'<td>'+t.setsContra+'</td>'
+      +'<td>'+t.saldoSets+'</td>'
+      +'<td class="th-sep td-sep td-pts">'+t.pontos+'</td>'
+    +'</tr>';
+  });
+
+  var jogos=g.jogosTotal>0?g.jogosFeitos+'/'+g.jogosTotal+' jogos':'';
+  return '<div class="grupo-cell">'
+    +'<div class="grupo-header">'
+      +'<div class="grupo-letra">'+esc(g.grupo)+'</div>'
+      +'<div class="grupo-info">'
+        +'<div class="grupo-nome">Grupo '+esc(g.grupo)+'</div>'
+        +(jogos?'<div class="grupo-sub">'+jogos+'</div>':'')
+      +'</div>'
+    +'</div>'
+    +'<table class="tabela">'
+      +'<thead><tr>'
+        +'<th class="th-equipe" colspan="2">Time</th>'
+        +'<th title="Jogos">J</th>'
+        +'<th title="Vitórias">V</th>'
+        +'<th title="Derrotas">D</th>'
+        +'<th class="th-sep" title="Sets Pró">SP</th>'
+        +'<th title="Sets Contra">SC</th>'
+        +'<th title="Saldo de Sets">Sal</th>'
+        +'<th class="th-sep" title="Pontos">PTS</th>'
+      +'</tr></thead>'
+      +'<tbody>'+rows+'</tbody>'
+    +'</table>'
+  +'</div>';
+}
+
+async function carregar(){
+  try{
+    var [torneioRes,timesRes]=await Promise.all([
+      fetch(API+'?action=torneio&modalidade=volei',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}),
+      fetch(API+'?action=timesPublicos',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}).catch(function(){return{times:[]}})
+    ]);
+
+    (timesRes.times||[]).forEach(function(t){
+      if(!t.escudo)return;
+      var url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
+      shields[norm(t.nome)]=url;
+    });
+
+    var grupos=torneioRes.grupos||[];
+    var html=grupos.map(grupoHtml).join('');
+    var grid=document.getElementById('grid');
+    grid.innerHTML=html;
+    document.getElementById('loading').style.display='none';
+    grid.style.display='grid';
+
+    // atualizar label de modalidade
+    if(torneioRes.modalidade){
+      var mod={'volei':'VÔLEI','basquete':'BASQUETE','futsal':'FUTSAL'};
+      document.getElementById('hdr-modality').textContent=mod[torneioRes.modalidade]||torneioRes.modalidade.toUpperCase();
+    }
+  }catch(e){
+    document.getElementById('loading').innerHTML='<span>Erro ao carregar dados</span>';
+    console.error(e);
+  }
+}
+
+carregar();
+// atualizar a cada 60s
+setInterval(carregar,60000);
+
+// escala OBS
+(function(){
+  var W=1920,H=1080,st=document.getElementById('stage');
+  function resize(){
+    var s=Math.min(innerWidth/W,innerHeight/H);
+    st.style.transform='scale('+s+')';
+    st.style.left=Math.round((innerWidth-W*s)/2)+'px';
+    st.style.top=Math.round((innerHeight-H*s)/2)+'px';
+  }
+  resize();window.addEventListener('resize',resize);
+})();
+</script>
+</body>
+</html>
