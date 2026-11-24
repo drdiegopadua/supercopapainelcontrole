@@ -243,7 +243,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:'Barlow',sy
 (function(){
   const API_HOST='hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
   const ACOES=['criarPartida','ponto','pontoMenos','timeout','cartao','substituicao','definirEscalacaoSet','definirCapitaoQuadra','atualizarObservacoes','removerEvento','desfazerPonto','processarEventosLote','finalizarPartida','reabrirPartida','excluirPartida'];
-  function sessao(){try{const a=JSON.parse(sessionStorage.getItem('supercopa_auth')||'null');return a&&a.usuario?{usuario:a.usuario,senha:a.senha}:null}catch(e){return null}}
+  function sessao(){try{let a=JSON.parse(sessionStorage.getItem('supercopa_auth')||'null');if(!a||!a.usuario)a=JSON.parse(localStorage.getItem('supercopa_auth')||'null');return a&&a.usuario?{usuario:a.usuario,senha:a.senha}:null}catch(e){return null}}
   window._fetchOrig=window.fetch.bind(window);
   window.fetch=function(u,o){
     try{
