@@ -243,6 +243,8 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 
 <script>
 var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+var _ESCUDOS3D='https://www.supercopaafc.com.br/novo/escudos/';
+var ESCUDOS_MAP={'alpha vôlei':'alpha-volei.png','ct das montanhas':'ct-das-montanhas.png','ctv aravôlei':'ctv-aravolei.png','ctva voleibol':'ctva-voleibol.png','equipe uvi':'equipe-uvi.png','es vôlei':'es-volei.png','ms vôlei':'ms-volei.png','rpb volei':'rpb-volei.png','super vôlei':'super-volei.png','supra vôlei':'supra-volei.png','tiger volley':'tiger-volley.png','união vôlei':'uniao-volei.png'};
 var shields={};
 
 function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()}
@@ -303,11 +305,13 @@ async function carregar(){
       fetch(API+'?action=timesPublicos',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}).catch(function(){return{times:[]}})
     ]);
 
+    // preencher escudos do API e sobrescrever com os 3D do site
     (timesRes.times||[]).forEach(function(t){
       if(!t.escudo)return;
       var url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
       shields[norm(t.nome)]=url;
     });
+    Object.keys(ESCUDOS_MAP).forEach(function(k){shields[k]=_ESCUDOS3D+ESCUDOS_MAP[k]});
 
     var grupos=torneioRes.grupos||[];
     var html=grupos.map(grupoHtml).join('');

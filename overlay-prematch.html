@@ -322,6 +322,9 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 </div>
 <script>
 const SC_API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+var _E3D='https://www.supercopaafc.com.br/novo/escudos/';
+var ESCUDOS3D={'alpha vôlei':'alpha-volei.png','ct das montanhas':'ct-das-montanhas.png','ctv aravôlei':'ctv-aravolei.png','ctva voleibol':'ctva-voleibol.png','equipe uvi':'equipe-uvi.png','es vôlei':'es-volei.png','ms vôlei':'ms-volei.png','rpb volei':'rpb-volei.png','super vôlei':'super-volei.png','supra vôlei':'supra-volei.png','tiger volley':'tiger-volley.png','união vôlei':'uniao-volei.png'};
+function escudo3D(nome){var k=String(nome||'').toLowerCase().trim();return ESCUDOS3D[k]?_E3D+ESCUDOS3D[k]:null}
 function p(k){return new URLSearchParams(location.search).get(k)||''}
 function initials(n){return n.trim().split(/\s+/).map(function(w){return w[0]||''}).slice(0,3).join('').toUpperCase()}
 
@@ -392,7 +395,7 @@ async function fetchShields(cN,vN,eC,eV){
     function apply(nome,imgId,initId,ov){
       if(ov)return;
       var t=find(nome);if(!t||!t.escudo)return;
-      var url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
+      var url=escudo3D(nome)||(t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo);
       var img=document.getElementById(imgId);
       img.onload=function(){img.style.display='block';hide(initId)};
       img.src=url;
