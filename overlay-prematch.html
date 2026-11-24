@@ -3,18 +3,12 @@
 <head>
 <meta charset="utf-8">
 <title>Pré-Jogo · Supercopa AFC</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800&family=Barlow:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,900&display=swap">
 <style>
-/*
-  Overlay de pré-jogo — Supercopa AFC
-  Params: ?casa=X &visitante=Y &data=28/11 &horario=13H00
-          &quadra=Quadra+Principal &grupo=A &fase=grupos
-  Fundo transparente — fonte Browser Source no OBS (1920×1080)
-*/
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
 
+/* ── stage 1920×1080, escala pelo JS ── */
 #stage{
   position:absolute;left:0;top:0;
   width:1920px;height:1080px;
@@ -22,212 +16,231 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
   font-family:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
   color:#fff;
   opacity:0;
-  animation:stageIn .8s .2s forwards;
+  animation:stageIn .5s .1s forwards;
 }
 @keyframes stageIn{to{opacity:1}}
 
-/* ── painéis laterais ── */
-.panel{position:absolute;top:72px;bottom:88px;width:760px;overflow:hidden}
-.panel-casa{left:0}
-.panel-vis{right:0}
-
-.panel-bg{
-  position:absolute;inset:0;
-  background-size:cover;background-position:center;
-  filter:brightness(.35) saturate(1.2);
-  transform:scale(1.08);
-  animation:zoomBg 12s ease-in-out infinite alternate;
-}
-@keyframes zoomBg{to{transform:scale(1)}}
-
-.panel-casa .panel-color{
-  position:absolute;inset:0;
-  background:linear-gradient(160deg,rgba(27,82,224,.88) 0%,rgba(11,42,143,.92) 55%,rgba(7,26,92,.96) 100%);
-}
-.panel-vis .panel-color{
-  position:absolute;inset:0;
-  background:linear-gradient(200deg,rgba(160,20,20,.88) 0%,rgba(100,8,8,.93) 55%,rgba(45,2,2,.97) 100%);
-}
-
-/* padrão de pontos decorativos */
-.dots{
-  position:absolute;inset:0;
-  background-image:radial-gradient(circle,rgba(255,255,255,.18) 1px,transparent 1px);
-  background-size:28px 28px;
-  opacity:.45;
-}
-
-/* faixas diagonais */
-.slash{
-  position:absolute;top:0;bottom:0;width:6px;
-  background:#f5b800;
-  box-shadow:0 0 24px 4px rgba(245,184,0,.6);
-  transform:skewX(-8deg);
-}
-.panel-casa .slash{right:-3px}
-.panel-vis .slash{left:-3px}
-
-/* nome vertical do time — stripe na borda externa do painel */
-.team-name{
-  position:absolute;
-  top:0;bottom:0;
-  width:160px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:132px;font-weight:900;
-  letter-spacing:4px;text-transform:uppercase;
-  line-height:1;white-space:nowrap;
-  text-shadow:0 4px 32px rgba(0,0,0,.7),0 0 60px rgba(0,0,0,.5);
-  animation:nameIn .6s .4s both;
-  writing-mode:vertical-rl;
-  overflow:hidden;
-  z-index:2;
-}
-/* casa: borda esquerda (lado oposto ao centro) */
-.panel-casa .team-name{
-  left:16px;
-  transform:rotate(180deg);
-}
-/* visitante: borda direita */
-.panel-vis .team-name{
-  right:16px;
-}
-@keyframes nameIn{from{opacity:0;letter-spacing:16px}to{opacity:1;letter-spacing:4px}}
-
-/* escudo do time — posicionado no centro do painel, sobre o nome */
-.shield-wrap{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  display:flex;align-items:center;justify-content:center;
-  width:240px;height:240px;
-  z-index:3;
-  animation:shieldIn .7s .5s both;
-}
-@keyframes shieldIn{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-
-.shield{
-  width:220px;height:220px;
-  object-fit:contain;
-  filter:drop-shadow(0 8px 40px rgba(0,0,0,.9));
-}
-.shield-initials{
-  width:220px;height:220px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:80px;font-weight:900;
-  background:rgba(0,0,0,.35);
-  border:3px solid rgba(255,255,255,.25);
-  text-shadow:0 2px 16px rgba(0,0,0,.8);
-  backdrop-filter:blur(4px);
-}
-
-/* ── centro ── */
-#center{
-  position:absolute;
-  left:760px;right:760px;top:72px;bottom:88px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:0;
-  z-index:10;
-}
-
-/* fundo central */
-#center-bg{
-  position:absolute;inset:0;
-  background:linear-gradient(180deg,#0d1326 0%,#0a0e1a 100%);
-  border-left:3px solid rgba(245,184,0,.35);
-  border-right:3px solid rgba(245,184,0,.35);
-}
-
-/* data chip */
-#date-chip{
-  position:absolute;top:20px;left:50%;transform:translateX(-50%);
-  z-index:1;
-  background:#f5b800;color:#0a0e1a;
-  font-size:34px;font-weight:900;letter-spacing:3px;
-  padding:8px 28px;
-  clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);
-  white-space:nowrap;
-  animation:chipIn .5s .6s both;
-}
-@keyframes chipIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-
-/* fase/grupo — removido do centro, fica só no topbar */
-#fase-label{display:none}
-
-/* VS */
-#vs{
-  position:relative;z-index:1;
-  font-size:180px;font-weight:900;font-style:italic;
-  line-height:.85;
-  background:linear-gradient(160deg,#ffffff 30%,#b9d0ff);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 0 40px rgba(27,82,224,.6));
-  animation:vsIn .6s .3s both;
-  letter-spacing:-6px;
-}
-@keyframes vsIn{from{opacity:0;transform:scale(1.4)}to{opacity:1;transform:scale(1)}}
-
-/* linha divisória */
-.h-line{
-  width:80px;height:3px;
-  background:linear-gradient(90deg,transparent,#f5b800,transparent);
-  margin:28px 0;
-  position:relative;z-index:1;
-}
-
-/* logo supercopa */
-#sc-logo{
-  position:relative;z-index:1;
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  animation:chipIn .5s .8s both;
-}
-#sc-logo img{height:72px;filter:drop-shadow(0 0 16px rgba(245,184,0,.5))}
-#sc-logo span{
-  font-size:18px;font-weight:700;letter-spacing:5px;text-transform:uppercase;
-  color:#ffd34d;
-}
-
-/* ── barra superior ── */
+/* ═══════════ TOPBAR ═══════════ */
 #topbar{
-  position:absolute;top:0;left:0;right:0;height:72px;
-  background:rgba(7,26,92,.92);
-  border-bottom:3px solid #f5b800;
-  display:flex;align-items:center;justify-content:center;gap:32px;
-  z-index:20;
-  animation:barIn .5s .1s both;
+  position:absolute;left:0;right:0;top:0;height:76px;
+  background:linear-gradient(90deg,#061640 0%,#0b2a8f 50%,#061640 100%);
+  border-bottom:4px solid #f5b800;
+  display:flex;align-items:center;justify-content:center;gap:28px;
+  z-index:30;
+  animation:slideDown .5s both;
 }
-@keyframes barIn{from{transform:translateY(-72px)}to{transform:none}}
-#topbar .tc-name{
-  font-size:26px;font-weight:800;letter-spacing:3px;text-transform:uppercase;
-  color:#ffd34d;
-}
-#topbar .sep{width:2px;height:28px;background:rgba(245,184,0,.4)}
-#topbar .tc-sub{font-size:16px;font-weight:600;letter-spacing:3px;color:#b9d0ff;text-transform:uppercase}
+@keyframes slideDown{from{transform:translateY(-76px)}to{transform:none}}
+.top-title{font-size:24px;font-weight:900;letter-spacing:5px;color:#ffd34d;text-transform:uppercase}
+.top-sep{width:2px;height:26px;background:rgba(245,184,0,.4)}
+.top-sub{font-size:16px;font-weight:700;letter-spacing:4px;color:#a0b8e8;text-transform:uppercase}
 
-/* ── barra inferior ── */
+/* ═══════════ BOTBAR ═══════════ */
 #botbar{
-  position:absolute;bottom:0;left:0;right:0;height:88px;
-  background:#071a5c;
+  position:absolute;left:0;right:0;bottom:0;height:92px;
+  background:linear-gradient(90deg,#061640 0%,#07122e 50%,#061640 100%);
   border-top:4px solid #f5b800;
-  display:flex;align-items:center;justify-content:center;gap:0;
-  z-index:20;
-  animation:botIn .5s .15s both;
+  display:flex;align-items:center;justify-content:center;
+  z-index:30;
+  animation:slideUp .5s both;
 }
-@keyframes botIn{from{transform:translateY(88px)}to{transform:none}}
+@keyframes slideUp{from{transform:translateY(92px)}to{transform:none}}
 .info-block{
-  display:flex;align-items:center;gap:16px;
-  padding:0 48px;
+  display:flex;align-items:center;gap:14px;
+  padding:0 44px;
   border-right:1px solid rgba(245,184,0,.2);
 }
-.info-block:last-child{border-right:none}
-.info-icon{font-size:28px;opacity:.8}
-.info-text{display:flex;flex-direction:column;gap:1px}
-.info-text small{font-size:14px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8ca0d0}
-.info-text b{font-size:30px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.info-block:last-child{border:none}
+.info-icon{font-size:28px;opacity:.7}
+.info-label{font-size:12px;font-weight:700;letter-spacing:4px;color:#6880b8;text-transform:uppercase}
+.info-val{font-size:30px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 
-/* ── stripes diagonais de fundo (decoração) ── */
-.stripe{
-  position:absolute;width:4px;background:rgba(255,255,255,.04);
-  top:-10%;height:120%;transform:skewX(-12deg);
+/* ═══════════ PAINÉIS LATERAIS ═══════════ */
+/* Area principal: de y=76 até y=988 → 912px de altura */
+
+#panel-casa{
+  position:absolute;left:0;top:76px;
+  width:820px;bottom:92px;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:28px;
+}
+.bg-casa{
+  position:absolute;inset:0;
+  background:linear-gradient(130deg,#1b52e0 0%,#0b2a8f 45%,#071a5c 100%);
+}
+
+#panel-vis{
+  position:absolute;right:0;top:76px;
+  width:820px;bottom:92px;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:28px;
+}
+.bg-vis{
+  position:absolute;inset:0;
+  background:linear-gradient(230deg,#c01010 0%,#7a0808 45%,#3a0101 100%);
+}
+
+/* padrão de linhas diagonais nos painéis */
+.diags{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    -58deg,
+    transparent 0,transparent 44px,
+    rgba(255,255,255,.028) 44px,rgba(255,255,255,.028) 46px
+  );
+}
+
+/* cantos angulares dourados */
+.corner-tl{
+  position:absolute;top:0;left:0;
+  width:0;height:0;
+  border-style:solid;
+  border-width:120px 120px 0 0;
+  border-color:rgba(245,184,0,.14) transparent transparent transparent;
+}
+.corner-br{
+  position:absolute;bottom:0;right:0;
+  width:0;height:0;
+  border-style:solid;
+  border-width:0 0 100px 100px;
+  border-color:transparent transparent rgba(245,184,0,.08) transparent;
+}
+
+/* borda vertical dourada entre painel e centro */
+.panel-edge{
+  position:absolute;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,transparent,#f5b800 15%,#f5b800 85%,transparent);
+  box-shadow:0 0 14px 2px rgba(245,184,0,.45);
+}
+#panel-casa .panel-edge{right:0}
+#panel-vis .panel-edge{left:0}
+
+/* ═══════════ BADGE ═══════════ */
+.badge-wrap{
+  position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:center;
+  animation:badgeIn .7s .35s both;
+}
+@keyframes badgeIn{from{opacity:0;transform:scale(.55) translateY(-16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.badge-glow{
+  position:absolute;
+  width:290px;height:290px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(245,184,0,.2) 0%,transparent 68%);
+  pointer-events:none;
+}
+.badge-ring{
+  position:absolute;
+  width:248px;height:248px;
+  border-radius:50%;
+  border:1.5px solid rgba(255,255,255,.12);
+  pointer-events:none;
+}
+.badge-img{
+  width:220px;height:220px;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 36px rgba(0,0,0,.85));
+  position:relative;z-index:1;
+}
+.badge-init{
+  width:220px;height:220px;
+  border-radius:50%;
+  background:rgba(0,0,0,.35);
+  border:3px solid rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;
+  font-size:68px;font-weight:900;
+  letter-spacing:1px;
+  backdrop-filter:blur(6px);
+  position:relative;z-index:1;
+}
+
+/* ═══════════ NOME DO TIME ═══════════ */
+.team-name{
+  position:relative;z-index:2;
+  font-weight:900;text-transform:uppercase;
+  line-height:.88;letter-spacing:2px;
+  text-align:center;
+  text-shadow:0 4px 20px rgba(0,0,0,.8),0 0 48px rgba(0,0,0,.5);
+  padding:0 48px;
+  width:100%;
+  animation:nameIn .6s .5s both;
+}
+@keyframes nameIn{from{opacity:0;letter-spacing:14px}to{opacity:1;letter-spacing:2px}}
+
+/* ═══════════ CENTRO ═══════════ */
+#center{
+  position:absolute;
+  left:820px;right:820px;
+  top:76px;bottom:92px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:0;
+  z-index:20;
+}
+#center-bg{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,#0d1326 0%,#080d1a 100%);
+}
+
+#date-chip{
+  position:absolute;top:24px;
+  background:#f5b800;color:#050d1a;
+  font-size:36px;font-weight:900;letter-spacing:2px;
+  padding:8px 32px;
+  clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);
+  white-space:nowrap;
+  z-index:2;
+  animation:chipIn .5s .6s both;
+}
+@keyframes chipIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+
+#vs{
+  position:relative;z-index:2;
+  font-size:200px;font-weight:900;font-style:italic;
+  line-height:.85;letter-spacing:-8px;
+  background:linear-gradient(160deg,#ffffff 0%,#c0d4ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 32px rgba(27,82,224,.45));
+  animation:vsIn .5s .25s both;
+}
+@keyframes vsIn{from{opacity:0;transform:scale(1.6)}to{opacity:1;transform:scale(1)}}
+
+.ctr-line{
+  width:72px;height:3px;
+  background:linear-gradient(90deg,transparent,#f5b800,transparent);
+  margin:18px 0;
+  position:relative;z-index:2;
+}
+
+#sc-logo{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  animation:chipIn .5s .8s both;
+}
+#sc-logo img{
+  height:60px;
+  filter:drop-shadow(0 0 10px rgba(245,184,0,.5));
+}
+#sc-logo-name{font-size:14px;font-weight:800;letter-spacing:5px;color:#ffd34d;text-transform:uppercase}
+
+#fase-bottom{
+  position:absolute;bottom:16px;z-index:2;
+  font-size:13px;font-weight:700;letter-spacing:3px;color:#6880b8;text-transform:uppercase;
+  text-align:center;padding:0 8px;width:100%;
+}
+
+/* glow de atmosfera no centro */
+#center-glow{
+  position:absolute;
+  left:50%;top:50%;
+  width:320px;height:320px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(27,82,224,.22) 0%,transparent 70%);
+  pointer-events:none;z-index:1;
 }
 </style>
 </head>
@@ -236,39 +249,39 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 
   <!-- topo -->
   <div id="topbar">
-    <span class="tc-name">Supercopa AFC</span>
-    <div class="sep"></div>
-    <span class="tc-sub" id="top-fase">Copa de Vôlei</span>
+    <span class="top-title">Supercopa AFC</span>
+    <div class="top-sep"></div>
+    <span class="top-sub" id="top-fase">Copa de Vôlei</span>
   </div>
 
-  <!-- painel casa (esquerda) -->
-  <div class="panel panel-casa">
-    <div class="panel-bg" id="bg-casa"></div>
-    <div class="panel-color"></div>
-    <div class="dots"></div>
-    <div class="stripe" style="left:15%"></div>
-    <div class="stripe" style="left:30%"></div>
-    <div class="stripe" style="left:55%"></div>
-    <div class="slash"></div>
-    <div class="shield-wrap">
-      <img class="shield" id="shield-casa" src="" alt="" style="display:none" onerror="this.style.display='none';document.getElementById('init-casa').style.display='flex'">
-      <div class="shield-initials" id="init-casa"></div>
+  <!-- painel casa -->
+  <div id="panel-casa">
+    <div class="bg-casa"></div>
+    <div class="diags"></div>
+    <div class="corner-tl"></div>
+    <div class="corner-br"></div>
+    <div class="panel-edge"></div>
+    <div class="badge-wrap">
+      <div class="badge-glow"></div>
+      <div class="badge-ring"></div>
+      <img class="badge-img" id="shield-casa" src="" style="display:none" alt="">
+      <div class="badge-init" id="init-casa"></div>
     </div>
     <div class="team-name" id="name-casa">TIME A</div>
   </div>
 
-  <!-- painel visitante (direita) -->
-  <div class="panel panel-vis">
-    <div class="panel-bg" id="bg-vis"></div>
-    <div class="panel-color"></div>
-    <div class="dots"></div>
-    <div class="stripe" style="left:15%"></div>
-    <div class="stripe" style="left:40%"></div>
-    <div class="stripe" style="left:65%"></div>
-    <div class="slash"></div>
-    <div class="shield-wrap">
-      <img class="shield" id="shield-vis" src="" alt="" style="display:none" onerror="this.style.display='none';document.getElementById('init-vis').style.display='flex'">
-      <div class="shield-initials" id="init-vis"></div>
+  <!-- painel visitante -->
+  <div id="panel-vis">
+    <div class="bg-vis"></div>
+    <div class="diags"></div>
+    <div class="corner-tl" style="transform:scaleX(-1)"></div>
+    <div class="corner-br" style="transform:scaleX(-1)"></div>
+    <div class="panel-edge"></div>
+    <div class="badge-wrap">
+      <div class="badge-glow"></div>
+      <div class="badge-ring"></div>
+      <img class="badge-img" id="shield-vis" src="" style="display:none" alt="">
+      <div class="badge-init" id="init-vis"></div>
     </div>
     <div class="team-name" id="name-vis">TIME B</div>
   </div>
@@ -276,154 +289,117 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
   <!-- centro -->
   <div id="center">
     <div id="center-bg"></div>
+    <div id="center-glow"></div>
     <div id="date-chip" style="display:none"></div>
-    <div id="fase-label"></div>
     <div id="vs">VS</div>
-    <div class="h-line"></div>
+    <div class="ctr-line"></div>
     <div id="sc-logo">
-      <img src="logo-supercopa.jpg" alt="Supercopa AFC" onerror="this.style.display='none'" style="height:60px">
-      <span>Supercopa AFC</span>
+      <img src="logo-supercopa.jpg" alt="Supercopa AFC" onerror="this.style.display='none'">
+      <div id="sc-logo-name">Supercopa AFC</div>
     </div>
-    <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:1;font-size:16px;font-weight:700;letter-spacing:3px;color:#8ca0d0;text-transform:uppercase;white-space:nowrap;text-align:center" id="center-fase"></div>
+    <div id="fase-bottom"></div>
   </div>
 
   <!-- rodapé -->
   <div id="botbar">
     <div class="info-block" id="blk-data" style="display:none">
       <span class="info-icon">📅</span>
-      <div class="info-text">
-        <small>Data</small>
-        <b id="bot-data"></b>
-      </div>
+      <div><div class="info-label">Data</div><div class="info-val" id="bot-data"></div></div>
     </div>
     <div class="info-block" id="blk-quadra" style="display:none">
       <span class="info-icon">🏟</span>
-      <div class="info-text">
-        <small>Local</small>
-        <b id="bot-quadra"></b>
-      </div>
+      <div><div class="info-label">Local</div><div class="info-val" id="bot-quadra"></div></div>
     </div>
     <div class="info-block" id="blk-horario" style="display:none">
       <span class="info-icon">🕐</span>
-      <div class="info-text">
-        <small>Horário</small>
-        <b id="bot-horario"></b>
-      </div>
+      <div><div class="info-label">Horário</div><div class="info-val" id="bot-horario"></div></div>
     </div>
     <div class="info-block" id="blk-grupo" style="display:none">
       <span class="info-icon">🏐</span>
-      <div class="info-text">
-        <small>Grupo</small>
-        <b id="bot-grupo"></b>
-      </div>
+      <div><div class="info-label">Grupo</div><div class="info-val" id="bot-grupo"></div></div>
     </div>
   </div>
 
 </div>
 <script>
-const SC_API = 'https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
-
+const SC_API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
 function p(k){return new URLSearchParams(location.search).get(k)||''}
-function esc(s){return s.replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}
-function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).slice(0,3).join('').toUpperCase()}
+function initials(n){return n.trim().split(/\s+/).map(function(w){return w[0]||''}).slice(0,3).join('').toUpperCase()}
 
-// escala automática com transform-origin:0 0
+// escala stage para o viewport
 (function(){
-  const W=1920,H=1080,st=document.getElementById('stage');
+  var W=1920,H=1080,st=document.getElementById('stage');
   function resize(){
-    const s=Math.min(innerWidth/W,innerHeight/H);
-    st.style.transform=`scale(${s})`;
+    var s=Math.min(innerWidth/W,innerHeight/H);
+    st.style.transform='scale('+s+')';
     st.style.left=Math.round((innerWidth-W*s)/2)+'px';
     st.style.top=Math.round((innerHeight-H*s)/2)+'px';
   }
   resize();window.addEventListener('resize',resize);
 })();
 
-function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
-function show(id){const e=document.getElementById(id);if(e)e.style.display=''}
-function hide(id){const e=document.getElementById(id);if(e)e.style.display='none'}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v}
+function show(id){var e=document.getElementById(id);if(e)e.style.display=''}
+function hide(id){var e=document.getElementById(id);if(e)e.style.display='none'}
 
-function applyParams(){
-  const casa     = p('casa')     || 'TIME A';
-  const vis      = p('visitante')|| 'TIME B';
-  const data     = p('data');
-  const horario  = p('horario');
-  const quadra   = p('quadra');
-  const grupo    = p('grupo');
-  const fase     = p('fase');
-  const escCasa  = p('escudo_casa');
-  const escVis   = p('escudo_vis');
-
-  set('name-casa', casa);
-  set('name-vis',  vis);
-  document.getElementById('init-casa').textContent = initials(casa);
-  document.getElementById('init-vis').textContent  = initials(vis);
-  // escala o font-size para caber na altura do painel (920px útil)
-  // Barlow Condensed: cada char ≈ 0.52×fontSize + 4px letter-spacing
-  function scaleName(id, name){
-    const el=document.getElementById(id);
-    if(!el)return;
-    const panelH=900;
-    const len=name.length;
-    let size=132;
-    const fits=sz=>len*sz*0.52+(len-1)*4<=panelH;
-    while(size>44&&!fits(size))size-=4;
-    el.style.fontSize=size+'px';
-  }
-  scaleName('name-casa',casa);
-  scaleName('name-vis', vis);
-
-  if(data){
-    set('date-chip', data);
-    show('date-chip');
-    set('bot-data', data);
-    show('blk-data');
-  }
-  if(horario){set('bot-horario',horario);show('blk-horario')}
-  if(quadra) {set('bot-quadra', quadra); show('blk-quadra')}
-  if(grupo)  {set('bot-grupo',  'Grupo '+grupo); show('blk-grupo')}
-
-  // fase/label
-  const faseMap={grupos:'Fase de Grupos',quartas:'Quartas de Final',semifinal:'Semifinal',final:'Grande Final'};
-  const faseLabel = faseMap[fase] || (grupo ? 'Grupo '+grupo+' · Fase de Grupos' : 'Supercopa AFC');
-  set('fase-label', faseLabel);
-  set('top-fase', faseLabel);
-  set('center-fase', faseLabel);
-
-  // escudos via URL param direto
-  function setShieldUrl(imgId, initId, url){
-    const img=document.getElementById(imgId);
-    img.onload=()=>{img.style.display='';const init=document.getElementById(initId);if(init)init.style.display='none'};
-    img.onerror=()=>{img.style.display='none';const init=document.getElementById(initId);if(init)init.style.display='flex'};
-    img.src=url;
-  }
-  if(escCasa) setShieldUrl('shield-casa','init-casa',escCasa);
-  if(escVis)  setShieldUrl('shield-vis','init-vis',escVis);
-
-  // escudos via API (se não fornecidos via param)
-  if(!escCasa||!escVis){
-    fetchShields(casa, vis, escCasa, escVis);
-  }
+// ajusta font-size para caber no painel (820px - 96px padding = 724px útil)
+// Barlow Condensed: char width ≈ 0.52 × fontSize (conservador)
+function scaleName(id,name){
+  var el=document.getElementById(id);if(!el)return;
+  var usable=724,len=name.length,size=140;
+  while(size>36&&len*size*0.52>usable)size-=4;
+  el.style.fontSize=size+'px';
 }
 
-async function fetchShields(casaNome, visNome, escCasaUrl, escVisUrl){
+function shield(imgId,initId,url){
+  var img=document.getElementById(imgId);
+  img.onload=function(){img.style.display='block';hide(initId)};
+  img.onerror=function(){img.style.display='none';show(initId)};
+  img.src=url;
+}
+
+function applyParams(){
+  var casa=p('casa')||'TIME A';
+  var vis=p('visitante')||'TIME B';
+  var data=p('data'),horario=p('horario'),quadra=p('quadra'),grupo=p('grupo'),fase=p('fase');
+  var escCasa=p('escudo_casa'),escVis=p('escudo_vis');
+
+  set('name-casa',casa); scaleName('name-casa',casa);
+  set('name-vis',vis);   scaleName('name-vis',vis);
+  set('init-casa',initials(casa));
+  set('init-vis',initials(vis));
+
+  if(data){set('date-chip',data);show('date-chip');set('bot-data',data);show('blk-data')}
+  if(horario){set('bot-horario',horario);show('blk-horario')}
+  if(quadra){set('bot-quadra',quadra);show('blk-quadra')}
+  if(grupo){set('bot-grupo','Grupo '+grupo);show('blk-grupo')}
+
+  var faseMap={grupos:'Fase de Grupos',quartas:'Quartas de Final',semifinal:'Semifinal',final:'Grande Final'};
+  var fl=faseMap[fase]||(grupo?'Grupo '+grupo+' · Fase de Grupos':'Copa de Vôlei');
+  set('top-fase',fl);set('fase-bottom',fl);
+
+  if(escCasa)shield('shield-casa','init-casa',escCasa);
+  if(escVis) shield('shield-vis','init-vis',escVis);
+  if(!escCasa||!escVis)fetchShields(casa,vis,escCasa,escVis);
+}
+
+async function fetchShields(cN,vN,eC,eV){
   try{
-    const r=await fetch(SC_API+'?action=timesPublicos',{signal:AbortSignal.timeout(6000)});
-    const d=await r.json();
-    const times=d.times||[];
-    const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-    const find=n=>times.find(t=>norm(t.nome)===norm(n));
-    function applyShield(nome, imgId, initId, overrideUrl){
-      if(overrideUrl)return;
-      const t=find(nome);
-      if(!t||!t.escudo)return;
-      const url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
-      const img=document.getElementById(imgId);
-      img.onload=()=>{img.style.display='';const init=document.getElementById(initId);if(init)init.style.display='none';};
+    var r=await fetch(SC_API+'?action=timesPublicos',{signal:AbortSignal.timeout(6000)});
+    var d=await r.json();
+    var times=d.times||[];
+    var norm=function(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()};
+    var find=function(n){return times.find(function(t){return norm(t.nome)===norm(n)})};
+    function apply(nome,imgId,initId,ov){
+      if(ov)return;
+      var t=find(nome);if(!t||!t.escudo)return;
+      var url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
+      var img=document.getElementById(imgId);
+      img.onload=function(){img.style.display='block';hide(initId)};
       img.src=url;
     }
-    applyShield(casaNome,'shield-casa','init-casa',escCasaUrl);
-    applyShield(visNome, 'shield-vis', 'init-vis', escVisUrl);
+    apply(cN,'shield-casa','init-casa',eC);
+    apply(vN,'shield-vis','init-vis',eV);
   }catch(e){}
 }
 
