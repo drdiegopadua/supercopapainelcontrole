@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Overlay Pré-Jogo · Seletor</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@500;600;700&display=swap">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1120;--card:#161c2e;--card2:#1c2440;
+  --b1:#1b52e0;--b2:#0b2a8f;--gold:#f5b800;
+  --red:#c01010;--mute:#6880a8;--ln:rgba(255,255,255,.08);
+  --txt:#e8edf8;
+}
+html,body{background:var(--bg);color:var(--txt);font-family:'Barlow',sans-serif;min-height:100vh}
+
+/* ── header ── */
+header{
+  position:sticky;top:0;z-index:20;
+  background:rgba(13,17,32,.95);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--ln);
+  padding:16px 20px;
+  display:flex;align-items:center;gap:14px;
+}
+.hdr-back{
+  display:flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:10px;
+  background:rgba(255,255,255,.07);
+  color:var(--txt);text-decoration:none;font-size:18px;
+  flex-shrink:0;
+}
+.hdr-back:hover{background:rgba(255,255,255,.12)}
+.hdr-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;line-height:1}
+.hdr-sub{font-size:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--mute);margin-top:2px}
+.hdr-logo{margin-left:auto;height:36px;opacity:.85}
+
+/* ── filtros ── */
+.filters{
+  display:flex;gap:8px;padding:16px 20px 0;
+  flex-wrap:wrap;
+}
+.fil{
+  padding:6px 16px;border-radius:20px;
+  background:var(--card);border:1px solid var(--ln);
+  font:600 13px 'Barlow',sans-serif;letter-spacing:.5px;
+  color:var(--mute);cursor:pointer;
+  transition:all .15s;
+}
+.fil:hover{border-color:var(--b1);color:var(--txt)}
+.fil.on{background:var(--b1);border-color:var(--b1);color:#fff}
+
+/* ── lista de jogos ── */
+main{padding:16px 20px 40px;display:flex;flex-direction:column;gap:8px}
+
+.day-label{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:14px;font-weight:800;letter-spacing:4px;text-transform:uppercase;
+  color:var(--mute);padding:16px 0 6px;
+  border-bottom:1px solid var(--ln);
+  margin-bottom:4px;
+}
+
+/* ── card de jogo ── */
+.jogo-card{
+  background:var(--card);
+  border:1px solid var(--ln);
+  border-radius:14px;
+  overflow:hidden;
+  transition:border-color .15s,transform .15s;
+}
+.jogo-card:hover{border-color:rgba(27,82,224,.4);transform:translateY(-1px)}
+.jogo-card.encerrado{opacity:.5}
+
+.jogo-top{
+  display:flex;align-items:center;gap:0;
+  padding:16px;
+}
+
+/* time */
+.team-side{
+  flex:1;min-width:0;
+  display:flex;align-items:center;gap:12px;
+}
+.team-side.vis{flex-direction:row-reverse;text-align:right}
+.badge{
+  flex-shrink:0;
+  width:48px;height:48px;border-radius:50%;
+  background:rgba(0,0,0,.35);
+  border:1.5px solid rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.badge img{width:40px;height:40px;object-fit:contain}
+.badge-init{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;color:var(--mute)}
+.team-name{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:20px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;
+  line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.team-name.small{font-size:16px}
+
+/* placar/vs centro */
+.match-center{
+  flex-shrink:0;
+  width:96px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:0 8px;
+}
+.match-vs{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:28px;font-weight:900;font-style:italic;
+  color:rgba(255,255,255,.25);
+  letter-spacing:-2px;
+}
+.match-hora{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px}
+.match-score{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:30px;font-weight:900;letter-spacing:4px;
+  color:#fff;
+}
+
+/* info bar baixo */
+.jogo-info{
+  display:flex;align-items:center;gap:0;
+  border-top:1px solid var(--ln);
+  background:var(--card2);
+}
+.info-pill{
+  flex:1;min-width:0;
+  display:flex;align-items:center;gap:7px;
+  padding:8px 12px;
+  font-size:12px;font-weight:600;letter-spacing:.5px;
+  color:var(--mute);
+  border-right:1px solid var(--ln);
+}
+.info-pill:last-child{border:none}
+.info-pill svg{flex-shrink:0;opacity:.6}
+.info-pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* status badge */
+.status{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+}
+.status.agendado{background:rgba(27,82,224,.2);color:#7ba4f0}
+.status.andamento{background:rgba(34,197,94,.2);color:#4ade80}
+.status.andamento::before{content:'';width:6px;height:6px;border-radius:50%;background:#4ade80;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.status.encerrado{background:rgba(255,255,255,.07);color:var(--mute)}
+
+/* ── botão overlay ── */
+.jogo-action{
+  padding:12px 16px;
+  border-top:1px solid var(--ln);
+  display:flex;align-items:center;gap:10px;
+}
+.btn-overlay{
+  flex:1;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 20px;border-radius:10px;
+  background:var(--b1);color:#fff;
+  font:700 14px 'Barlow',sans-serif;letter-spacing:.5px;
+  border:none;cursor:pointer;
+  transition:background .15s,transform .1s;
+}
+.btn-overlay:hover{background:#2060f0;transform:scale(1.01)}
+.btn-overlay:active{transform:scale(.98)}
+.btn-overlay svg{flex-shrink:0}
+
+/* ── estado vazio / loading ── */
+#estado{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:60px 20px;
+  color:var(--mute);font-size:15px;text-align:center;
+}
+.spinner{
+  width:36px;height:36px;border-radius:50%;
+  border:3px solid rgba(27,82,224,.2);
+  border-top-color:var(--b1);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="hdr-back">←</a>
+  <div>
+    <div class="hdr-title">Overlay Pré-Jogo</div>
+    <div class="hdr-sub">Selecione o jogo para abrir no OBS</div>
+  </div>
+  <img src="logo-supercopa.jpg" class="hdr-logo" alt="Supercopa AFC" onerror="this.style.display='none'">
+</header>
+
+<div class="filters" id="filters">
+  <button class="fil on" data-f="todos">Todos</button>
+  <button class="fil" data-f="agendado">Agendados</button>
+  <button class="fil" data-f="andamento">Em andamento</button>
+  <button class="fil" data-f="encerrado">Encerrados</button>
+</div>
+
+<main id="lista"></main>
+
+<div id="estado"><div class="spinner"></div><span>Carregando partidas…</span></div>
+
+<script>
+var API='https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+var OVERLAY='overlay-prematch.html';
+var allJogos=[],shields={},filtroAtivo='todos';
+
+function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function initials(n){return n.trim().split(/\s+/).map(function(w){return w[0]||''}).slice(0,3).join('').toUpperCase()}
+
+function statusJogo(p){
+  if(p.encerrada||p.status==='encerrada'||(p.setsCasa>=2||p.setsVisitante>=2))return 'encerrado';
+  if((p.setsCasa>0||p.setsVisitante>0||p.pontosCasa>0||p.pontosVisitante>0)&&(!p.encerrada))return 'andamento';
+  return 'agendado';
+}
+function statusLabel(st){
+  if(st==='andamento')return '<span class="status andamento">Ao vivo</span>';
+  if(st==='encerrado')return '<span class="status encerrado">Encerrado</span>';
+  return '<span class="status agendado">Agendado</span>';
+}
+
+function badgeHtml(nome,id){
+  var url=shields[norm(nome)];
+  if(url)return '<div class="badge"><img src="'+esc(url)+'" alt="" onerror="this.parentElement.innerHTML=\'<span class=badge-init>'+esc(initials(nome))+'</span>\'"></div>';
+  return '<div class="badge"><span class="badge-init">'+esc(initials(nome))+'</span></div>';
+}
+
+function teamLen(n){return n.length>12}
+
+function cardHtml(p){
+  var st=statusJogo(p);
+  var sC=p.setsCasa||0,sV=p.setsVisitante||0;
+  var scoreHtml=st==='agendado'
+    ?'<div class="match-vs">VS</div>'
+    :'<div class="match-score">'+sC+' · '+sV+'</div>';
+  var casa=p.equipeCasa||'',vis=p.equipeVisitante||'';
+  return '<div class="jogo-card'+(st==='encerrado'?' encerrado':'')+'" data-status="'+st+'" data-id="'+esc(p.id)+'">'
+    +'<div class="jogo-top">'
+      +'<div class="team-side">'
+        +badgeHtml(casa)
+        +'<div class="team-name'+(teamLen(casa)?' small':'')+'">'+esc(casa)+'</div>'
+      +'</div>'
+      +'<div class="match-center">'
+        +scoreHtml
+        +'<div class="match-hora">'+esc(p.horario||'')+'</div>'
+      +'</div>'
+      +'<div class="team-side vis">'
+        +'<div class="team-name'+(teamLen(vis)?' small':'')+'">'+esc(vis)+'</div>'
+        +badgeHtml(vis)
+      +'</div>'
+    +'</div>'
+    +'<div class="jogo-info">'
+      +'<div class="info-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>'+esc(p.data||'—')+'</span></div>'
+      +'<div class="info-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>'+esc(p.horario||'—')+'</span></div>'
+      +'<div class="info-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg><span>Grupo '+esc(p.grupo||'—')+'</span></div>'
+      +(p.quadra?'<div class="info-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>'+esc(p.quadra)+'</span></div>':'')
+      +'<div class="info-pill" style="flex:none;border:none;padding-right:16px">'+statusLabel(st)+'</div>'
+    +'</div>'
+    +'<div class="jogo-action">'
+      +'<button class="btn-overlay" data-id="'+esc(p.id)+'">'
+        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10l4.553-2.03A1 1 0 0 1 21 8.853v6.294a1 1 0 0 1-1.447.883L15 14M3 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>'
+        +'Abrir overlay no OBS'
+      +'</button>'
+    +'</div>'
+  +'</div>';
+}
+
+function abrirOverlay(p){
+  var q=new URLSearchParams();
+  q.set('casa',p.equipeCasa||'');
+  q.set('visitante',p.equipeVisitante||'');
+  if(p.data)    q.set('data',p.data);
+  if(p.horario) q.set('horario',p.horario);
+  if(p.quadra)  q.set('quadra',p.quadra);
+  if(p.grupo)   q.set('grupo',p.grupo);
+  window.open(OVERLAY+'?'+q.toString(),'_blank');
+}
+
+function render(){
+  var lista=document.getElementById('lista');
+  var jogos=filtroAtivo==='todos'?allJogos:allJogos.filter(function(p){return statusJogo(p)===filtroAtivo});
+  if(!jogos.length){lista.innerHTML='<div id="estado"><span>Nenhuma partida encontrada.</span></div>';return}
+
+  // agrupar por data
+  var byDay={};
+  jogos.forEach(function(p){var d=p.data||'Sem data';if(!byDay[d])byDay[d]=[];byDay[d].push(p)});
+
+  var html='';
+  Object.keys(byDay).forEach(function(d){
+    html+='<div class="day-label">📅 '+esc(d)+'</div>';
+    byDay[d].forEach(function(p){html+=cardHtml(p)});
+  });
+  lista.innerHTML=html;
+
+  lista.querySelectorAll('.btn-overlay').forEach(function(btn){
+    btn.onclick=function(){
+      var p=allJogos.find(function(x){return x.id===btn.dataset.id});
+      if(p)abrirOverlay(p);
+    };
+  });
+}
+
+function estado(msg,spin){
+  var el=document.getElementById('estado');
+  el.style.display='flex';
+  el.innerHTML=(spin?'<div class="spinner"></div>':'')+'<span>'+msg+'</span>';
+  document.getElementById('lista').innerHTML='';
+}
+
+async function carregar(){
+  estado('Carregando partidas…',true);
+  try{
+    var [torneioRes,timesRes]=await Promise.all([
+      fetch(API+'?action=torneio&modalidade=volei',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}),
+      fetch(API+'?action=timesPublicos',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}).catch(function(){return {times:[]}})
+    ]);
+
+    // montar mapa de escudos
+    (timesRes.times||[]).forEach(function(t){
+      if(!t.escudo)return;
+      var url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
+      shields[norm(t.nome)]=url;
+    });
+
+    // extrair todas as partidas dos grupos
+    allJogos=[];
+    (torneioRes.grupos||[]).forEach(function(g){
+      (g.partidas||[]).forEach(function(p){
+        allJogos.push(Object.assign({},p,{grupo:p.grupo||g.grupo}));
+      });
+    });
+
+    // ordenar por data e horário
+    allJogos.sort(function(a,b){
+      var da=String(a.data||'').split('/').reverse().join('')+String(a.horario||'');
+      var db=String(b.data||'').split('/').reverse().join('')+String(b.horario||'');
+      return da<db?-1:da>db?1:0;
+    });
+
+    document.getElementById('estado').style.display='none';
+    if(!allJogos.length){estado('Nenhuma partida cadastrada ainda.',false);return}
+    render();
+  }catch(e){
+    estado('Erro ao carregar. Tente novamente.',false);
+    console.error(e);
+  }
+}
+
+// filtros
+document.getElementById('filters').addEventListener('click',function(e){
+  var btn=e.target.closest('.fil');
+  if(!btn)return;
+  document.querySelectorAll('.fil').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');
+  filtroAtivo=btn.dataset.f;
+  render();
+});
+
+carregar();
+</script>
+</body>
+</html>
