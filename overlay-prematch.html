@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pré-Jogo · Supercopa AFC</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800&family=Barlow:wght@500;700;800&display=swap">
+<style>
+/*
+  Overlay de pré-jogo — Supercopa AFC
+  Params: ?casa=X &visitante=Y &data=28/11 &horario=13H00
+          &quadra=Quadra+Principal &grupo=A &fase=grupos
+  Fundo transparente — fonte Browser Source no OBS (1920×1080)
+*/
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
+
+#stage{
+  position:absolute;inset:0;
+  font-family:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
+  color:#fff;
+  opacity:0;
+  animation:stageIn .8s .2s forwards;
+}
+@keyframes stageIn{to{opacity:1}}
+
+/* ── painéis laterais ── */
+.panel{position:absolute;top:0;bottom:0;width:820px;overflow:hidden}
+.panel-casa{left:0}
+.panel-vis{right:0}
+
+.panel-bg{
+  position:absolute;inset:0;
+  background-size:cover;background-position:center;
+  filter:brightness(.35) saturate(1.2);
+  transform:scale(1.08);
+  animation:zoomBg 12s ease-in-out infinite alternate;
+}
+@keyframes zoomBg{to{transform:scale(1)}}
+
+.panel-casa .panel-color{
+  position:absolute;inset:0;
+  background:linear-gradient(160deg,rgba(27,82,224,.88) 0%,rgba(11,42,143,.92) 55%,rgba(7,26,92,.96) 100%);
+}
+.panel-vis .panel-color{
+  position:absolute;inset:0;
+  background:linear-gradient(200deg,rgba(160,20,20,.88) 0%,rgba(100,8,8,.93) 55%,rgba(45,2,2,.97) 100%);
+}
+
+/* padrão de pontos decorativos */
+.dots{
+  position:absolute;inset:0;
+  background-image:radial-gradient(circle,rgba(255,255,255,.18) 1px,transparent 1px);
+  background-size:28px 28px;
+  opacity:.45;
+}
+
+/* faixas diagonais */
+.slash{
+  position:absolute;top:0;bottom:0;width:6px;
+  background:#f5b800;
+  box-shadow:0 0 24px 4px rgba(245,184,0,.6);
+  transform:skewX(-8deg);
+}
+.panel-casa .slash{right:-3px}
+.panel-vis .slash{left:-3px}
+
+/* nome vertical do time */
+.team-name{
+  position:absolute;
+  top:50%;left:50%;
+  transform-origin:center center;
+  font-size:148px;font-weight:900;
+  letter-spacing:4px;text-transform:uppercase;
+  line-height:1;white-space:nowrap;
+  text-shadow:0 4px 32px rgba(0,0,0,.7);
+  animation:nameIn .6s .4s both;
+}
+.panel-casa .team-name{
+  transform:translate(-50%,-50%) rotate(-90deg);
+}
+.panel-vis .team-name{
+  transform:translate(-50%,-50%) rotate(90deg);
+}
+@keyframes nameIn{from{opacity:0;letter-spacing:16px}to{opacity:1;letter-spacing:4px}}
+
+/* escudo do time */
+.shield-wrap{
+  position:absolute;bottom:200px;
+  display:flex;align-items:center;justify-content:center;
+  width:220px;height:220px;
+  animation:shieldIn .7s .5s both;
+}
+.panel-casa .shield-wrap{left:50%;transform:translateX(-50%)}
+.panel-vis .shield-wrap{left:50%;transform:translateX(-50%)}
+@keyframes shieldIn{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+.panel-vis .shield-wrap{animation:shieldInR .7s .5s both}
+@keyframes shieldInR{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+
+.shield{
+  width:200px;height:200px;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 32px rgba(0,0,0,.8));
+}
+.shield-initials{
+  width:200px;height:200px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:72px;font-weight:900;
+  background:rgba(255,255,255,.12);
+  border:4px solid rgba(255,255,255,.3);
+  text-shadow:0 2px 12px rgba(0,0,0,.5);
+}
+
+/* ── centro ── */
+#center{
+  position:absolute;
+  left:820px;right:820px;top:0;bottom:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+  z-index:10;
+}
+
+/* fundo central */
+#center-bg{
+  position:absolute;inset:0;
+  background:#0a0e1a;
+  clip-path:polygon(18px 0,calc(100% - 18px) 0,100% 100%,0 100%);
+}
+
+/* data chip */
+#date-chip{
+  position:relative;z-index:1;
+  background:#f5b800;color:#0a0e1a;
+  font-size:36px;font-weight:900;letter-spacing:3px;
+  padding:10px 32px;
+  clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);
+  margin-bottom:28px;
+  animation:chipIn .5s .6s both;
+}
+@keyframes chipIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+
+/* fase/grupo */
+#fase-label{
+  position:relative;z-index:1;
+  font-size:22px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
+  color:#b9d0ff;margin-bottom:40px;
+  animation:chipIn .5s .65s both;
+}
+
+/* VS */
+#vs{
+  position:relative;z-index:1;
+  font-size:200px;font-weight:900;font-style:italic;
+  line-height:.85;
+  background:linear-gradient(160deg,#ffffff 30%,#b9d0ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 40px rgba(27,82,224,.6));
+  animation:vsIn .6s .3s both;
+}
+@keyframes vsIn{from{opacity:0;transform:scale(1.4)}to{opacity:1;transform:scale(1)}}
+
+/* linha divisória */
+.h-line{
+  width:80px;height:3px;
+  background:linear-gradient(90deg,transparent,#f5b800,transparent);
+  margin:28px 0;
+  position:relative;z-index:1;
+}
+
+/* logo supercopa */
+#sc-logo{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  animation:chipIn .5s .8s both;
+}
+#sc-logo img{height:72px;filter:drop-shadow(0 0 16px rgba(245,184,0,.5))}
+#sc-logo span{
+  font-size:18px;font-weight:700;letter-spacing:5px;text-transform:uppercase;
+  color:#ffd34d;
+}
+
+/* ── barra superior ── */
+#topbar{
+  position:absolute;top:0;left:0;right:0;height:72px;
+  background:rgba(7,26,92,.92);
+  border-bottom:3px solid #f5b800;
+  display:flex;align-items:center;justify-content:center;gap:32px;
+  z-index:20;
+  animation:barIn .5s .1s both;
+}
+@keyframes barIn{from{transform:translateY(-72px)}to{transform:none}}
+#topbar .tc-name{
+  font-size:26px;font-weight:800;letter-spacing:3px;text-transform:uppercase;
+  color:#ffd34d;
+}
+#topbar .sep{width:2px;height:28px;background:rgba(245,184,0,.4)}
+#topbar .tc-sub{font-size:16px;font-weight:600;letter-spacing:3px;color:#b9d0ff;text-transform:uppercase}
+
+/* ── barra inferior ── */
+#botbar{
+  position:absolute;bottom:0;left:0;right:0;height:88px;
+  background:#071a5c;
+  border-top:4px solid #f5b800;
+  display:flex;align-items:center;justify-content:center;gap:0;
+  z-index:20;
+  animation:botIn .5s .15s both;
+}
+@keyframes botIn{from{transform:translateY(88px)}to{transform:none}}
+.info-block{
+  display:flex;align-items:center;gap:16px;
+  padding:0 48px;
+  border-right:1px solid rgba(245,184,0,.2);
+}
+.info-block:last-child{border-right:none}
+.info-icon{font-size:28px;opacity:.8}
+.info-text{display:flex;flex-direction:column;gap:1px}
+.info-text small{font-size:14px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8ca0d0}
+.info-text b{font-size:30px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+
+/* ── stripes diagonais de fundo (decoração) ── */
+.stripe{
+  position:absolute;width:4px;background:rgba(255,255,255,.04);
+  top:-10%;height:120%;transform:skewX(-12deg);
+}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- topo -->
+  <div id="topbar">
+    <span class="tc-name">Supercopa AFC</span>
+    <div class="sep"></div>
+    <span class="tc-sub" id="top-fase">Copa de Vôlei</span>
+  </div>
+
+  <!-- painel casa (esquerda) -->
+  <div class="panel panel-casa">
+    <div class="panel-bg" id="bg-casa"></div>
+    <div class="panel-color"></div>
+    <div class="dots"></div>
+    <div class="stripe" style="left:15%"></div>
+    <div class="stripe" style="left:30%"></div>
+    <div class="stripe" style="left:55%"></div>
+    <div class="slash"></div>
+    <div class="shield-wrap">
+      <img class="shield" id="shield-casa" src="" alt="" onerror="this.style.display='none';document.getElementById('init-casa').style.display='flex'">
+      <div class="shield-initials" id="init-casa" style="display:none" id="init-casa"></div>
+    </div>
+    <div class="team-name" id="name-casa">TIME A</div>
+  </div>
+
+  <!-- painel visitante (direita) -->
+  <div class="panel panel-vis">
+    <div class="panel-bg" id="bg-vis"></div>
+    <div class="panel-color"></div>
+    <div class="dots"></div>
+    <div class="stripe" style="left:15%"></div>
+    <div class="stripe" style="left:40%"></div>
+    <div class="stripe" style="left:65%"></div>
+    <div class="slash"></div>
+    <div class="shield-wrap">
+      <img class="shield" id="shield-vis" src="" alt="" onerror="this.style.display='none';document.getElementById('init-vis').style.display='flex'">
+      <div class="shield-initials" id="init-vis" style="display:none"></div>
+    </div>
+    <div class="team-name" id="name-vis">TIME B</div>
+  </div>
+
+  <!-- centro -->
+  <div id="center">
+    <div id="center-bg"></div>
+    <div id="date-chip" style="display:none"></div>
+    <div id="fase-label"></div>
+    <div id="vs">VS</div>
+    <div class="h-line"></div>
+    <div id="sc-logo">
+      <img src="logo-supercopa.jpg" alt="Supercopa AFC" onerror="this.style.display='none'">
+      <span>Supercopa AFC</span>
+    </div>
+  </div>
+
+  <!-- rodapé -->
+  <div id="botbar">
+    <div class="info-block" id="blk-data" style="display:none">
+      <span class="info-icon">📅</span>
+      <div class="info-text">
+        <small>Data</small>
+        <b id="bot-data"></b>
+      </div>
+    </div>
+    <div class="info-block" id="blk-quadra" style="display:none">
+      <span class="info-icon">🏟</span>
+      <div class="info-text">
+        <small>Local</small>
+        <b id="bot-quadra"></b>
+      </div>
+    </div>
+    <div class="info-block" id="blk-horario" style="display:none">
+      <span class="info-icon">🕐</span>
+      <div class="info-text">
+        <small>Horário</small>
+        <b id="bot-horario"></b>
+      </div>
+    </div>
+    <div class="info-block" id="blk-grupo" style="display:none">
+      <span class="info-icon">🏐</span>
+      <div class="info-text">
+        <small>Grupo</small>
+        <b id="bot-grupo"></b>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+const SC_API = 'https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
+
+function p(k){return new URLSearchParams(location.search).get(k)||''}
+function esc(s){return s.replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}
+function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).slice(0,3).join('').toUpperCase()}
+
+// escala automática (igual ao overlay de placar)
+(function(){
+  const W=1920,H=1080;
+  function resize(){
+    const s=Math.min(innerWidth/W,innerHeight/H);
+    document.getElementById('stage').style.transform=`scale(${s})`;
+    document.getElementById('stage').style.marginLeft=(innerWidth-W*s)/2+'px';
+    document.getElementById('stage').style.marginTop=(innerHeight-H*s)/2+'px';
+  }
+  resize();window.addEventListener('resize',resize);
+})();
+
+function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
+function show(id){const e=document.getElementById(id);if(e)e.style.display=''}
+function hide(id){const e=document.getElementById(id);if(e)e.style.display='none'}
+
+function applyParams(){
+  const casa     = p('casa')     || 'TIME A';
+  const vis      = p('visitante')|| 'TIME B';
+  const data     = p('data');
+  const horario  = p('horario');
+  const quadra   = p('quadra');
+  const grupo    = p('grupo');
+  const fase     = p('fase');
+  const escCasa  = p('escudo_casa');
+  const escVis   = p('escudo_vis');
+
+  set('name-casa', casa);
+  set('name-vis',  vis);
+  document.getElementById('init-casa').textContent = initials(casa);
+  document.getElementById('init-vis').textContent  = initials(vis);
+
+  if(data){
+    set('date-chip', data);
+    show('date-chip');
+    set('bot-data', data);
+    show('blk-data');
+  }
+  if(horario){set('bot-horario',horario);show('blk-horario')}
+  if(quadra) {set('bot-quadra', quadra); show('blk-quadra')}
+  if(grupo)  {set('bot-grupo',  'Grupo '+grupo); show('blk-grupo')}
+
+  // fase/label
+  const faseMap={grupos:'Fase de Grupos',quartas:'Quartas de Final',semifinal:'Semifinal',final:'Grande Final'};
+  const faseLabel = faseMap[fase] || (grupo ? 'Grupo '+grupo+' · Fase de Grupos' : 'Supercopa AFC');
+  set('fase-label', faseLabel);
+  set('top-fase', faseLabel);
+
+  // escudos via URL param direto
+  if(escCasa){
+    const img=document.getElementById('shield-casa');
+    img.src=escCasa;img.style.display='';
+  }
+  if(escVis){
+    const img=document.getElementById('shield-vis');
+    img.src=escVis;img.style.display='';
+  }
+
+  // escudos via API (se não fornecidos via param)
+  if(!escCasa||!escVis){
+    fetchShields(casa, vis, escCasa, escVis);
+  }
+}
+
+async function fetchShields(casaNome, visNome, escCasaUrl, escVisUrl){
+  try{
+    const r=await fetch(SC_API+'?action=timesPublicos',{signal:AbortSignal.timeout(6000)});
+    const d=await r.json();
+    const times=d.times||[];
+    const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    const find=n=>times.find(t=>norm(t.nome)===norm(n));
+    function applyShield(nome, imgId, initId, overrideUrl){
+      if(overrideUrl)return;
+      const t=find(nome);
+      if(!t||!t.escudo)return;
+      const url=t.escudo.startsWith('http')?t.escudo:'https://hngwasixgyvnvfanpuax.supabase.co/storage/v1/object/public/'+t.escudo;
+      const img=document.getElementById(imgId);
+      img.src=url;img.style.display='';
+    }
+    applyShield(casaNome,'shield-casa','init-casa',escCasaUrl);
+    applyShield(visNome, 'shield-vis', 'init-vis', escVisUrl);
+  }catch(e){}
+}
+
+applyParams();
+</script>
+</body>
+</html>
