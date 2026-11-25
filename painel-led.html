@@ -261,7 +261,7 @@ function cPatro(){
  return {t:'Patrocinadores',h:'<div class="pt"><div class="ct rv" style="--d:0"><small>Quem faz a Supercopa acontecer</small><b>'+esc(g[0])+'</b><i></i></div><div class="lg" style="--w:'+w+'px;--h:'+h+'px">'+g[1].map(function(x,i){return '<div class="cd rv" style="--d:'+(i+2)+';--i:'+i+'"><img src="'+BASE+x[0]+'.png" alt="'+esc(x[1])+'"></div>'}).join('')+'</div></div>'}
 }
 /* ---- faixa inferior (rolagem contínua) ---- */
-(function(){var it=['<b>Supercopa de Vôlei</b> · Afonso Cláudio / ES','28 e 29 de novembro','supercopaafc.com.br','Vote no atleta destaque no app','Chat da galera ao vivo no app','<b>Patrocinadores</b>: Coroa Instituto','Planet Sports','Açaí do Diego','Casa Homem do Campo','Sicredi','Express Pizzas e Lanches','IZI Internet','Prato Fino','Restaurante do Marcão','Elite Suplementos','Jacaré Fotografia','Laboratório CDA','Realização: <b>Prefeitura de Afonso Cláudio</b>'];
+(function(){var it=['<b>Supercopa de Vôlei</b> · Afonso Cláudio / ES','28 e 29 de novembro','supercopaafc.com.br','Vote no atleta destaque no app','Chat da galera ao vivo no app','<b>Patrocinadores</b>: Coroa Instituto','Planet Sports','Açaí do Diego','Casa Homem do Campo','Sicredi','Express Pizzas e Lanches','IZI Internet','Prato Fino','Restaurante do Marcão','Elite Suplementos','Jacaré Fotografia','Laboratório CDA','Realização: <b>Instituto Cultural das Montanhas</b>'];
  var h=it.map(function(x){return '<span>'+x+'</span><i>◆</i>'}).join('');$('tr').innerHTML=h+h})();
 /* ---- rotação com transição de TV ---- */
 var seq=[],si=0,atual=null,ativo=null;
