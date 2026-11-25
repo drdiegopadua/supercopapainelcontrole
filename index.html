@@ -839,7 +839,7 @@ body.dark .btn-secondary:hover { color: #fff; }
     <li><a href="javascript:void(0)" onclick="navTo('classificacao',this); return false;"><i class='bx bxs-bar-chart-alt-2'></i><span>Classificação</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('tvconfig',this); return false;"><i class='bx bx-tv'></i><span>TV Config</span></a></li>
     <li><a href="javascript:void(0)" onclick="navTo('avisos',this); return false;"><i class='bx bxs-megaphone'></i><span>Avisos</span></a></li>
-    <li><a href="telao-led.html" target="_blank" rel="noopener"><i class='bx bx-tv'></i><span>Telão LED</span></a></li>
+    <li><a href="javascript:void(0)" onclick="navTo('telao',this); return false;"><i class='bx bx-tv'></i><span>Telão LED</span></a></li>
     <li><a href="overlay-volei.html?estilo=cinema" target="_blank" rel="noopener"><i class='bx bx-broadcast'></i><span>Overlay Placar</span></a></li>
     <li><a href="overlay-patrocinadores.html" target="_blank" rel="noopener"><i class='bx bxs-image'></i><span>Overlay Patrocinadores</span></a></li>
     <li><a href="prematch-selector.html" target="_blank" rel="noopener"><i class='bx bx-clapperboard'></i><span>Overlay Pré-Jogo</span></a></li>
@@ -2070,6 +2070,76 @@ body.dark .btn-secondary:hover { color: #fff; }
 
     </div>
 
+    <!-- ─── TELÃO LED ─── -->
+    <div class="page" id="page-telao">
+      <div class="page-header">
+        <div>
+          <h1>Telão LED</h1>
+          <div class="breadcrumb"><span>Supercopa</span>›<span class="cur">Controle do Telão</span></div>
+        </div>
+        <a href="telao-led.html" target="_blank" class="btn btn-primary"><i class='bx bx-link-external'></i> Abrir o telão</a>
+      </div>
+
+      <!-- STATUS -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><i class='bx bx-broadcast'></i> Status em tempo real</div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <span id="tl-conn-dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444"></span>
+            <span id="tl-conn-txt" style="color:var(--dark-grey)">Telão não detectado</span>
+          </div>
+          <div style="font-size:13px;color:var(--dark-grey)">Fase: <b id="tl-status-fase" style="color:var(--blue)">—</b></div>
+          <div style="font-size:13px;color:var(--dark-grey)">Tela: <b id="tl-status-tela" style="color:var(--blue)">—</b></div>
+          <span id="tl-status-pausa" style="display:none;font-size:12px;font-weight:600;color:#f59e0b;background:rgba(245,158,11,.12);padding:3px 10px;border-radius:20px">⏸ PAUSADO</span>
+        </div>
+      </div>
+
+      <!-- FASE -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><i class='bx bxs-layer'></i> Fase do telão</div>
+        <p style="font-size:13px;color:var(--dark-grey);margin:6px 0 14px">Muda o que aparece no telão imediatamente. O botão da fase ativa fica destacado.</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="tl-fases">
+          <!-- gerado por JS -->
+        </div>
+      </div>
+
+      <!-- NAVEGAÇÃO -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><i class='bx bx-slideshow'></i> Navegar telas</div>
+        <p style="font-size:13px;color:var(--dark-grey);margin:6px 0 14px">Avança ou volta uma tela dentro da fase atual. Pausar congela a rotação automática.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="tlEnviar({type:'voltar'})"><i class='bx bx-chevron-left'></i> Anterior</button>
+          <button class="btn btn-primary" onclick="tlEnviar({type:'avancar'})">Próxima <i class='bx bx-chevron-right'></i></button>
+          <button class="btn btn-secondary" id="tl-btn-pause" onclick="tlTogglePause()"><i class='bx bx-pause'></i> Pausar</button>
+        </div>
+      </div>
+
+      <!-- DURAÇÃO POR TELA -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><i class='bx bx-time'></i> Duração por tela</div>
+        <p style="font-size:13px;color:var(--dark-grey);margin:6px 0 14px">Ajuste quantos segundos cada tela fica no ar. Aplica imediatamente.</p>
+        <div id="tl-duracoes" style="display:flex;flex-direction:column;gap:10px">
+          <!-- gerado por JS -->
+        </div>
+      </div>
+
+      <!-- PROGRAMAÇÃO -->
+      <div class="card">
+        <div class="card-title"><i class='bx bx-calendar-event'></i> Programação</div>
+        <p style="font-size:13px;color:var(--dark-grey);margin:6px 0 14px">Agende qual fase entra em determinado horário. Funciona enquanto este painel estiver aberto.</p>
+        <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:end;flex-wrap:wrap">
+          <div class="form-group" style="margin:0"><label style="font-size:12px">Horário</label><input class="form-control" type="time" id="tl-ag-hora" value="08:00" style="width:110px"></div>
+          <div class="form-group" style="margin:0"><label style="font-size:12px">Fase</label><select class="form-control" id="tl-ag-fase">
+            <option value="pre">Pré-evento</option><option value="apresentacao">Equipes</option><option value="jogos" selected>Jogos</option>
+            <option value="publicidade">Publicidade</option><option value="entretenimento">Diversão</option><option value="encerramento">Encerramento</option>
+          </select></div>
+          <div class="form-group" style="margin:0"><label style="font-size:12px">Dur. (min)</label><input class="form-control" type="number" id="tl-ag-dur" value="30" min="1" max="300" style="width:80px"></div>
+          <button class="btn btn-primary" onclick="tlAgAdicionar()" style="height:38px"><i class='bx bx-plus'></i> Add</button>
+        </div>
+        <div id="tl-ag-lista" style="margin-top:14px"></div>
+      </div>
+    </div>
+
 </main>
 </section>
 
@@ -2589,6 +2659,7 @@ navTo = function (page, el) {
   if (page === 'elencos') carregarElencos();
   if (page === 'torneio') carregarTorneio();
   if (page === 'sistema') { carregarSaude(); if (papelAtual_() === 'admin') carregarUsuariosPainel(); }
+  if (page === 'telao') { document.getElementById('navLabel').textContent = 'Telão LED'; initTelaoControle_(); }
   return r;
 };
 
@@ -8254,6 +8325,161 @@ function abrirTvVolei(){
 }
 
 try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw-painel.js'); } catch (e) { /* offline cache é opcional */ }
+
+// ════════════════════════════════════════════════════════
+// CONTROLE DO TELÃO
+// ════════════════════════════════════════════════════════
+(function(){
+  var FASES_INFO = {
+    pre:            {n:'Pré-evento',   ic:'bx-time-five',  cor:'#6e40c9'},
+    apresentacao:   {n:'Equipes',      ic:'bx-group',       cor:'#1b52e0'},
+    jogos:          {n:'Jogos',        ic:'bx-broadcast',   cor:'#2ea043'},
+    publicidade:    {n:'Publicidade',  ic:'bx-images',      cor:'#d29922'},
+    entretenimento: {n:'Diversão',     ic:'bx-smile',       cor:'#e36209'},
+    encerramento:   {n:'Encerramento', ic:'bx-trophy',      cor:'#ef4444'},
+  };
+  var TELAS_INFO = {
+    contagem:{n:'Contagem',dur:20}, boasvindas:{n:'Boas-vindas',dur:20}, equipes:{n:'Equipes',dur:60},
+    aovivo:{n:'Ao vivo',dur:30}, proximo:{n:'Próximo jogo',dur:15}, classificacao:{n:'Classificação',dur:20},
+    publicidade:{n:'Patrocinadores',dur:15}, quiz:{n:'Quiz',dur:20}, galera:{n:'Galera',dur:25},
+    resultado:{n:'Resultado',dur:18}, podio:{n:'Pódio',dur:18}, campeao:{n:'Campeão',dur:25},
+    premiacao:{n:'Premiação',dur:22}, agradecimento:{n:'Obrigado',dur:18}, video:{n:'Vídeo',dur:30},
+  };
+  var DURACOES = {}; Object.keys(TELAS_INFO).forEach(function(k){DURACOES[k]=TELAS_INFO[k].dur;});
+  var tlBc = null, tlPausado = false, tlFaseAtiva = null, tlDetected = false;
+  var tlAgenda = JSON.parse(localStorage.getItem('sc-telao-agenda')||'[]');
+
+  function tlConectar(){
+    try{
+      if(tlBc){try{tlBc.close();}catch(e){}}
+      tlBc = new BroadcastChannel('supercopa-telao');
+      tlBc.onmessage = function(e){
+        var d = e.data||{};
+        if(d.type==='estado'){
+          tlDetected = true; tlFaseAtiva = d.fase; tlPausado = d.pausado;
+          tlAtualizarStatus(d.fase, d.tela, d.pausado);
+        }
+      };
+    }catch(e){}
+  }
+
+  window.tlEnviar = function(msg){
+    try{ if(!tlBc) tlConectar(); tlBc.postMessage(msg); } catch(e){}
+  };
+
+  window.tlSetFase = function(f){
+    tlFaseAtiva = f;
+    try{ localStorage.setItem('sc-telao-fase',f); }catch(e){}
+    tlEnviar({type:'fase',fase:f});
+    tlRenderFases();
+    var info = FASES_INFO[f]||{};
+    document.getElementById('tl-status-fase').textContent = info.n||f;
+    if(typeof showToast==='function') showToast('Telão: '+info.n);
+  };
+
+  window.tlTogglePause = function(){
+    tlPausado = !tlPausado;
+    tlEnviar({type:'pausa',val:tlPausado});
+    var btn = document.getElementById('tl-btn-pause');
+    if(btn) btn.innerHTML = tlPausado ? "<i class='bx bx-play'></i> Retomar" : "<i class='bx bx-pause'></i> Pausar";
+  };
+
+  function tlAtualizarStatus(fase, tela, pausado){
+    var dot = document.getElementById('tl-conn-dot');
+    var txt = document.getElementById('tl-conn-txt');
+    var sf  = document.getElementById('tl-status-fase');
+    var st  = document.getElementById('tl-status-tela');
+    var sp  = document.getElementById('tl-status-pausa');
+    var bp  = document.getElementById('tl-btn-pause');
+    if(dot) dot.style.background = '#22c55e';
+    if(txt) txt.textContent = 'Telão conectado';
+    if(sf && fase) sf.textContent = (FASES_INFO[fase]||{}).n||fase;
+    if(st && tela) st.textContent = (TELAS_INFO[tela]||{n:tela}).n;
+    if(sp) sp.style.display = pausado ? '' : 'none';
+    if(bp) bp.innerHTML = pausado ? "<i class='bx bx-play'></i> Retomar" : "<i class='bx bx-pause'></i> Pausar";
+  }
+
+  function tlRenderFases(){
+    var c = document.getElementById('tl-fases'); if(!c) return;
+    var ativa = tlFaseAtiva || (function(){try{return localStorage.getItem('sc-telao-fase');}catch(e){return null;}})() || 'jogos';
+    c.innerHTML = Object.keys(FASES_INFO).map(function(k){
+      var info = FASES_INFO[k], on = k===ativa;
+      return '<button onclick="tlSetFase(\''+k+'\')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:10px;border:2px solid '+(on?info.cor:'var(--stroke)')+';background:'+(on?info.cor+'18':'transparent')+';color:'+(on?info.cor:'var(--dark-grey)')+';cursor:pointer;font-size:13px;font-weight:'+(on?'700':'500')+';transition:.15s">'
+        +'<i class=\'bx '+info.ic+'\' style="font-size:22px"></i>'+info.n+'</button>';
+    }).join('');
+  }
+
+  function tlRenderDuracoes(){
+    var c = document.getElementById('tl-duracoes'); if(!c) return;
+    c.innerHTML = Object.keys(TELAS_INFO).map(function(k){
+      var ti = TELAS_INFO[k], dur = DURACOES[k]||ti.dur;
+      return '<div style="display:flex;align-items:center;gap:12px">'
+        +'<span style="min-width:120px;font-size:13px;color:var(--dark-grey)">'+ti.n+'</span>'
+        +'<input type="range" min="5" max="120" step="1" value="'+dur+'" style="flex:1;accent-color:var(--blue)" oninput="tlSetDur(\''+k+'\',+this.value)">'
+        +'<span id="tl-dur-'+k+'" style="min-width:36px;text-align:right;font-size:13px;font-weight:600">'+dur+'s</span>'
+        +'</div>';
+    }).join('');
+  }
+
+  window.tlSetDur = function(tela, seg){
+    DURACOES[tela] = seg;
+    var el = document.getElementById('tl-dur-'+tela);
+    if(el) el.textContent = seg+'s';
+    tlEnviar({type:'duracao',tela:tela,seg:seg});
+  };
+
+  // Agenda
+  function tlRenderAgenda(){
+    var c = document.getElementById('tl-ag-lista'); if(!c) return;
+    if(!tlAgenda.length){ c.innerHTML='<p style="font-size:13px;color:var(--dark-grey)">Nenhum item agendado.</p>'; return; }
+    c.innerHTML = tlAgenda.map(function(a,i){
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--grey);border-radius:8px;margin-top:6px;font-size:13px">'
+        +'<b style="color:var(--blue);min-width:46px">'+a.hora+'</b>'
+        +'<span style="flex:1">'+(FASES_INFO[a.fase]||{n:a.fase}).n+'</span>'
+        +'<span style="color:var(--dark-grey)">'+a.dur+' min</span>'
+        +'<button onclick="tlAgRemover('+i+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 6px">✕</button>'
+        +'</div>';
+    }).join('');
+  }
+  window.tlAgAdicionar = function(){
+    var hora = document.getElementById('tl-ag-hora').value;
+    var fase = document.getElementById('tl-ag-fase').value;
+    var dur  = +(document.getElementById('tl-ag-dur').value)||30;
+    if(!hora||!fase) return;
+    tlAgenda.push({hora:hora,fase:fase,dur:dur});
+    tlAgenda.sort(function(a,b){return a.hora.localeCompare(b.hora);});
+    try{ localStorage.setItem('sc-telao-agenda',JSON.stringify(tlAgenda)); }catch(e){}
+    tlRenderAgenda();
+  };
+  window.tlAgRemover = function(i){
+    tlAgenda.splice(i,1);
+    try{ localStorage.setItem('sc-telao-agenda',JSON.stringify(tlAgenda)); }catch(e){}
+    tlRenderAgenda();
+  };
+  function tlVerificarAgenda(){
+    var d = new Date(), hm = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    tlAgenda.forEach(function(a){
+      if(a.hora===hm && !a._disp){ a._disp=true; tlSetFase(a.fase); setTimeout(function(){a._disp=false;},61000); }
+      if(a.hora>hm) a._disp=false;
+    });
+  }
+
+  // chamada pelo navTo ao entrar na página
+  var _tlInited = false;
+  window.initTelaoControle_ = function(){
+    if(!_tlInited){
+      _tlInited = true;
+      tlConectar();
+      setInterval(function(){ tlEnviar({type:'ping'}); tlVerificarAgenda(); }, 8000);
+      setInterval(tlVerificarAgenda, 5000);
+    }
+    tlFaseAtiva = (function(){try{return localStorage.getItem('sc-telao-fase');}catch(e){return null;}})() || 'jogos';
+    tlRenderFases();
+    tlRenderDuracoes();
+    tlRenderAgenda();
+    tlEnviar({type:'ping'});
+  };
+})();
 </script>
 </body>
 </html>
