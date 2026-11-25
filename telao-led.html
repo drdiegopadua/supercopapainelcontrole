@@ -596,7 +596,7 @@
   /* =================== PAINEL DO OPERADOR (aparece ao mexer o mouse) =================== */
   #op{position:absolute;left:50%;top:112px;transform:translate(-50%,-20px);z-index:50;opacity:0;pointer-events:none;transition:.3s;
     padding:14px 18px;border-radius:24px;background:rgba(10,18,56,.92);color:#fff;box-shadow:0 30px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px;min-width:900px}
-  body.cursor #op{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+  /* body.cursor #op{opacity:1;pointer-events:auto;transform:translate(-50%,0)} */
   #op .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
   #op .lb{font-size:10px;font-weight:800;letter-spacing:3px;color:rgba(255,255,255,.5);text-transform:uppercase;width:70px}
   #op button{font:700 13px var(--B);color:#fff;background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:8px 14px;cursor:pointer}
@@ -757,13 +757,13 @@ async function carregarDados(){
   if(!t || !t.ok) return { ...PAINEL_DATA_MOCK, painel:{fase:faseCtrl||'jogos'} };
 
   // mapa de times
-  const _ESC3D = {'alpha vôlei':'alpha-volei','ct das montanhas':'ct-das-montanhas','ctv aravôlei':'ctv-aravolei','ctva voleibol':'ctva-voleibol','equipe uvi':'equipe-uvi','es vôlei':'es-volei','ms vôlei':'ms-volei','rpb volei':'rpb-volei','super vôlei':'super-volei','supra vôlei':'supra-volei','tiger volley':'tiger-volley','união vôlei':'uniao-volei'};
+  const _ESC3D = {'alpha volei':'alpha-volei','ct das montanhas':'ct-das-montanhas','ctv aravolei':'ctv-aravolei','ctva voleibol':'ctva-voleibol','equipe uvi':'equipe-uvi','es volei':'es-volei','ms volei':'ms-volei','rpb volei':'rpb-volei','super volei':'super-volei','supra volei':'supra-volei','tiger volley':'tiger-volley','uniao volei':'uniao-volei'};
   const escudo3D = n=>{ const k=norm(n); return _ESC3D[k]?SITE+'novo/escudos/'+_ESC3D[k]+'.png':null; };
   const TM = {};
   ((tm&&tm.times)||[]).forEach(x=>{
     const logoOvr = escudo3D(x.nome);
     TM[norm(x.nome)] = { logo: logoOvr||(x.escudo||''), cidade: String(x.cidade||'').replace(/\s*-\s*[A-Z]{2}$/,''),
-      grupo: x.grupo||'', naipe: x.naipe||'Misto', tecnico: x.tecnico||'', atletas: (x.atletas||[]).map(a=>({numero:a.numero||'',nome:a.nome||'',posicao:a.posicao||'',foto:a.foto||''})) };
+      grupo: x.grupo||'', naipe: x.naipe||'Masculino', tecnico: x.tecnico||'', atletas: (x.atletas||[]).map(a=>({numero:a.numero||'',nome:a.nome||'',posicao:a.posicao||'',foto:a.foto||''})) };
   });
   const logo = n => (TM[norm(n)]||{}).logo || escudo3D(n) || '';
   const cid  = n => (TM[norm(n)]||{}).cidade || '';
@@ -871,7 +871,7 @@ async function carregarDados(){
     evento: { nome:'Supercopa AFC de Vôlei', edicao:t.edicao||'2024',
       complemento:'Afonso Cláudio · ES', status: haVivo?'Ao vivo · Afonso Cláudio':'Afonso Cláudio · 28 e 29 de novembro de 2026',
       logo:'', appQrcode:qr(APP), inicio:'2026-11-28T08:00:00', inicioTexto:'28 de novembro de 2026',
-      dataTexto:'28 e 29 de novembro de 2026', local:'Afonso Cláudio · ES', aberturaTexto:'Abertura às 8h',
+      dataTexto:'28 e 29 de novembro de 2026', local:'Afonso Cláudio · ES', aberturaTexto:'Sábado às 13h',
       mensagens:['Bem-vindo à Supercopa AFC!','12 equipes, 2 dias de vôlei!','Baixe o app da Supercopa!'],
       fotosHeroi:['','',''], logosRodape },
     equipes, jogosAoVivo, proximosJogos, grupos, patrocinadores, quiz, galera,
@@ -1131,7 +1131,7 @@ function renderClassificacao(d){
 let adPage = 0, adVisto = false;
 function renderPublicidade(d){
   const all = d.patrocinadores||[], m = all.find(p=>p.cota==='master')||{}, rest = all.filter(p=>p!==m);
-  const per = 8, pages = Math.max(1,Math.ceil(rest.length/per)), pg = adPage % pages, sl = rest.slice(pg*per,pg*per+per); while(sl.length<per) sl.push({});
+  const per = 8, pages = Math.max(1,Math.ceil(rest.length/per)), pg = adPage % pages, sl = rest.slice(pg*per,pg*per+per); while(sl.length<per) sl.push(rest[sl.length % Math.max(1,rest.length)]);
   const tile = (p,k,dd) => `<div class="glass tl rv" ${D(dd)}><div class="lg imgbox ct" data-slot="patrocinadores[${pg*per+k+1}].logo">${img(p.logo,'logo','LOGO')}</div><div class="nm">${esc(p.nome||'')}</div></div>`;
   setTela('publicidade', `
   <div class="ad">
@@ -1173,9 +1173,9 @@ function renderGalera(d){
       <span class="pill r tag"><span class="rdot" style="background:#fff"></span>Fan cam</span>
       <div class="glass cap"><div><div class="H" data-slot="galera.fotos[i].nome">${esc(f.nome||'')}</div><p data-slot="galera.fotos[i].legenda">${esc(f.legenda||'')}</p></div><div class="c gt num">${fs.length?i+1:0}/${fs.length}</div></div></div>
     <div class="side">
-      <div class="glass cta rv" ${D(.15)}><div class="top"><div class="qr imgbox ct" data-slot="galera.qrcode">${img(g.qrcode,'qr','QR CODE')}</div>
-        <div><span class="eyebrow">Apareça no telão</span><div class="H" style="margin-top:10px" data-slot="galera.chamada">${esc(g.chamada||'')}</div></div></div>
-        <div class="hash gt" data-slot="galera.hashtag">${esc(g.hashtag||'')}</div><p data-slot="galera.instrucao">${esc(g.instrucao||'')}</p></div>
+      <div class="glass cta rv" ${D(.15)} style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px">
+        <div class="hash gt" style="font-size:2em;font-weight:900;letter-spacing:2px" data-slot="galera.hashtag">${esc(g.hashtag||'#SupercopaAFC')}</div>
+        <span class="eyebrow">Galeria do evento</span></div>
       <div class="th"><div class="imgbox rv" ${D(.25)} data-slot="galera.fotos[i+1].url">${img(t(1).url,'photo','')}</div><div class="imgbox rv" ${D(.3)} data-slot="galera.fotos[i+2].url">${img(t(2).url,'photo','')}</div></div>
     </div>
   </div>`);
