@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Controle do Telão — Supercopa AFC</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --border:#30363d; --accent:#1b52e0; --accent2:#22c3ee;
+  --text:#e6edf3; --muted:#8b949e; --ok:#2ea043; --warn:#d29922; --danger:#f85149;
+  --phase-pre:#6e40c9; --phase-eq:#1b52e0; --phase-jg:#2ea043; --phase-pub:#d29922;
+  --phase-div:#e36209; --phase-enc:#f85149;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
+h1{font-size:18px;font-weight:700;padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+h1 span.badge{background:var(--accent);color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+.conn{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0}
+.conn.ok{background:var(--ok)}
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 57px)}
+aside{border-right:1px solid var(--border);padding:16px;display:flex;flex-direction:column;gap:14px}
+main{padding:20px;display:flex;flex-direction:column;gap:20px;overflow-y:auto}
+
+/* seção */
+section{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+section h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border)}
+.sec-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+
+/* botões de fase */
+.fase-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--text);cursor:pointer;width:100%;text-align:left;font-size:13px;font-weight:500;transition:.15s}
+.fase-btn:hover{background:#1f2937}
+.fase-btn.ativo{border-color:var(--clr);color:var(--clr);background:color-mix(in srgb, var(--clr) 10%, transparent)}
+.fase-btn .dot{width:8px;height:8px;border-radius:50%;background:var(--clr);flex-shrink:0}
+.fase-btn .tecla{margin-left:auto;font-size:11px;color:var(--muted);background:var(--border);padding:1px 6px;border-radius:4px}
+
+/* telas */
+.telas{display:flex;flex-wrap:wrap;gap:8px}
+.tela-btn{padding:7px 13px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-weight:500;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tela-btn:hover{border-color:var(--accent2);color:var(--text)}
+.tela-btn.ativo{border-color:var(--accent);background:rgba(27,82,224,.15);color:var(--accent2)}
+.tela-btn .dur-badge{font-size:10px;color:var(--muted);background:rgba(255,255,255,.06);padding:1px 5px;border-radius:10px}
+
+/* controles */
+.ctrl{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 14px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
+.btn:hover{background:#1f2937}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1a48c8}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.ok:hover{background:#248a39}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+
+/* duração */
+.dur-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dur-row label{color:var(--muted);font-size:12px;min-width:110px}
+.dur-row input[type=range]{flex:1;min-width:80px;accent-color:var(--accent)}
+.dur-row .val{min-width:34px;text-align:right;font-size:13px;font-weight:600}
+
+/* agenda */
+.agenda-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.agenda-row label{color:var(--muted);font-size:12px;min-width:70px}
+.agenda-row input, .agenda-row select{background:#0d1117;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px}
+.agenda-row input[type=time]{width:100px}
+.agenda-row select{flex:1;min-width:140px}
+.agenda-row input[type=number]{width:72px}
+
+/* log */
+.log{background:#0d1117;border-radius:6px;padding:10px;font-size:11px;color:var(--muted);max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.log .entry{display:flex;gap:6px}
+.log .ts{color:#3f4b5a;flex-shrink:0}
+
+/* status bar */
+#status-bar{padding:8px 20px;background:var(--panel);border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:14px;position:sticky;bottom:0}
+#status-bar .cur-info{color:var(--text);font-weight:600}
+
+/* agenda items */
+.ag-list{display:flex;flex-direction:column;gap:6px}
+.ag-item{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;align-items:center;gap:10px;font-size:12px}
+.ag-item .ag-time{color:var(--accent2);font-weight:700;min-width:46px}
+.ag-item .ag-fase{flex:1}
+.ag-item .ag-dur{color:var(--muted)}
+.ag-item .ag-del{background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 6px}
+
+@media(max-width:680px){.layout{grid-template-columns:1fr};aside{border-right:none;border-bottom:1px solid var(--border)}}
+</style>
+</head>
+<body>
+
+<h1>
+  <span class="conn" id="conn-dot"></span>
+  Painel de Controle · Telão Supercopa AFC
+  <span class="badge">AO VIVO</span>
+</h1>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside>
+  <section>
+    <h2>Fase atual</h2>
+    <div class="sec-body" id="fase-list">
+      <!-- gerado por JS -->
+    </div>
+  </section>
+
+  <section>
+    <h2>Navegação</h2>
+    <div class="sec-body">
+      <div class="ctrl">
+        <button class="btn" id="btn-voltar">◀ Anterior</button>
+        <button class="btn primary" id="btn-avancar">Próxima ▶</button>
+      </div>
+      <div class="ctrl">
+        <button class="btn" id="btn-pausar">⏸ Pausar</button>
+        <button class="btn" id="btn-retomar" style="display:none">▶ Retomar</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Telão</h2>
+    <div class="sec-body">
+      <p style="font-size:12px;color:var(--muted)">Abra o telão em outra aba para que o controle funcione em tempo real.</p>
+      <a class="btn" href="telao-led.html" target="_blank" style="display:block;text-align:center;text-decoration:none">Abrir Telão ↗</a>
+    </div>
+  </section>
+</aside>
+
+<!-- MAIN -->
+<main>
+
+  <!-- TELAS DA FASE -->
+  <section>
+    <h2 id="telas-titulo">Telas — fase atual</h2>
+    <div class="sec-body">
+      <div class="telas" id="tela-list"></div>
+    </div>
+  </section>
+
+  <!-- DURAÇÃO POR TELA -->
+  <section>
+    <h2>Duração por tela (segundos)</h2>
+    <div class="sec-body" id="dur-list">
+      <!-- gerado por JS -->
+    </div>
+  </section>
+
+  <!-- PROGRAMAÇÃO -->
+  <section>
+    <h2>Programação (agendar fase)</h2>
+    <div class="sec-body">
+      <div class="agenda-row">
+        <label>Horário</label>
+        <input type="time" id="ag-hora" value="08:00">
+      </div>
+      <div class="agenda-row">
+        <label>Fase</label>
+        <select id="ag-fase">
+          <option value="pre">Pré-evento</option>
+          <option value="apresentacao">Equipes</option>
+          <option value="jogos" selected>Jogos</option>
+          <option value="publicidade">Publicidade</option>
+          <option value="entretenimento">Diversão</option>
+          <option value="encerramento">Encerramento</option>
+        </select>
+      </div>
+      <div class="agenda-row">
+        <label>Duração (min)</label>
+        <input type="number" id="ag-dur" value="30" min="1" max="300">
+      </div>
+      <div class="ctrl">
+        <button class="btn ok" id="btn-ag-add">+ Adicionar</button>
+      </div>
+      <div class="ag-list" id="ag-list"></div>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <section>
+    <h2>Log de ações</h2>
+    <div class="sec-body">
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<div id="status-bar">
+  <span>Fase: <span class="cur-info" id="sb-fase">—</span></span>
+  <span>Tela: <span class="cur-info" id="sb-tela">—</span></span>
+  <span id="sb-pausa" style="color:var(--warn);display:none">⏸ PAUSADO</span>
+</div>
+
+<script>
+const FASES = {
+  pre:            { nome:'Pré-evento',   tecla:'1', cor:'var(--phase-pre)',  telas:['boasvindas','contagem','video','publicidade'] },
+  apresentacao:   { nome:'Equipes',      tecla:'2', cor:'var(--phase-eq)',   telas:['equipes','publicidade'] },
+  jogos:          { nome:'Jogos',        tecla:'3', cor:'var(--phase-jg)',   telas:['aovivo','proximo','aovivo','classificacao','video','publicidade'] },
+  publicidade:    { nome:'Publicidade',  tecla:'4', cor:'var(--phase-pub)',  telas:['publicidade','video'] },
+  entretenimento: { nome:'Diversão',     tecla:'5', cor:'var(--phase-div)',  telas:['quiz','galera','video','publicidade'] },
+  encerramento:   { nome:'Encerramento', tecla:'6', cor:'var(--phase-enc)',  telas:['resultado','podio','campeao','premiacao','agradecimento'] },
+};
+const TELAS_INFO = {
+  contagem:{n:'Contagem',dur:20}, boasvindas:{n:'Boas-vindas',dur:20}, equipes:{n:'Equipes',dur:60},
+  aovivo:{n:'Ao vivo',dur:30}, proximo:{n:'Próximo jogo',dur:15}, classificacao:{n:'Classificação',dur:20},
+  publicidade:{n:'Patrocinadores',dur:15}, quiz:{n:'Quiz',dur:20}, galera:{n:'Galera',dur:25},
+  resultado:{n:'Resultado',dur:18}, podio:{n:'Pódio',dur:18}, campeao:{n:'Campeão',dur:25},
+  premiacao:{n:'Premiação',dur:22}, agradecimento:{n:'Obrigado',dur:18}, video:{n:'Vídeo',dur:30},
+};
+const DURACOES = {}; // overrides
+Object.keys(TELAS_INFO).forEach(k=>DURACOES[k]=TELAS_INFO[k].dur);
+
+let faseAtiva = null;
+let telaAtiva = null;
+let pausado = false;
+let bc = null;
+let agenda = JSON.parse(localStorage.getItem('sc-telao-agenda')||'[]');
+let agTimer = null;
+
+// BroadcastChannel
+function conectar(){
+  try{
+    if(bc){ try{bc.close();}catch(_){} }
+    bc = new BroadcastChannel('supercopa-telao');
+    bc.onmessage = e=>{
+      const d = e.data||{};
+      if(d.type==='estado'){
+        faseAtiva = d.fase; telaAtiva = d.tela; pausado = d.pausado;
+        atualizarUI();
+      }
+    };
+    document.getElementById('conn-dot').classList.add('ok');
+    log('Canal conectado');
+  }catch(e){ log('Erro ao conectar canal: '+e.message); }
+}
+
+function enviar(msg){
+  try{
+    if(!bc) conectar();
+    bc.postMessage(msg);
+    log('Enviado: '+JSON.stringify(msg));
+  }catch(e){ log('Erro: '+e.message); }
+}
+
+// Lê fase do localStorage (se o telão salvou)
+function lerFaseSalva(){
+  try{ return localStorage.getItem('sc-telao-fase'); }catch(_){ return null; }
+}
+
+function setFase(f){
+  faseAtiva = f;
+  try{ localStorage.setItem('sc-telao-fase',f); }catch(_){}
+  enviar({type:'fase',fase:f});
+  atualizarUI();
+  log('Fase → '+FASES[f].nome);
+}
+
+function setTela(t){
+  telaAtiva = t;
+  enviar({type:'tela',tela:t});
+  atualizarUI();
+  log('Tela → '+t);
+}
+
+function pausar(val){
+  pausado = val;
+  enviar({type:'pausa',val});
+  atualizarUI();
+}
+
+function avancar(){ enviar({type:'avancar'}); log('▶ Avançar tela'); }
+function voltar(){ enviar({type:'voltar'}); log('◀ Voltar tela'); }
+
+function atualizarUI(){
+  const f = faseAtiva || lerFaseSalva() || 'jogos';
+  // sidebar fases
+  document.querySelectorAll('.fase-btn').forEach(b=>{
+    b.classList.toggle('ativo', b.dataset.fase===f);
+  });
+  // telas
+  const info = FASES[f]||FASES.jogos;
+  document.getElementById('telas-titulo').textContent = 'Telas — '+info.nome;
+  renderTelas(f);
+  // status bar
+  document.getElementById('sb-fase').textContent = info.nome;
+  document.getElementById('sb-tela').textContent = telaAtiva ? (TELAS_INFO[telaAtiva]?.n||telaAtiva) : '—';
+  document.getElementById('sb-pausa').style.display = pausado ? '' : 'none';
+  document.getElementById('btn-pausar').style.display = pausado ? 'none' : '';
+  document.getElementById('btn-retomar').style.display = pausado ? '' : 'none';
+}
+
+function renderFases(){
+  const c = document.getElementById('fase-list');
+  const f = faseAtiva || lerFaseSalva() || 'jogos';
+  c.innerHTML = Object.entries(FASES).map(([k,v])=>`
+    <button class="fase-btn ${k===f?'ativo':''}" data-fase="${k}" style="--clr:${v.cor}" onclick="setFase('${k}')">
+      <span class="dot"></span>${v.nome}<span class="tecla">${v.tecla}</span>
+    </button>`).join('');
+}
+
+function renderTelas(fase){
+  const c = document.getElementById('tela-list');
+  const info = FASES[fase]||FASES.jogos;
+  c.innerHTML = [...new Set(info.telas)].map(t=>{
+    const ti = TELAS_INFO[t]||{n:t,dur:20};
+    const dur = DURACOES[t]||ti.dur;
+    return `<button class="tela-btn ${t===telaAtiva?'ativo':''}" onclick="setTela('${t}')">
+      ${ti.n}<span class="dur-badge">${dur}s</span></button>`;
+  }).join('');
+}
+
+function renderDuracoes(){
+  const c = document.getElementById('dur-list');
+  c.innerHTML = Object.entries(TELAS_INFO).map(([k,v])=>{
+    const val = DURACOES[k]||v.dur;
+    return `<div class="dur-row">
+      <label>${v.n}</label>
+      <input type="range" min="5" max="120" step="1" value="${val}" data-tela="${k}" oninput="setDur('${k}',+this.value)">
+      <span class="val" id="dur-val-${k}">${val}s</span>
+    </div>`;
+  }).join('');
+}
+
+function setDur(tela, seg){
+  DURACOES[tela] = seg;
+  document.getElementById('dur-val-'+tela).textContent = seg+'s';
+  enviar({type:'duracao',tela,seg});
+  renderTelas(faseAtiva||lerFaseSalva()||'jogos');
+}
+
+// Agenda
+function renderAgenda(){
+  const c = document.getElementById('ag-list');
+  if(!agenda.length){ c.innerHTML='<p style="font-size:12px;color:var(--muted)">Nenhum item agendado.</p>'; return; }
+  c.innerHTML = agenda.map((a,i)=>`
+    <div class="ag-item">
+      <span class="ag-time">${a.hora}</span>
+      <span class="ag-fase">${FASES[a.fase]?.nome||a.fase}</span>
+      <span class="ag-dur">${a.dur} min</span>
+      <button class="ag-del" onclick="removerAgenda(${i})">✕</button>
+    </div>`).join('');
+}
+
+function adicionarAgenda(){
+  const hora = document.getElementById('ag-hora').value;
+  const fase = document.getElementById('ag-fase').value;
+  const dur  = +document.getElementById('ag-dur').value||30;
+  if(!hora||!fase) return;
+  agenda.push({hora,fase,dur});
+  agenda.sort((a,b)=>a.hora.localeCompare(b.hora));
+  salvarAgenda();
+  renderAgenda();
+  log('Agendado: '+FASES[fase]?.nome+' às '+hora+' por '+dur+' min');
+}
+
+function removerAgenda(i){
+  agenda.splice(i,1);
+  salvarAgenda();
+  renderAgenda();
+}
+
+function salvarAgenda(){
+  try{ localStorage.setItem('sc-telao-agenda', JSON.stringify(agenda)); }catch(_){}
+}
+
+function verificarAgenda(){
+  const agora = new Date();
+  const hm = agora.getHours().toString().padStart(2,'0')+':'+agora.getMinutes().toString().padStart(2,'0');
+  agenda.forEach(a=>{
+    if(a.hora===hm && !a._disparado){
+      a._disparado = true;
+      setFase(a.fase);
+      log('⏰ Agendamento disparado: '+FASES[a.fase]?.nome+' às '+a.hora);
+      // reset _disparado no próximo minuto
+      setTimeout(()=>{ a._disparado=false; }, 60500);
+    }
+    // zera na virada do dia
+    if(a.hora > hm) a._disparado=false;
+  });
+}
+
+function log(msg){
+  const c = document.getElementById('log');
+  const d = new Date();
+  const ts = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+  c.insertAdjacentHTML('afterbegin',`<div class="entry"><span class="ts">${ts}</span><span>${msg}</span></div>`);
+  while(c.children.length>50) c.lastElementChild.remove();
+}
+
+// eventos
+document.getElementById('btn-voltar').onclick = voltar;
+document.getElementById('btn-avancar').onclick = avancar;
+document.getElementById('btn-pausar').onclick = ()=>pausar(true);
+document.getElementById('btn-retomar').onclick = ()=>pausar(false);
+document.getElementById('btn-ag-add').onclick = adicionarAgenda;
+
+// teclado de atalho
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  const fk = Object.keys(FASES);
+  if(/^[1-6]$/.test(e.key)) setFase(fk[+e.key-1]);
+  if(e.key==='ArrowRight') avancar();
+  if(e.key==='ArrowLeft') voltar();
+  if(e.key===' '){ e.preventDefault(); pausar(!pausado); }
+});
+
+// init
+conectar();
+faseAtiva = lerFaseSalva()||'jogos';
+renderFases();
+renderTelas(faseAtiva);
+renderDuracoes();
+renderAgenda();
+atualizarUI();
+// pinga estado do telão e verifica agenda
+setInterval(()=>{ enviar({type:'ping'}); verificarAgenda(); }, 10000);
+// heartbeat agenda a cada segundo (para disparar exatamente no minuto certo)
+setInterval(verificarAgenda, 5000);
+</script>
+</body>
+</html>
