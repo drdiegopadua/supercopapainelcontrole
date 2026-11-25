@@ -967,6 +967,12 @@ function renderPatrocinadores(d){
   const all = d.patrocinadores || [];
   const master = all.find(p=>p.cota==='master') || all[0] || {};
   const rest = all.filter(p=>p!==master);
+  /* rastrear quais logos estão visíveis agora */
+  const _slugOf = p=>((p.logo||'').match(/parceiros\/([a-z0-9-]+)\.png/)||[])[1];
+  const _per = CONFIG.patrocinadoresPorPagina;
+  const _slice = rest.slice(sponsPage*_per, sponsPage*_per+_per);
+  const _slugs = [master,..._slice].map(_slugOf).filter(Boolean);
+  if(_slugs.length) try{ fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api',{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'patrocinio_view',plataforma:'telao',local:'telao-patrocinadores',slugs:_slugs})}); }catch(e){}
   $('#master').innerHTML = `
     <div class="label">Patrocínio master</div>
     <div class="ringwrap">${ticks(60,48,2.4)}<div class="arc"></div>
