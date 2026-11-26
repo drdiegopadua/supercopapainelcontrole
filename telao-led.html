@@ -872,8 +872,11 @@ async function carregarDados(){
     link:'supercopaafc.com.br', premio:'O campeão será premiado na cerimônia de encerramento',
     qrcode:qr(APP+'#quiz'), ranking };
 
-  // galera
-  const fotos = ((gl&&gl.fotos)||[]).slice(0,20).map(f=>({url:f.f||'',nome:f.nome||'',legenda:f.cap||'Supercopa AFC'}));
+  // galera — apenas fotos selecionadas pelo admin (telaoFotos)
+  const selIds = new Set(((sel&&sel.ids)||[]).map(String));
+  const fotos = selIds.size
+    ? ((gl&&gl.fotos)||[]).filter(f=>selIds.has(String(f.id))).slice(0,20).map(f=>({url:f.f||'',nome:f.nome||'',legenda:f.cap||'Supercopa AFC'}))
+    : [];
   const galera = { chamada:'Poste sua foto e apareça no telão!', hashtag:'#SupercopaAFC', qrcode:qr(APP+'#fotos'),
     instrucao:'Abra o app da Supercopa e envie sua foto', fotos };
 
