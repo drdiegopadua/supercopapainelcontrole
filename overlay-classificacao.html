@@ -298,11 +298,39 @@ function grupoHtml(g){
   +'</div>';
 }
 
+function projetarTabela(grupos,vivos){
+  if(!vivos||!vivos.length)return grupos;
+  return grupos.map(function(g){
+    var tab=g.tabela.map(function(t){return Object.assign({},t,{_proj:false})});
+    var idx={};
+    tab.forEach(function(t,i){idx[String(t.equipe||'').trim().toLowerCase()]=i});
+    vivos.forEach(function(p){
+      var cN=String(p.equipeCasa||'').trim().toLowerCase();
+      var vN=String(p.equipeVisitante||'').trim().toLowerCase();
+      var iA=idx[cN],iB=idx[vN];
+      if(iA==null||iB==null)return;
+      var cL=(p.setsCasa||0)>(p.setsVisitante||0)||((p.setsCasa||0)===(p.setsVisitante||0)&&(p.pontosCasa||0)>(p.pontosVisitante||0));
+      var vL=(p.setsVisitante||0)>(p.setsCasa||0)||((p.setsCasa||0)===(p.setsVisitante||0)&&(p.pontosVisitante||0)>(p.pontosCasa||0));
+      if(!cL&&!vL)return;
+      var wI=cL?iA:iB,lI=cL?iB:iA;
+      var wS=cL?(p.setsCasa||0):(p.setsVisitante||0),lS=cL?(p.setsVisitante||0):(p.setsCasa||0);
+      var finW=2,finL=wS>lS?lS:1;
+      var pW=finL===0?3:2,pL=finL===0?0:1;
+      tab[wI]=Object.assign({},tab[wI],{pontos:(tab[wI].pontos||0)+pW,vitorias:(tab[wI].vitorias||0)+1,jogos:(tab[wI].jogos||0)+1,saldoSets:(tab[wI].saldoSets||0)+(finW-finL),_proj:true});
+      tab[lI]=Object.assign({},tab[lI],{pontos:(tab[lI].pontos||0)+pL,jogos:(tab[lI].jogos||0)+1,saldoSets:(tab[lI].saldoSets||0)-(finW-finL),_proj:true});
+    });
+    var sorted=tab.slice().sort(function(a,b){return(b.pontos-a.pontos)||(b.vitorias-a.vitorias)||(b.saldoSets-a.saldoSets)||((b.saldoPontos||0)-(a.saldoPontos||0))});
+    sorted.forEach(function(t,i){t.pos=i+1});
+    return Object.assign({},g,{tabela:sorted});
+  });
+}
+
 async function carregar(){
   try{
-    var [torneioRes,timesRes]=await Promise.all([
+    var [torneioRes,timesRes,vRes]=await Promise.all([
       fetch(API+'?action=torneio&modalidade=volei',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}),
-      fetch(API+'?action=timesPublicos',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}).catch(function(){return{times:[]}})
+      fetch(API+'?action=timesPublicos',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}).catch(function(){return{times:[]}}),
+      fetch(API+'?action=partidasAoVivo',{signal:AbortSignal.timeout(8000)}).then(function(r){return r.json()}).catch(function(){return{partidas:[]}})
     ]);
 
     // preencher escudos do API e sobrescrever com os 3D do site
@@ -313,7 +341,8 @@ async function carregar(){
     });
     Object.keys(ESCUDOS_MAP).forEach(function(k){shields[k]=_ESCUDOS3D+ESCUDOS_MAP[k]});
 
-    var grupos=torneioRes.grupos||[];
+    var vivos=vRes.partidas||[];
+    var grupos=projetarTabela(torneioRes.grupos||[],vivos);
     var html=grupos.map(grupoHtml).join('');
     var grid=document.getElementById('grid');
     grid.innerHTML=html;

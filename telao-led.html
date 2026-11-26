@@ -930,7 +930,9 @@ async function carregarDados(){
       fotosHeroi:['','',''], logosRodape },
     equipes, jogosAoVivo, proximosJogos, grupos, patrocinadores, quiz, destaque, galera,
     alerta: alerta||undefined,
-    videos: (tv&&tv.videos)||[],
+    videos: (tv&&tv.videos&&tv.videos.length) ? tv.videos : [
+      { url:'https://drdiegopadua.github.io/supercopapainelcontrole/abertura_supercopa_volei.mp4', titulo:'Abertura Supercopa AFC', tipo:'institucional', telaCheia:true, fases:['pre','publicidade'] },
+    ],
     encerramento,
   };
 }
