@@ -745,9 +745,9 @@ async function carregarDados(){
   const P = (slug,nm,cota)=>({ nome:nm, cota, logo:SITE+'novo/parceiros/'+slug+'.png' });
 
   // leitura paralela da API
-  const [t, tm, ao, rk, gl, sel, av] = await Promise.all([
+  const [t, tm, ao, rk, gl, sel, av, atl] = await Promise.all([
     J('torneio',{modalidade:'volei'}), J('timesPublicos'), J('partidasAoVivo'),
-    J('ranking_quiz'), J('galeriaLista'), J('telaoFotos'), J('telaoAviso')
+    J('ranking_quiz'), J('galeriaLista'), J('telaoFotos'), J('telaoAviso'), J('atletasTodos')
   ]);
 
   // fase controlada pelo painel de controle (localStorage)
@@ -773,10 +773,18 @@ async function carregarDados(){
   const statusDe = j => vivos[String(j.id).toUpperCase()] ? 'ao_vivo' : (j.status==='finalizado'||j.status==='wo')?'encerrado':j.status==='ao_vivo'?'ao_vivo':'agendado';
   const haVivo = jg.some(j=>statusDe(j)==='ao_vivo');
 
+  // atletas por equipe (de atletasTodos)
+  const ATL = {};
+  ((atl&&atl.atletas)||[]).forEach(a=>{
+    const k = norm(a.equipe);
+    if(!ATL[k]) ATL[k] = [];
+    ATL[k].push({numero:a.numero||'', nome:a.nome||'', posicao:a.tipo||'', foto:''});
+  });
+
   // equipes (para fase apresentacao)
   const equipes = ((tm&&tm.times)||[]).map(x=>{
     const info = TM[norm(x.nome)]||{};
-    return { nome:x.nome, cidade:info.cidade, grupo:info.grupo, naipe:info.naipe, tecnico:info.tecnico, escudo:info.logo||'', atletas:info.atletas||[] };
+    return { nome:x.nome, cidade:info.cidade, grupo:info.grupo, naipe:info.naipe, tecnico:info.tecnico, escudo:info.logo||'', atletas:ATL[norm(x.nome)]||info.atletas||[] };
   });
 
   // classificação
