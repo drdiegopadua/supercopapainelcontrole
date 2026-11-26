@@ -747,9 +747,9 @@ async function carregarDados(){
   const P = (slug,nm,cota)=>({ nome:nm, cota, logo:SITE+'novo/parceiros/'+slug+'.png' });
 
   // leitura paralela da API
-  const [t, tm, ao, rk, gl, sel, av, atl] = await Promise.all([
+  const [t, tm, ao, rk, gl, sel, av, atl, tv] = await Promise.all([
     J('torneio',{modalidade:'volei'}), J('timesPublicos'), J('partidasAoVivo'),
-    J('ranking_quiz'), J('galeriaLista'), J('telaoFotos'), J('telaoAviso'), J('atletasTodos')
+    J('ranking_quiz'), J('galeriaLista'), J('telaoFotos'), J('telaoAviso'), J('atletasTodos'), J('telaoVideos')
   ]);
 
   // fase controlada pelo painel de controle (localStorage)
@@ -913,7 +913,7 @@ async function carregarDados(){
       fotosHeroi:['','',''], logosRodape },
     equipes, jogosAoVivo, proximosJogos, grupos, patrocinadores, quiz, galera,
     alerta: alerta||undefined,
-    videos: [],
+    videos: (tv&&tv.videos)||[],
     encerramento,
   };
 }
