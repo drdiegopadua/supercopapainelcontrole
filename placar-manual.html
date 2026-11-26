@@ -339,14 +339,24 @@ function cardJogo(j,live){
   const dataFmt=j.data?j.data.split('-').reverse().slice(0,2).join('/'):'';
   const meta=[dataFmt,hora,fase].filter(Boolean).join(' · ');
   const badge=live?'<span class="sel-card-badge badge-live">● AO VIVO</span>':'<span class="sel-card-badge badge-ready">Iniciar</span>';
-  return `<div class="sel-card" onclick="selecionarJogo('${j.id}','${esc(j.casa)}','${esc(j.visitante)}',${live},'${esc(fase)}')">
+  const del=live?`<button class="bar-btn bar-btn-danger" style="font-size:11px;padding:4px 10px;margin-left:6px;flex-shrink:0" onclick="event.stopPropagation();excluirPartidaTeste('${j.id}')">🗑 Excluir teste</button>`:'';
+  return `<div class="sel-card" onclick="selecionarJogo('${j.id}','${esc(j.casa)}','${esc(j.visitante)}',${live},'${esc(fase)}')" style="align-items:center">
     <div class="sel-card-info">
       <div class="sel-card-teams">${esc(j.casa)} × ${esc(j.visitante)}</div>
       <div class="sel-card-meta">${meta}</div>
     </div>
-    ${badge}
-    <div class="sel-card-arrow">›</div>
+    ${badge}${del}
+    <div class="sel-card-arrow" ${live?'style="display:none"':''}>›</div>
   </div>`;
+}
+
+async function excluirPartidaTeste(id){
+  if(!confirm('Excluir esta partida de teste?\nO placar e os eventos serão apagados.'))return;
+  try{
+    const r=await post({acao:'excluirPartida',id});
+    if(r&&r.ok){toast('✅ Partida excluída','ok');carregarJogos();}
+    else toast('❌ '+(r&&r.erro||'Erro ao excluir'),'err');
+  }catch(ex){toast('❌ Falha de conexão','err')}
 }
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[c]))}
