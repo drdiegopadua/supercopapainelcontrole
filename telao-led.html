@@ -681,6 +681,7 @@
     <section class="screen" id="tela-classificacao"></section>
     <section class="screen" id="tela-publicidade"></section>
     <section class="screen" id="tela-quiz"></section>
+    <section class="screen" id="tela-destaque"></section>
     <section class="screen" id="tela-galera"></section>
     <section class="screen" id="tela-resultado"></section>
     <section class="screen" id="tela-podio"></section>
@@ -720,15 +721,15 @@ const CONFIG = {
 const TELAS = {
   contagem:{n:'Contagem',dur:20}, boasvindas:{n:'Boas-vindas',dur:20}, equipes:{n:'Equipes',dur:60}, aovivo:{n:'Ao vivo',dur:30},
   proximo:{n:'Próximo jogo',dur:15}, classificacao:{n:'Classificação',dur:20}, publicidade:{n:'Patrocinadores',dur:15}, quiz:{n:'Quiz',dur:20},
-  galera:{n:'Galera',dur:25}, resultado:{n:'Resultado',dur:18}, podio:{n:'Pódio',dur:18}, campeao:{n:'Campeão',dur:25},
+  destaque:{n:'Atleta destaque',dur:25}, galera:{n:'Galera',dur:25}, resultado:{n:'Resultado',dur:18}, podio:{n:'Pódio',dur:18}, campeao:{n:'Campeão',dur:25},
   premiacao:{n:'Premiação',dur:22}, agradecimento:{n:'Obrigado',dur:18}, video:{n:'Vídeo',dur:30},
 };
 const FASES = {
   pre:            { nome:'Pré-evento',   telas:['boasvindas','contagem','video','publicidade'] },
   apresentacao:   { nome:'Equipes',      telas:['equipes','publicidade'] },
-  jogos:          { nome:'Jogos',        telas:['aovivo','aovivo','classificacao','video','publicidade'] },
+  jogos:          { nome:'Jogos',        telas:['aovivo','aovivo','classificacao','destaque','video','publicidade'] },
   publicidade:    { nome:'Publicidade',  telas:['publicidade','video'] },
-  entretenimento: { nome:'Diversão',     telas:['quiz','galera','video','publicidade'] },
+  entretenimento: { nome:'Diversão',     telas:['quiz','destaque','galera','video','publicidade'] },
   encerramento:   { nome:'Encerramento', telas:['resultado','podio','campeao','premiacao','agradecimento'] },
 };
 const ESCURAS = ['campeao'];   // telas em modo escuro
@@ -747,9 +748,10 @@ async function carregarDados(){
   const P = (slug,nm,cota)=>({ nome:nm, cota, logo:SITE+'novo/parceiros/'+slug+'.png' });
 
   // leitura paralela da API
-  const [t, tm, ao, rk, gl, sel, av, atl, tv] = await Promise.all([
+  const [t, tm, ao, rk, gl, sel, av, atl, tv, rdst, vot] = await Promise.all([
     J('torneio',{modalidade:'volei'}), J('timesPublicos'), J('partidasAoVivo'),
-    J('ranking_quiz'), J('galeriaLista'), J('telaoFotos'), J('telaoAviso'), J('atletasTodos'), J('telaoVideos')
+    J('ranking_quiz'), J('galeriaLista'), J('telaoFotos'), J('telaoAviso'), J('atletasTodos'), J('telaoVideos'),
+    J('rankingDestaque'), J('votacao')
   ]);
 
   // fase controlada pelo painel de controle (localStorage)
@@ -872,6 +874,18 @@ async function carregarDados(){
     link:'supercopaafc.com.br', premio:'O campeão será premiado na cerimônia de encerramento',
     qrcode:qr(APP+'#quiz'), ranking };
 
+  // atleta destaque
+  const rkDst = ((rdst&&rdst.ranking)||[]);
+  const totalVotos = Math.max(1, (vot&&vot.totalVotos)||0);
+  const destaque = {
+    aberta: !!(vot&&vot.aberta),
+    totalVotos: vot&&vot.totalVotos||0,
+    chamada: 'Vote no Atleta Destaque!',
+    link: 'supercopaafc.com.br',
+    qrcode: qr(APP+'#votacao'),
+    ranking: rkDst.map(r=>({ pos:r.pos||0, nome:abrev(r.nome||''), equipe:r.equipe||'', numero:r.numero||'', votos:r.votos||0, pct:r.pct||0 }))
+  };
+
   // galera — apenas fotos selecionadas pelo admin (telaoFotos)
   const selIds = new Set(((sel&&sel.ids)||[]).map(String));
   const fotos = selIds.size
@@ -914,7 +928,7 @@ async function carregarDados(){
       dataTexto:'28 e 29 de novembro de 2026', local:'Afonso Cláudio · ES', aberturaTexto:'Sábado às 13h',
       mensagens:['Bem-vindo à Supercopa AFC!','12 equipes, 2 dias de vôlei!','Baixe o app da Supercopa!'],
       fotosHeroi:['','',''], logosRodape },
-    equipes, jogosAoVivo, proximosJogos, grupos, patrocinadores, quiz, galera,
+    equipes, jogosAoVivo, proximosJogos, grupos, patrocinadores, quiz, destaque, galera,
     alerta: alerta||undefined,
     videos: (tv&&tv.videos)||[],
     encerramento,
@@ -1203,6 +1217,28 @@ function renderQuiz(d){
       <div class="url" data-slot="quiz.link">${esc(q.link||'')}</div><p data-slot="quiz.premio">${esc(q.premio||'')}</p><div class="btn">Jogue agora</div></div>
   </div>`);
 }
+function renderDestaque(d){
+  const dst = d.destaque||{}, rk = dst.ranking||[], max = Math.max(1,...rk.map(r=>r.votos||0));
+  const pd = i => { const r = rk[i]||{nome:'—',equipe:'',numero:'',votos:0,pct:0};
+    return `<div class="pd p${i+1} rv" ${D(i===0?.1:.2)}>${gauge((r.votos||0)/max,
+      `<div class="pos">${i+1}º</div><div class="v gt num" data-to="${r.votos??0}" data-slot="destaque.ranking[${i}].votos">${r.votos??0}</div><div class="u">VOTOS</div>`)}
+      <div class="w" data-slot="destaque.ranking[${i}].nome">${esc(r.nome)}</div>
+      <div class="u" data-slot="destaque.ranking[${i}].equipe">#${esc(r.numero||'')} · ${esc(r.equipe||'')}</div></div>`; };
+  setTela('destaque', `
+  <div class="qz">
+    <div class="glass pod rv"><div style="display:flex;justify-content:space-between"><span class="eyebrow">Atleta Destaque</span><span class="eyebrow m" data-slot="destaque.totalVotos">${(dst.totalVotos||0)} votos registrados</span></div>
+      <div class="row">${pd(1)}${pd(0)}${pd(2)}</div></div>
+    <div class="glass ls rv" ${D(.1)}><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="eyebrow">Ranking de votos</span></div>
+      ${rk.slice(3,10).map((r,i)=>{ const p=Math.max(4,(r.votos||0)/max*100); return `<div class="li"><div class="n">${pad(i+4)}</div>
+        <div><div class="w" data-slot="destaque.ranking[${i+3}].nome">${esc(r.nome)}</div><div class="slider"><i style="width:${p}%"></i><b style="left:${p}%"></b></div></div>
+        <div class="v num" data-to="${r.votos??0}" data-slot="destaque.ranking[${i+3}].votos">${r.votos??0}</div></div>`; }).join('')}</div>
+    <div class="glass cta rv" ${D(.2)}><span class="eyebrow">${dst.aberta?'Vote agora':'Votação encerrada'}</span>
+      <div class="H" data-slot="destaque.chamada">${esc(dst.chamada||'Vote no Atleta Destaque!')}</div>
+      <div class="qr imgbox ct" data-slot="destaque.qrcode">${img(dst.qrcode,'qr','QR CODE')}</div>
+      <div class="url" data-slot="destaque.link">${esc(dst.link||'')}</div>
+      ${dst.aberta?'<div class="btn">Vote agora</div>':''}</div>
+  </div>`);
+}
 let fanIdx = 0;
 function renderGalera(d){
   const g = d.galera||{}, fs = g.fotos||[], i = fs.length ? fanIdx % fs.length : 0, f = fs[i]||{}, t = k => fs.length>k ? fs[(i+k)%fs.length] : {};
@@ -1373,7 +1409,7 @@ function proximoAlerta(){
 }
 
 const RENDER = { contagem:renderContagem, boasvindas:renderBoasVindas, equipes:renderEquipes, aovivo:renderAoVivo, proximo:renderProximo,
-  classificacao:renderClassificacao, publicidade:renderPublicidade, quiz:renderQuiz, galera:renderGalera, resultado:renderResultado,
+  classificacao:renderClassificacao, publicidade:renderPublicidade, quiz:renderQuiz, destaque:renderDestaque, galera:renderGalera, resultado:renderResultado,
   podio:renderPodio, campeao:renderCampeao, premiacao:renderPremiacao, agradecimento:renderAgradecimento, video:renderVideo };
 
 /* =============================================================================
