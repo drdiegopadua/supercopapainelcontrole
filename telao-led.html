@@ -847,7 +847,7 @@ async function carregarDados(){
   const jFinal = jm('FINAL');
   const fimStatus = j => j && (j.status==='finalizado'||j.status==='wo');
   const encerramento = {
-    edicao: t.edicao||'2024',
+    edicao: t.edicao||'2026',
     final: jFinal ? { fase:'Grande final', data:String(jFinal.data||'').split('-').reverse().slice(0,2).join('/'),
       quadra:/altern/i.test(jFinal.quadra||'')?'Quadra alternativa':'Quadra principal',
       duracao:'', timeA:{nome:nome(jFinal,'c'),logo:logo(nome(jFinal,'c'))}, timeB:{nome:nome(jFinal,'v'),logo:logo(nome(jFinal,'v'))},
@@ -867,7 +867,7 @@ async function carregarDados(){
 
   return {
     painel: { fase },
-    evento: { nome:'Supercopa AFC de Vôlei', edicao:t.edicao||'2024',
+    evento: { nome:'Supercopa AFC de Vôlei', edicao:t.edicao||'2026',
       complemento:'Afonso Cláudio · ES', status: haVivo?'Ao vivo · Afonso Cláudio':'Afonso Cláudio · 28 e 29 de novembro de 2026',
       logo:'', appQrcode:qr(APP), inicio:'2026-11-28T08:00:00', inicioTexto:'28 de novembro de 2026',
       dataTexto:'28 e 29 de novembro de 2026', local:'Afonso Cláudio · ES', aberturaTexto:'Sábado às 13h',
