@@ -341,7 +341,13 @@ async function carregar(){
     });
     Object.keys(ESCUDOS_MAP).forEach(function(k){shields[k]=_ESCUDOS3D+ESCUDOS_MAP[k]});
 
-    var vivos=vRes.partidas||[];
+    // filtrar vivos: só jogos da Quadra Eurico Vieira (a única com placar ao vivo na transmissão)
+    var jogosEurico=new Set((torneioRes.jogos||[]).filter(function(j){
+      return /eurico/i.test(j.quadra||'');
+    }).map(function(j){return j.id}));
+    var vivos=(vRes.partidas||[]).filter(function(p){
+      return !jogosEurico.size || jogosEurico.has(p.id);
+    });
     var grupos=projetarTabela(torneioRes.grupos||[],vivos);
     var html=grupos.map(grupoHtml).join('');
     var grid=document.getElementById('grid');
