@@ -408,7 +408,9 @@
   .grp .r .tn{font-size:21px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .grp .r .pt{font-family:var(--F);font-weight:700;font-size:34px}
   .grp .r .s{font-size:16px;font-weight:600;color:var(--mut)}
-  .grp .live{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:2px;color:#ff3b5c}
+  .grp .live{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:2px;color:#ff3b5c;border-radius:20px;padding:2px 8px;background:rgba(255,59,92,.12)}
+  .grp .r.proj .tn{color:#e5484d}
+  .grp .r .pt.proj{color:#e5484d}
 
   /* =================== 04 PUBLICIDADE =================== */
   .ad{height:100%;display:grid;grid-template-columns:1fr 680px 1fr;gap:34px}
@@ -787,11 +789,40 @@ async function carregarDados(){
     return { nome:x.nome, cidade:info.cidade, grupo:info.grupo, naipe:info.naipe, tecnico:info.tecnico, escudo:info.logo||'', atletas:ATL[norm(x.nome)]||info.atletas||[] };
   });
 
+  // projeção ao vivo (mesmo algoritmo do site supercopaafc.com.br)
+  function projetarGrupos(grupos, vivos) {
+    if (!vivos || !vivos.length) return grupos;
+    return grupos.map(function(g) {
+      var tab = g.tabela.map(function(t) { return Object.assign({}, t, {_proj: false}); });
+      var idx = {};
+      tab.forEach(function(t, i) { idx[String(t.equipe||'').trim().toLowerCase()] = i; });
+      vivos.forEach(function(p) {
+        var cN = String(p.equipeCasa||p.casa||'').trim().toLowerCase(),
+            vN = String(p.equipeVisitante||p.visitante||'').trim().toLowerCase(),
+            iA = idx[cN], iB = idx[vN];
+        if (iA == null || iB == null) return;
+        var cL = (p.setsCasa||0) > (p.setsVisitante||0) || ((p.setsCasa||0)===(p.setsVisitante||0) && (p.pontosCasa||0) > (p.pontosVisitante||0));
+        var vL = (p.setsVisitante||0) > (p.setsCasa||0) || ((p.setsCasa||0)===(p.setsVisitante||0) && (p.pontosVisitante||0) > (p.pontosCasa||0));
+        if (!cL && !vL) return;
+        var wI = cL ? iA : iB, lI = cL ? iB : iA;
+        var wS = cL ? (p.setsCasa||0) : (p.setsVisitante||0), lS = cL ? (p.setsVisitante||0) : (p.setsCasa||0);
+        var finW = 2, finL = wS > lS ? lS : 1;
+        var pW = finL === 0 ? 3 : 2, pL = finL === 0 ? 0 : 1;
+        tab[wI] = Object.assign({}, tab[wI], { pontos:(tab[wI].pontos||0)+pW, vitorias:(tab[wI].vitorias||0)+1, jogos:(tab[wI].jogos||0)+1, saldoSets:(tab[wI].saldoSets||0)+(finW-finL), _proj:true });
+        tab[lI] = Object.assign({}, tab[lI], { pontos:(tab[lI].pontos||0)+pL, jogos:(tab[lI].jogos||0)+1, saldoSets:(tab[lI].saldoSets||0)-(finW-finL), _proj:true });
+      });
+      var sorted = tab.slice().sort(function(a,b){ return (b.pontos-a.pontos)||(b.vitorias-a.vitorias)||(b.saldoSets-a.saldoSets)||((b.saldoPontos||0)-(a.saldoPontos||0)); });
+      return Object.assign({}, g, {tabela: sorted});
+    });
+  }
+  const gruposProj = projetarGrupos(t.grupos||[], (ao&&ao.partidas)||[]);
+
   // classificação
-  const grupos = (t.grupos||[]).filter(g=>g.tabela&&g.tabela.length).map(g=>{
+  const grupos = gruposProj.filter(g=>g.tabela&&g.tabela.length).map(g=>{
     return { letra:g.grupo, jogosRealizados:g.jogosFeitos||0, jogosTotal:g.jogosTotal||3, classificam:2,
       aoVivo: jg.some(j=>j.fase==='grupos'&&j.grupo===g.grupo&&statusDe(j)==='ao_vivo'),
-      times: g.tabela.map(x=>({ nome:x.equipe, logo:logo(x.equipe), pontos:x.pontos||0, v:x.vitorias||0, d:x.derrotas||0, saldoSets:x.saldoSets||0 })) };
+      projecao: g.tabela.some(x=>x._proj),
+      times: g.tabela.map(x=>({ nome:x.equipe, logo:logo(x.equipe), pontos:x.pontos||0, v:x.vitorias||0, d:x.derrotas||0, saldoSets:x.saldoSets||0, proj:!!x._proj })) };
   });
 
   // jogos ao vivo (formato novo)
@@ -1121,12 +1152,12 @@ function renderClassificacao(d){
   setTela('classificacao', `<div class="gr4">${(d.grupos||[]).slice(0,4).map((g,gi)=>`
     <div class="glass grp rv" ${D(gi*.08)}>
       <div class="hd"><div class="L gt" data-slot="grupos[${gi}].letra">${esc(g.letra)}</div>
-        <div class="meta"><div class="eyebrow m">Grupo</div><b data-slot="grupos[${gi}].jogosRealizados">${g.jogosRealizados??0}/${g.jogosTotal??3} jogos</b>${g.aoVivo?'<div class="live"><span class="rdot" style="width:7px;height:7px"></span>AO VIVO</div>':''}</div></div>
+        <div class="meta"><div class="eyebrow m">Grupo</div><b data-slot="grupos[${gi}].jogosRealizados">${g.jogosRealizados??0}/${g.jogosTotal??3} jogos</b>${g.aoVivo?'<div class="live"><span class="rdot" style="width:7px;height:7px"></span>AO VIVO</div>':''}${g.projecao&&!g.aoVivo?'<div class="live" style="background:rgba(229,72,61,.15);color:#e5484d"><span class="rdot" style="width:7px;height:7px"></span>PROJEÇÃO</div>':''}</div></div>
       <div class="cols"><span>#</span><span>Equipe</span><span>Pts</span><span>V</span><span>D</span><span>SS</span></div>
       <div class="rows">${(g.times||[]).map((t,ti)=>`
-        <div class="r ${ti<(g.classificam??2)?'q':''}"><div class="p">${ti+1}</div>
+        <div class="r ${ti<(g.classificam??2)?'q':''}${t.proj?' proj':''}"><div class="p">${t.proj?'<span style="color:#e5484d;font-size:.7em">▶</span>':(ti+1)}</div>
           <div class="t">${circ(t.logo,'shield','',`grupos[${gi}].times[${ti}].logo`)}<div class="tn" data-slot="grupos[${gi}].times[${ti}].nome">${esc(t.nome)}</div></div>
-          <div class="pt gt" data-to="${t.pontos??0}" data-slot="grupos[${gi}].times[${ti}].pontos">${t.pontos??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].v">${t.v??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].d">${t.d??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].saldoSets">${(t.saldoSets>0?'+':'')+(t.saldoSets??0)}</div></div>`).join('')}</div>
+          <div class="pt gt${t.proj?' proj':''}'" data-to="${t.pontos??0}" data-slot="grupos[${gi}].times[${ti}].pontos">${t.pontos??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].v">${t.v??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].d">${t.d??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].saldoSets">${(t.saldoSets>0?'+':'')+(t.saldoSets??0)}</div></div>`).join('')}</div>
     </div>`).join('')}</div>`);
 }
 
