@@ -477,7 +477,7 @@ async function listar(filtro: (e: Any) => boolean, campos: string[]) {
 
 // ════════ Equipes: PIN, confirmação, atletas, LGPD, assinaturas, juízes ════════
 const LIMITE_ATLETAS = 14, LIMITE_COMISSAO = 2;
-const PRAZO_CADASTRO_ATLETAS = new Date("2026-11-27T13:00:00-03:00");
+const PRAZO_CADASTRO_ATLETAS = new Date("2026-11-27T23:59:00-03:00");
 const TERMO_LGPD_VERSAO = "2026-1";
 const chaveEq = (s: Any) => (s || "").toString().trim().toLowerCase();
 const fmtBR = (v: Any): string => {
@@ -652,7 +652,7 @@ async function salvarAssinatura(d: Any) {
   const { error } = await sb.from("assinaturas").upsert({ chave: chaveEq(equipe), equipe, papel, assinatura: d.assinatura, atualizado_em: new Date().toISOString() });
   return error ? { ok: false, erro: error.message } : { ok: true };
 }
-const PRAZO_MSG = "Prazo de cadastro/edição de atletas encerrado em 27/11/2026 às 13h.";
+const PRAZO_MSG = "Prazo de cadastro/edição de atletas encerrado em 27/11/2026 às 23h59.";
 
 // Copia o que já existe nas planilhas (somente admin). Pode rodar de novo sem duplicar.
 async function migrarDoSheets(d: Any) {
@@ -762,7 +762,7 @@ async function saudeSistema(d: Any) {
   add("Backup diário", "aviso", "Confira a pasta 'Supercopa - Backup Supabase' no Drive (gerada às ~3h)");
   extra.forEach((i) => itens.push(i));
   const encerrado = new Date() >= PRAZO_CADASTRO_ATLETAS;
-  add("Prazo de cadastro de atletas", encerrado ? "aviso" : "ok", encerrado ? "Encerrado" : "Aberto até 27/11 13:00");
+  add("Prazo de cadastro de atletas", encerrado ? "aviso" : "ok", encerrado ? "Encerrado" : "Aberto até 27/11 23:59");
   return { ok: true, itens, ms: Date.now() - t0 };
 }
 
