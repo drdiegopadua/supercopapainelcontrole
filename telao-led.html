@@ -693,9 +693,6 @@
   <footer class="ftr">
     <span class="cap">Patrocínio<br>oficial</span>
     <div class="run-wrap"><div class="run" id="logoRun"></div></div>
-    <div class="div"></div>
-    <span class="cap" style="width:78px">Realização<br>e apoio</span>
-    <div class="real" id="footerLogos"></div>
   </footer>
 
   <div id="vfull"></div>
@@ -804,9 +801,10 @@ function renderFixos(d){
   $('#eventName').textContent = ev.nome || 'Supercopa AFC';
   $('#eventSub').textContent = ev.status || '';
   $('#appQr').innerHTML = img(ev.appQrcode,'qr','');
-  $('#footerLogos').innerHTML = (ev.logosRodape||[]).map((l,i)=>`<div class="lgx imgbox ct" data-slot="evento.logosRodape[${i}].logo">${img(l.logo,'logo',l.nome||'')}</div>`).join('');
   const sp = d.patrocinadores || [];
-  const one = sp.map((p,i)=>`<div class="lgx imgbox ct" data-slot="patrocinadores[${i}].logo">${img(p.logo,'logo',p.nome||'')}</div>`).join('');
+  const extras = (ev.logosRodape||[]).filter(l=>!(l.nome||'').toLowerCase().includes('prefeitura'));
+  const allLogos = [...sp, ...extras];
+  const one = allLogos.map((p,i)=>`<div class="lgx imgbox ct" data-slot="logos[${i}].logo">${img(p.logo,'logo',p.nome||'')}</div>`).join('');
   const run = $('#logoRun'); if(run.dataset.k !== one){ run.innerHTML = one + one; run.dataset.k = one; }
 }
 
