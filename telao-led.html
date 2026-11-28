@@ -1320,6 +1320,7 @@ function comando(d){
     }
     else if(d.type==='voltar'||d.type==='prev') show(cur-1,-1);
     else if(d.type==='avancar'||d.type==='next') show(cur+1);
+    else if(d.type==='loop'){ aplicarLoop(d); show(0); }
     else if(d.type==='modo'){ fixo = !!d.fixo; try{localStorage.setItem('sc-telao-fixo', fixo?'1':'0');}catch(_){} t0=performance.now(); }
     else if(d.type==='pausa'){ paused = d.val!==undefined ? d.val : !paused; t0=performance.now(); buildOp(); }
     else if(d.type==='duracao' && d.tela && d.seg){ TELAS[d.tela] && (TELAS[d.tela].dur = +d.seg); }
@@ -1334,12 +1335,19 @@ function comando(d){
     try{ _bc && _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur],pausado:paused,fixo}); }catch(_){}
 }
 if(_bc) _bc.onmessage = e => comando(e.data);
+// loop escolhido no app (telas marcadas + segundos); lista vazia = sequência da fase
+function aplicarLoop(l){
+  Object.entries(l.dur||{}).forEach(([k,v])=>{ if(TELAS[k]) TELAS[k].dur = +v; });
+  const validas = (l.telas||[]).filter(t=>TELAS[t]);
+  globalPlaylist = validas.length ? validas : null;
+  try{ localStorage.setItem('sc-telao-playlist', JSON.stringify(validas)); }catch(_){}
+}
 let cmdSeq = null;
 async function buscarComandos(){
   try{
     const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?action=telaoCmds&desde='+(cmdSeq??0),{cache:'no-store'});
     const j = await r.json(); if(!j.ok || typeof j.seq!=='number') return;   // função antiga ainda sem comandos
-    if(cmdSeq===null){ cmdSeq = j.seq; } else { (j.cmds||[]).forEach(c=>{ if(Date.now()-Date.parse(c.em) < 120000) comando(c); }); cmdSeq = Math.max(cmdSeq, j.seq); }
+    if(cmdSeq===null){ cmdSeq = j.seq; if(j.loop){ const antes = playlist()[cur]; aplicarLoop(j.loop); if(fase && playlist()[cur]!==antes) show(0); } } else { (j.cmds||[]).forEach(c=>{ if(Date.now()-Date.parse(c.em) < 120000) comando(c); }); cmdSeq = Math.max(cmdSeq, j.seq); }
     avisoTelao(j.aviso);
   }catch(_){}
 }

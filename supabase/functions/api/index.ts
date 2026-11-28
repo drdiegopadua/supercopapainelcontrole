@@ -1447,7 +1447,7 @@ async function telaoAvisoSalvar(d: Any) {
   return { ok: true, ...(await telaoAviso()) };
 }
 // ════════ Controle remoto do telão: o app grava o comando, o telão consulta a cada poucos segundos ════════
-const TELAO_CMD_TIPOS = ["fase", "tela", "avancar", "voltar", "pausa", "modo"];
+const TELAO_CMD_TIPOS = ["fase", "tela", "avancar", "voltar", "pausa", "modo", "loop"];
 async function telaoCmd(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
   const m: Any = d.cmd || {};
@@ -1457,6 +1457,12 @@ async function telaoCmd(d: Any) {
   if (m.tela !== undefined) cmd.tela = String(m.tela).slice(0, 30);
   if (m.val !== undefined) cmd.val = !!m.val;
   if (m.fixo !== undefined) cmd.fixo = !!m.fixo;
+  if (m.type === "loop") {   // telas marcadas (vazio = volta à sequência da fase) + segundos de cada tela
+    cmd.telas = (Array.isArray(m.telas) ? m.telas : []).map(String).filter((t: string) => /^[a-z]{3,20}$/.test(t)).slice(0, 25);
+    cmd.dur = {};
+    Object.entries(m.dur || {}).forEach(([k, v]) => { const n = Math.round(Number(v)); if (/^[a-z]{3,20}$/.test(k) && n >= 5 && n <= 300) cmd.dur[k] = n; });
+    await sb.from("config").upsert({ chave: "telao_loop", valor: { telas: cmd.telas, dur: cmd.dur, por: c.usuario }, atualizado_em: new Date().toISOString() });
+  }
   const { data } = await sb.from("config").select("valor").eq("chave", "telao_cmd").maybeSingle();
   const v: Any = (data && data.valor) || {};
   const seq = (Number(v.seq) || 0) + 1;
@@ -1465,9 +1471,9 @@ async function telaoCmd(d: Any) {
   return error ? { ok: false, erro: error.message } : { ok: true, seq };
 }
 async function telaoCmds(d: Any) {
-  const [{ data }, aviso] = await Promise.all([sb.from("config").select("valor").eq("chave", "telao_cmd").maybeSingle(), telaoAviso()]);
-  const v: Any = (data && data.valor) || {}, desde = Number(d.desde) || 0;
-  return { ok: true, seq: Number(v.seq) || 0, cmds: (v.cmds || []).filter((c: Any) => c.seq > desde), aviso };
+  const [{ data }, aviso, { data: lp }] = await Promise.all([sb.from("config").select("valor").eq("chave", "telao_cmd").maybeSingle(), telaoAviso(), sb.from("config").select("valor").eq("chave", "telao_loop").maybeSingle()]);
+  const v: Any = (data && data.valor) || {}, desde = Number(d.desde) || 0, l: Any = (lp && lp.valor) || null;
+  return { ok: true, seq: Number(v.seq) || 0, cmds: (v.cmds || []).filter((c: Any) => c.seq > desde), aviso, loop: l ? { telas: l.telas || [], dur: l.dur || {} } : null };
 }
 async function telaoFotos() {
   const { data } = await sb.from("config").select("valor").eq("chave", "telao_fotos").maybeSingle();
