@@ -1265,6 +1265,8 @@ try{
         const faseAlvo = Object.keys(FASES).find(f => FASES[f].telas.includes(d.tela));
         if(faseAlvo){ faseForcada = faseAlvo; try{localStorage.setItem('sc-telao-fase',faseAlvo);}catch(_){} setFase(faseAlvo); k = playlist().indexOf(d.tela); }
       }
+      // tela fora da lista marcada no painel: entra logo após a atual (sem salvar) para o clique sempre funcionar
+      if(k < 0 && globalPlaylist && TELAS[d.tela]){ globalPlaylist = globalPlaylist.slice(); globalPlaylist.splice(cur+1, 0, d.tela); k = cur+1; }
       if(k >= 0) show(k);
     }
     else if(d.type==='voltar'||d.type==='prev') show(cur-1,-1);
