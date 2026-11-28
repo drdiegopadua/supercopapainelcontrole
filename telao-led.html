@@ -302,16 +302,14 @@
   .bb .logo-in{opacity:1}
   .screen.active .bb .logo-in{animation:logoIn 1.6s cubic-bezier(.2,1.1,.3,1) both .2s}
   @keyframes logoIn{0%{opacity:0;transform:scale(.6) rotate(-6deg);filter:blur(20px)}60%{opacity:1;filter:none}100%{opacity:1;transform:none}}
-  .bb .txt{position:absolute;left:96px;top:190px;width:780px;z-index:4;overflow:hidden}
+  .bb .txt{position:absolute;left:96px;top:190px;width:860px;z-index:4}
   .bb .kick{display:flex;align-items:center;gap:16px}
   .bb .kick i{width:60px;height:2px;background:var(--grad)}
   .bb .w2{font-family:var(--F);font-weight:900;font-size:132px;line-height:.9;letter-spacing:-4px;text-transform:uppercase;margin-top:26px}
   .bb .w3{font-family:var(--F);font-weight:300;font-size:34px;letter-spacing:10px;text-transform:uppercase;margin-top:22px;color:var(--ink2)}
   .bb .slogan{font-size:26px;font-weight:600;color:var(--ink2);margin-top:30px;max-width:700px;line-height:1.4;min-height:72px;border-left:4px solid var(--blue);padding-left:20px}
   .bb .info{margin-top:40px}
-  .bb .info>div{padding:0 20px}
   .bb .info>div:first-child{padding-left:0}
-  .bb .info .v{font-size:21px}
 
   /* =================== 02 EQUIPES =================== */
   .tm{height:100%;display:grid;grid-template-columns:660px 1fr;gap:48px}
@@ -408,9 +406,7 @@
   .grp .r .tn{font-size:21px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .grp .r .pt{font-family:var(--F);font-weight:700;font-size:34px}
   .grp .r .s{font-size:16px;font-weight:600;color:var(--mut)}
-  .grp .live{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:2px;color:#ff3b5c;border-radius:20px;padding:2px 8px;background:rgba(255,59,92,.12)}
-  .grp .r.proj .tn{color:#e5484d}
-  .grp .r .pt.proj{color:#e5484d}
+  .grp .live{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:2px;color:#ff3b5c}
 
   /* =================== 04 PUBLICIDADE =================== */
   .ad{height:100%;display:grid;grid-template-columns:1fr 680px 1fr;gap:34px}
@@ -600,7 +596,7 @@
   /* =================== PAINEL DO OPERADOR (aparece ao mexer o mouse) =================== */
   #op{position:absolute;left:50%;top:112px;transform:translate(-50%,-20px);z-index:50;opacity:0;pointer-events:none;transition:.3s;
     padding:14px 18px;border-radius:24px;background:rgba(10,18,56,.92);color:#fff;box-shadow:0 30px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px;min-width:900px}
-  /* body.cursor #op{opacity:1;pointer-events:auto;transform:translate(-50%,0)} */
+  body.cursor #op{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
   #op .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
   #op .lb{font-size:10px;font-weight:800;letter-spacing:3px;color:rgba(255,255,255,.5);text-transform:uppercase;width:70px}
   #op button{font:700 13px var(--B);color:#fff;background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:8px 14px;cursor:pointer}
@@ -681,7 +677,6 @@
     <section class="screen" id="tela-classificacao"></section>
     <section class="screen" id="tela-publicidade"></section>
     <section class="screen" id="tela-quiz"></section>
-    <section class="screen" id="tela-destaque"></section>
     <section class="screen" id="tela-galera"></section>
     <section class="screen" id="tela-resultado"></section>
     <section class="screen" id="tela-podio"></section>
@@ -696,6 +691,9 @@
   <footer class="ftr">
     <span class="cap">Patrocínio<br>oficial</span>
     <div class="run-wrap"><div class="run" id="logoRun"></div></div>
+    <div class="div"></div>
+    <span class="cap" style="width:78px">Realização<br>e apoio</span>
+    <div class="real" id="footerLogos"></div>
   </footer>
 
   <div id="vfull"></div>
@@ -708,12 +706,12 @@
    CONFIGURAÇÃO
    ============================================================================= */
 const CONFIG = {
-  atualizarDadosACada: 5,    // s — placar ao vivo
+  atualizarDadosACada: 10,   // s — para placar ao vivo use 3–5
   equipeTrocaACada: 10,      // s
   patrocinadorTrocaACada: 4, // s
   mensagemTrocaACada: 7,     // s
   fotoTrocaACada: 6,         // s
-  mostrarSlots: false,       // marcações laranja desligadas em produção
+  mostrarSlots: true,        // marcações laranja. Em produção: false
   alertaDuracao: 6, alertasAutomaticos: true, melhorDe: 5,
   dominioUltimosPontos: 10, sequenciaMinima: 3,
   videoDuracaoMax: 60, videoSemArquivo: 8,
@@ -721,241 +719,28 @@ const CONFIG = {
 const TELAS = {
   contagem:{n:'Contagem',dur:20}, boasvindas:{n:'Boas-vindas',dur:20}, equipes:{n:'Equipes',dur:60}, aovivo:{n:'Ao vivo',dur:30},
   proximo:{n:'Próximo jogo',dur:15}, classificacao:{n:'Classificação',dur:20}, publicidade:{n:'Patrocinadores',dur:15}, quiz:{n:'Quiz',dur:20},
-  destaque:{n:'Atleta destaque',dur:25}, galera:{n:'Galera',dur:25}, resultado:{n:'Resultado',dur:18}, podio:{n:'Pódio',dur:18}, campeao:{n:'Campeão',dur:25},
+  galera:{n:'Galera',dur:25}, resultado:{n:'Resultado',dur:18}, podio:{n:'Pódio',dur:18}, campeao:{n:'Campeão',dur:25},
   premiacao:{n:'Premiação',dur:22}, agradecimento:{n:'Obrigado',dur:18}, video:{n:'Vídeo',dur:30},
 };
 const FASES = {
   pre:            { nome:'Pré-evento',   telas:['boasvindas','contagem','video','publicidade'] },
   apresentacao:   { nome:'Equipes',      telas:['equipes','publicidade'] },
-  jogos:          { nome:'Jogos',        telas:['aovivo','aovivo','classificacao','destaque','video','publicidade'] },
+  jogos:          { nome:'Jogos',        telas:['aovivo','proximo','aovivo','classificacao','video','publicidade'] },
   publicidade:    { nome:'Publicidade',  telas:['publicidade','video'] },
-  entretenimento: { nome:'Diversão',     telas:['quiz','destaque','galera','video','publicidade'] },
+  entretenimento: { nome:'Diversão',     telas:['quiz','galera','video','publicidade'] },
   encerramento:   { nome:'Encerramento', telas:['resultado','podio','campeao','premiacao','agradecimento'] },
 };
 const ESCURAS = ['campeao'];   // telas em modo escuro
 
 /* =============================================================================
-   FONTE DE DADOS — Supercopa AFC (integração real)
+   FONTE DE DADOS  ← CLAUDE CODE: SUBSTITUIR AQUI
    ============================================================================= */
 async function carregarDados(){
-  const API  = 'https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api';
-  const SITE = 'https://www.supercopaafc.com.br/';
-  const APP  = 'https://drdiegopadua.github.io/supercopa-app/';
-  const S = p => p.catch(()=>null);
-  const J = (a,p) => S(fetch(API+'?'+new URLSearchParams({action:a,...(p||{})}),{cache:'no-store'}).then(r=>r.json()));
-  const qr = u => 'https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=0&data='+encodeURIComponent(u);
-  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
-  const P = (slug,nm,cota)=>({ nome:nm, cota, logo:SITE+'novo/parceiros/'+slug+'.png' });
-
-  // leitura paralela da API
-  const [t, tm, ao, rk, gl, sel, av, atl, tv, rdst, vot] = await Promise.all([
-    J('torneio',{modalidade:'volei'}), J('timesPublicos'), J('partidasAoVivo'),
-    J('ranking_quiz'), J('galeriaLista'), J('telaoFotos'), J('telaoAviso'), J('atletasTodos'), J('telaoVideos'),
-    J('rankingDestaque'), J('votacao')
-  ]);
-
-  // fase controlada pelo painel de controle (localStorage)
-  const faseCtrl = (()=>{ try{ return localStorage.getItem('sc-telao-fase')||null; }catch(e){return null;} })();
-
-  if(!t || !t.ok) return { ...PAINEL_DATA_MOCK, painel:{fase:faseCtrl||'jogos'} };
-
-  // mapa de times
-  const _ESC3D = {'alpha volei':'alpha-volei','ct das montanhas':'ct-das-montanhas','ctv aravolei':'ctv-aravolei','ctva voleibol':'ctva-voleibol','equipe uvi':'equipe-uvi','es volei':'es-volei','ms volei':'ms-volei','rpb volei':'rpb-volei','super volei':'super-volei','supra volei':'supra-volei','tiger volley':'tiger-volley','uniao volei':'uniao-volei'};
-  const escudo3D = n=>{ const k=norm(n); return _ESC3D[k]?SITE+'novo/escudos/'+_ESC3D[k]+'.png':null; };
-  const TM = {};
-  ((tm&&tm.times)||[]).forEach(x=>{
-    const logoOvr = escudo3D(x.nome);
-    TM[norm(x.nome)] = { logo: logoOvr||(x.escudo||''), cidade: String(x.cidade||'').replace(/\s*-\s*[A-Z]{2}$/,''),
-      grupo: x.grupo||'', naipe: x.naipe||'Masculino', tecnico: x.tecnico||'', atletas: (x.atletas||[]).map(a=>({numero:a.numero||'',nome:a.nome||'',posicao:a.posicao||'',foto:a.foto||''})) };
-  });
-  const logo = n => (TM[norm(n)]||{}).logo || escudo3D(n) || '';
-  const cid  = n => (TM[norm(n)]||{}).cidade || '';
-  const jg   = t.jogos || [];
-  const vivos = {}; ((ao&&ao.partidas)||[]).forEach(p=>{ vivos[String(p.id).toUpperCase()] = p; });
-  const nome = (j,k) => k==='c' ? (j.casaDefinida===false?(j.rotuloCasa||'A definir'):j.casa) : (j.visitanteDefinida===false?(j.rotuloVisitante||'A definir'):j.visitante);
-  const FASE = {grupos:'Fase de grupos',quartas:'Quartas de final',semifinal:'Semifinal',final:'Grande final'};
-  const statusDe = j => vivos[String(j.id).toUpperCase()] ? 'ao_vivo' : (j.status==='finalizado'||j.status==='wo')?'encerrado':j.status==='ao_vivo'?'ao_vivo':'agendado';
-  const haVivo = jg.some(j=>statusDe(j)==='ao_vivo');
-
-  // atletas por equipe (de atletasTodos)
-  const ATL = {};
-  ((atl&&atl.atletas)||[]).forEach(a=>{
-    const k = norm(a.equipe);
-    if(!ATL[k]) ATL[k] = [];
-    ATL[k].push({numero:a.numero||'', nome:a.nome||'', posicao:a.tipo||'', foto:''});
-  });
-
-  // equipes (para fase apresentacao)
-  const equipes = ((tm&&tm.times)||[]).map(x=>{
-    const info = TM[norm(x.nome)]||{};
-    return { nome:x.nome, cidade:info.cidade, grupo:info.grupo, naipe:info.naipe, tecnico:info.tecnico, escudo:info.logo||'', atletas:ATL[norm(x.nome)]||info.atletas||[] };
-  });
-
-  // projeção ao vivo (mesmo algoritmo do site supercopaafc.com.br)
-  function projetarGrupos(grupos, vivos) {
-    if (!vivos || !vivos.length) return grupos;
-    return grupos.map(function(g) {
-      var tab = g.tabela.map(function(t) { return Object.assign({}, t, {_proj: false}); });
-      var idx = {};
-      tab.forEach(function(t, i) { idx[String(t.equipe||'').trim().toLowerCase()] = i; });
-      vivos.forEach(function(p) {
-        var cN = String(p.equipeCasa||p.casa||'').trim().toLowerCase(),
-            vN = String(p.equipeVisitante||p.visitante||'').trim().toLowerCase(),
-            iA = idx[cN], iB = idx[vN];
-        if (iA == null || iB == null) return;
-        var cL = (p.setsCasa||0) > (p.setsVisitante||0) || ((p.setsCasa||0)===(p.setsVisitante||0) && (p.pontosCasa||0) > (p.pontosVisitante||0));
-        var vL = (p.setsVisitante||0) > (p.setsCasa||0) || ((p.setsCasa||0)===(p.setsVisitante||0) && (p.pontosVisitante||0) > (p.pontosCasa||0));
-        if (!cL && !vL) return;
-        var wI = cL ? iA : iB, lI = cL ? iB : iA;
-        var wS = cL ? (p.setsCasa||0) : (p.setsVisitante||0), lS = cL ? (p.setsVisitante||0) : (p.setsCasa||0);
-        var finW = 2, finL = wS > lS ? lS : 1;
-        var pW = finL === 0 ? 3 : 2, pL = finL === 0 ? 0 : 1;
-        tab[wI] = Object.assign({}, tab[wI], { pontos:(tab[wI].pontos||0)+pW, vitorias:(tab[wI].vitorias||0)+1, jogos:(tab[wI].jogos||0)+1, saldoSets:(tab[wI].saldoSets||0)+(finW-finL), _proj:true });
-        tab[lI] = Object.assign({}, tab[lI], { pontos:(tab[lI].pontos||0)+pL, jogos:(tab[lI].jogos||0)+1, saldoSets:(tab[lI].saldoSets||0)-(finW-finL), _proj:true });
-      });
-      var sorted = tab.slice().sort(function(a,b){ return (b.pontos-a.pontos)||(b.vitorias-a.vitorias)||(b.saldoSets-a.saldoSets)||((b.saldoPontos||0)-(a.saldoPontos||0)); });
-      return Object.assign({}, g, {tabela: sorted});
-    });
-  }
-  const gruposProj = projetarGrupos(t.grupos||[], (ao&&ao.partidas)||[]);
-
-  // classificação
-  const grupos = gruposProj.filter(g=>g.tabela&&g.tabela.length).map(g=>{
-    return { letra:g.grupo, jogosRealizados:g.jogosFeitos||0, jogosTotal:g.jogosTotal||3, classificam:2,
-      aoVivo: jg.some(j=>j.fase==='grupos'&&j.grupo===g.grupo&&statusDe(j)==='ao_vivo'),
-      projecao: g.tabela.some(x=>x._proj),
-      times: g.tabela.map(x=>({ nome:x.equipe, logo:logo(x.equipe), pontos:x.pontos||0, v:x.vitorias||0, d:x.derrotas||0, saldoSets:x.saldoSets||0, proj:!!x._proj })) };
-  });
-
-  // jogos ao vivo (formato novo)
-  const jogosAoVivo = ((ao&&ao.partidas)||[]).map(p=>{
-    const j = jg.find(x=>String(x.id).toUpperCase()===String(p.id).toUpperCase())||{};
-    const faseN = j.fase==='grupos'?'Grupo '+(j.grupo||''):(FASE[j.fase]||j.fase||'');
-    const qdrN = /altern/i.test(j.quadra||'')?'Quadra alternativa':'Quadra principal';
-    return { quadra:qdrN, fase:faseN, setAtual:(p.setAtual||((p.setsCasa||0)+(p.setsVisitante||0)+1)),
-      saque:p.saque||'A', melhorDe:CONFIG.melhorDe,
-      timeA:{nome:nome(j,'c')||p.casa||'', logo:logo(nome(j,'c')||p.casa||'')},
-      timeB:{nome:nome(j,'v')||p.visitante||'', logo:logo(nome(j,'v')||p.visitante||'')},
-      setsA:p.setsCasa||0, setsB:p.setsVisitante||0,
-      pontosA:p.pontosCasa||0, pontosB:p.pontosVisitante||0,
-      parciais:(p.parciais||[]), ultimosPontos:(p.ultimosPontos||[]) };
-  });
-
-  // próximos jogos
-  const hoje = new Date().toISOString().slice(0,10);
-  const proximos = jg.filter(j=>statusDe(j)==='agendado').sort((a,b)=>((a.data||'')+(a.hora||'')).localeCompare((b.data||'')+(b.hora||''))).slice(0,4);
-  const proximosJogos = proximos.map(j=>{
-    const dt = j.data?String(j.data).split('-').reverse().slice(0,2).join('/'):hoje.split('-').reverse().slice(0,2).join('/');
-    const faseN = j.fase==='grupos'?'Grupo '+(j.grupo||''):(FASE[j.fase]||j.fase||'');
-    const qdrN = /altern/i.test(j.quadra||'')?'Quadra alternativa':'Quadra principal';
-    return { data:dt, hora:j.hora||'--:--', quadra:qdrN, fase:faseN,
-      timeA:{nome:nome(j,'c'), logo:logo(nome(j,'c'))}, timeB:{nome:nome(j,'v'), logo:logo(nome(j,'v'))} };
-  });
-
-  // patrocinadores
-  const patrocinadores = [
-    P('coroa-instituto','Coroa Instituto','master'),
-    P('planet-sports','Planet Sports','prata'), P('acai-do-diego','Açaí do Diego','prata'), P('casa-homem-do-campo','Casa Homem do Campo','prata'),
-    P('sicredi','Sicredi','prata'), P('express-pizzas-e-lanches','Express Pizzas e Lanches','prata'), P('izi-internet','IZI Internet','prata'),
-    P('prato-fino','Prato Fino','bronze'), P('restaurante-do-marcao','Restaurante do Marcão','bronze'), P('elite-suplementos','Elite Suplementos','bronze'),
-    P('jacare-fotografia','Jacaré Fotografia','bronze'), P('laboratorio-cda','Laboratório CDA','bronze'),
-  ];
-
-  // logos de rodapé
-  const logosRodape = [
-    {nome:'ICM',logo:SITE+'novo/parceiros/instituto-cultural-das-montanhas.png'},
-  ];
-
-  // quiz
-  const abrev = n=>{ const p=String(n||'').trim().split(/\s+/); return p.length>1?p[0]+' '+p[p.length-1].charAt(0).toUpperCase()+'.':p[0]; };
-  const fmtT = s=>{ s=Math.round(+s||0); return s?Math.floor(s/60)+'m'+String(s%60).padStart(2,'0')+'s':''; };
-  const ranking = ((rk&&rk.ranking)||[]).map(r=>({nome:abrev(r.nome),pontos:Math.round(+r.pct||0),acertos:r.acertos||0,tempo:fmtT(r.tempo)}));
-  const quiz = { atualizadoEm:'agora', totalParticipantes:ranking.length, chamada:'Jogue o quiz e entre no ranking!',
-    link:'supercopaafc.com.br', premio:'O campeão será premiado na cerimônia de encerramento',
-    qrcode:qr(APP+'#quiz'), ranking };
-
-  // atleta destaque
-  const rkDst = ((rdst&&rdst.ranking)||[]);
-  const totalVotos = Math.max(1, (vot&&vot.totalVotos)||0);
-  const destaque = {
-    aberta: !!(vot&&vot.aberta),
-    totalVotos: vot&&vot.totalVotos||0,
-    chamada: 'Vote no Atleta Destaque!',
-    link: 'supercopaafc.com.br',
-    qrcode: qr(APP+'#votacao'),
-    ranking: rkDst.map(r=>({ pos:r.pos||0, nome:abrev(r.nome||''), equipe:r.equipe||'', numero:r.numero||'', votos:r.votos||0, pct:r.pct||0 }))
-  };
-
-  // galera — apenas fotos selecionadas pelo admin (telaoFotos)
-  const selIds = new Set(((sel&&sel.ids)||[]).map(String));
-  const fotos = selIds.size
-    ? ((gl&&gl.fotos)||[]).filter(f=>selIds.has(String(f.id))).slice(0,20).map(f=>({url:f.f||'',nome:f.nome||'',legenda:f.cap||'Supercopa AFC'}))
-    : [];
-  const galera = { chamada:'Poste sua foto e apareça no telão!', hashtag:'#SupercopaAFC', qrcode:qr(APP+'#fotos'),
-    instrucao:'Abra o app da Supercopa e envie sua foto', fotos };
-
-  // alerta manual via telaoAviso
-  const alerta = (av&&av.aviso) ? { id:av.aviso.id||Date.now(), tipo:av.aviso.tipo||'texto', quadra:av.aviso.quadra||'', time:av.aviso.time||'', texto:av.aviso.texto||'' } : null;
-
-  // encerramento (mata-mata → encerramento)
-  const jm = id => jg.find(j=>String(j.id).toUpperCase()===id);
-  const jFinal = jm('FINAL');
-  const fimStatus = j => j && (j.status==='finalizado'||j.status==='wo');
-  const encerramento = {
-    edicao: t.edicao||'2026',
-    final: jFinal ? { fase:'Grande final', data:String(jFinal.data||'').split('-').reverse().slice(0,2).join('/'),
-      quadra:/altern/i.test(jFinal.quadra||'')?'Quadra alternativa':'Quadra principal',
-      duracao:'', timeA:{nome:nome(jFinal,'c'),logo:logo(nome(jFinal,'c'))}, timeB:{nome:nome(jFinal,'v'),logo:logo(nome(jFinal,'v'))},
-      setsA:jFinal.setsCasa||0, setsB:jFinal.setsVisitante||0, parciais:jFinal.parciais||[] } : {},
-    podio: fimStatus(jFinal) ? [
-      {posicao:1,nome:jFinal.vencedor||nome(jFinal,'c'),cidade:cid(jFinal.vencedor||nome(jFinal,'c')),logo:logo(jFinal.vencedor||nome(jFinal,'c'))},
-    ] : [],
-    campeao: fimStatus(jFinal) ? { nome:jFinal.vencedor||nome(jFinal,'c'), cidade:cid(jFinal.vencedor||nome(jFinal,'c')), logo:logo(jFinal.vencedor||nome(jFinal,'c')), fotoTime:'' } : {},
-    premiacao: [], agradecimento:'Obrigado por fazer parte da Supercopa AFC!'
-  };
-
-  // fase controlada externamente ou derivada dos dados
-  let faseDados = 'jogos';
-  if(encerramento.campeao&&encerramento.campeao.nome) faseDados='encerramento';
-  else if(haVivo) faseDados='jogos';
-  const fase = faseCtrl || faseDados;
-
-  return {
-    painel: { fase },
-    evento: { nome:'Supercopa AFC de Vôlei', edicao:t.edicao||'2026',
-      complemento:'Afonso Cláudio · ES', status: haVivo?'Ao vivo · Afonso Cláudio':'Afonso Cláudio · 28 e 29 de novembro de 2026',
-      logo:'', appQrcode:qr(APP), inicio:'2026-11-28T08:00:00', inicioTexto:'28 de novembro de 2026',
-      dataTexto:'28 e 29 de novembro de 2026', local:'Afonso Cláudio · ES', aberturaTexto:'Sábado às 13h',
-      mensagens:['Bem-vindo à Supercopa AFC!','12 equipes, 2 dias de vôlei!','Baixe o app da Supercopa!'],
-      fotosHeroi:['','',''], logosRodape },
-    equipes, jogosAoVivo, proximosJogos, grupos, patrocinadores, quiz, destaque, galera,
-    alerta: alerta||undefined,
-    videos: (tv&&tv.videos&&tv.videos.length) ? tv.videos : [
-      { url:'https://drdiegopadua.github.io/supercopapainelcontrole/abertura_supercopa_volei.mp4', titulo:'Abertura Supercopa AFC', tipo:'institucional', telaCheia:true, fases:['pre','publicidade'] },
-    ],
-    encerramento,
-  };
+  // TODO (Claude Code): ex.
+  // const r = await fetch('https://script.google.com/macros/s/XXXX/exec?painel=1', {cache:'no-store'});
+  // return await r.json();
+  return PAINEL_DATA_MOCK;
 }
-
-/* BroadcastChannel — recebe comandos do painel de controle */
-(()=>{
-  try{
-    const bc = new BroadcastChannel('supercopa-telao');
-    bc.onmessage = e=>{
-      const cmd = e.data||{};
-      if(cmd.type==='fase'){ try{ localStorage.setItem('sc-telao-fase',cmd.fase); }catch(_){} faseForcada=cmd.fase; fase=cmd.fase; cur=0; show(cur); }
-      if(cmd.type==='tela'){ const k=playlist().indexOf(cmd.tela); if(k>=0){cur=k;paused=true;show(cur);} }
-      if(cmd.type==='pausa'){ paused=cmd.val; }
-      if(cmd.type==='avancar'){ show(cur+1); }
-      if(cmd.type==='voltar'){ show(cur-1,-1); }
-      if(cmd.type==='duracao'){ TELAS[cmd.tela]&&(TELAS[cmd.tela].dur=cmd.seg); }
-      if(cmd.type==='ping'){ _bcSelf&&_bcSelf.postMessage({type:'estado',fase:fase||faseAtual(),tela:playlist()[cur],pausado:paused}); }
-    };
-    _bcSelf = bc;
-    setInterval(()=>{ try{ bc.postMessage({type:'estado',fase:fase||'jogos',tela:(playlist&&playlist()[cur])||'',pausado:paused||false}); }catch(_){} }, 3000);
-  }catch(_){}
-})();
-var _bcSelf = null;
 
 /* =============================================================================
    UTILITÁRIOS
@@ -1014,7 +799,8 @@ function renderFixos(d){
   $('#eventName').textContent = ev.nome || 'Supercopa AFC';
   $('#eventSub').textContent = ev.status || '';
   $('#appQr').innerHTML = img(ev.appQrcode,'qr','');
-  const sp = [...(d.patrocinadores||[]), ...(ev.logosRodape||[])];
+  $('#footerLogos').innerHTML = (ev.logosRodape||[]).map((l,i)=>`<div class="lgx imgbox ct" data-slot="evento.logosRodape[${i}].logo">${img(l.logo,'logo',l.nome||'')}</div>`).join('');
+  const sp = d.patrocinadores || [];
   const one = sp.map((p,i)=>`<div class="lgx imgbox ct" data-slot="patrocinadores[${i}].logo">${img(p.logo,'logo',p.nome||'')}</div>`).join('');
   const run = $('#logoRun'); if(run.dataset.k !== one){ run.innerHTML = one + one; run.dataset.k = one; }
 }
@@ -1171,12 +957,12 @@ function renderClassificacao(d){
   setTela('classificacao', `<div class="gr4">${(d.grupos||[]).slice(0,4).map((g,gi)=>`
     <div class="glass grp rv" ${D(gi*.08)}>
       <div class="hd"><div class="L gt" data-slot="grupos[${gi}].letra">${esc(g.letra)}</div>
-        <div class="meta"><div class="eyebrow m">Grupo</div><b data-slot="grupos[${gi}].jogosRealizados">${g.jogosRealizados??0}/${g.jogosTotal??3} jogos</b>${g.aoVivo?'<div class="live"><span class="rdot" style="width:7px;height:7px"></span>AO VIVO</div>':''}${g.projecao&&!g.aoVivo?'<div class="live" style="background:rgba(229,72,61,.15);color:#e5484d"><span class="rdot" style="width:7px;height:7px"></span>PROJEÇÃO</div>':''}</div></div>
+        <div class="meta"><div class="eyebrow m">Grupo</div><b data-slot="grupos[${gi}].jogosRealizados">${g.jogosRealizados??0}/${g.jogosTotal??3} jogos</b>${g.aoVivo?'<div class="live"><span class="rdot" style="width:7px;height:7px"></span>AO VIVO</div>':''}</div></div>
       <div class="cols"><span>#</span><span>Equipe</span><span>Pts</span><span>V</span><span>D</span><span>SS</span></div>
       <div class="rows">${(g.times||[]).map((t,ti)=>`
-        <div class="r ${ti<(g.classificam??2)?'q':''}${t.proj?' proj':''}"><div class="p">${t.proj?'<span style="color:#e5484d;font-size:.7em">▶</span>':(ti+1)}</div>
+        <div class="r ${ti<(g.classificam??2)?'q':''}"><div class="p">${ti+1}</div>
           <div class="t">${circ(t.logo,'shield','',`grupos[${gi}].times[${ti}].logo`)}<div class="tn" data-slot="grupos[${gi}].times[${ti}].nome">${esc(t.nome)}</div></div>
-          <div class="pt gt${t.proj?' proj':''}'" data-to="${t.pontos??0}" data-slot="grupos[${gi}].times[${ti}].pontos">${t.pontos??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].v">${t.v??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].d">${t.d??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].saldoSets">${(t.saldoSets>0?'+':'')+(t.saldoSets??0)}</div></div>`).join('')}</div>
+          <div class="pt gt" data-to="${t.pontos??0}" data-slot="grupos[${gi}].times[${ti}].pontos">${t.pontos??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].v">${t.v??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].d">${t.d??0}</div><div class="s" data-slot="grupos[${gi}].times[${ti}].saldoSets">${(t.saldoSets>0?'+':'')+(t.saldoSets??0)}</div></div>`).join('')}</div>
     </div>`).join('')}</div>`);
 }
 
@@ -1186,7 +972,7 @@ function renderClassificacao(d){
 let adPage = 0, adVisto = false;
 function renderPublicidade(d){
   const all = d.patrocinadores||[], m = all.find(p=>p.cota==='master')||{}, rest = all.filter(p=>p!==m);
-  const per = 8, pages = Math.max(1,Math.ceil(rest.length/per)), pg = adPage % pages, sl = rest.slice(pg*per,pg*per+per); while(sl.length<per) sl.push(rest[sl.length % Math.max(1,rest.length)]);
+  const per = 8, pages = Math.max(1,Math.ceil(rest.length/per)), pg = adPage % pages, sl = rest.slice(pg*per,pg*per+per); while(sl.length<per) sl.push({});
   const tile = (p,k,dd) => `<div class="glass tl rv" ${D(dd)}><div class="lg imgbox ct" data-slot="patrocinadores[${pg*per+k+1}].logo">${img(p.logo,'logo','LOGO')}</div><div class="nm">${esc(p.nome||'')}</div></div>`;
   setTela('publicidade', `
   <div class="ad">
@@ -1219,28 +1005,6 @@ function renderQuiz(d){
       <div class="url" data-slot="quiz.link">${esc(q.link||'')}</div><p data-slot="quiz.premio">${esc(q.premio||'')}</p><div class="btn">Jogue agora</div></div>
   </div>`);
 }
-function renderDestaque(d){
-  const dst = d.destaque||{}, rk = dst.ranking||[], max = Math.max(1,...rk.map(r=>r.votos||0));
-  const pd = i => { const r = rk[i]||{nome:'—',equipe:'',numero:'',votos:0,pct:0};
-    return `<div class="pd p${i+1} rv" ${D(i===0?.1:.2)}>${gauge((r.votos||0)/max,
-      `<div class="pos">${i+1}º</div><div class="v gt num" data-to="${r.votos??0}" data-slot="destaque.ranking[${i}].votos">${r.votos??0}</div><div class="u">VOTOS</div>`)}
-      <div class="w" data-slot="destaque.ranking[${i}].nome">${esc(r.nome)}</div>
-      <div class="u" data-slot="destaque.ranking[${i}].equipe">#${esc(r.numero||'')} · ${esc(r.equipe||'')}</div></div>`; };
-  setTela('destaque', `
-  <div class="qz">
-    <div class="glass pod rv"><div style="display:flex;justify-content:space-between"><span class="eyebrow">Atleta Destaque</span><span class="eyebrow m" data-slot="destaque.totalVotos">${(dst.totalVotos||0)} votos registrados</span></div>
-      <div class="row">${pd(1)}${pd(0)}${pd(2)}</div></div>
-    <div class="glass ls rv" ${D(.1)}><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="eyebrow">Ranking de votos</span></div>
-      ${rk.slice(3,10).map((r,i)=>{ const p=Math.max(4,(r.votos||0)/max*100); return `<div class="li"><div class="n">${pad(i+4)}</div>
-        <div><div class="w" data-slot="destaque.ranking[${i+3}].nome">${esc(r.nome)}</div><div class="slider"><i style="width:${p}%"></i><b style="left:${p}%"></b></div></div>
-        <div class="v num" data-to="${r.votos??0}" data-slot="destaque.ranking[${i+3}].votos">${r.votos??0}</div></div>`; }).join('')}</div>
-    <div class="glass cta rv" ${D(.2)}><span class="eyebrow">${dst.aberta?'Vote agora':'Votação encerrada'}</span>
-      <div class="H" data-slot="destaque.chamada">${esc(dst.chamada||'Vote no Atleta Destaque!')}</div>
-      <div class="qr imgbox ct" data-slot="destaque.qrcode">${img(dst.qrcode,'qr','QR CODE')}</div>
-      <div class="url" data-slot="destaque.link">${esc(dst.link||'')}</div>
-      ${dst.aberta?'<div class="btn">Vote agora</div>':''}</div>
-  </div>`);
-}
 let fanIdx = 0;
 function renderGalera(d){
   const g = d.galera||{}, fs = g.fotos||[], i = fs.length ? fanIdx % fs.length : 0, f = fs[i]||{}, t = k => fs.length>k ? fs[(i+k)%fs.length] : {};
@@ -1250,9 +1014,9 @@ function renderGalera(d){
       <span class="pill r tag"><span class="rdot" style="background:#fff"></span>Fan cam</span>
       <div class="glass cap"><div><div class="H" data-slot="galera.fotos[i].nome">${esc(f.nome||'')}</div><p data-slot="galera.fotos[i].legenda">${esc(f.legenda||'')}</p></div><div class="c gt num">${fs.length?i+1:0}/${fs.length}</div></div></div>
     <div class="side">
-      <div class="glass cta rv" ${D(.15)} style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px">
-        <div class="hash gt" style="font-size:2em;font-weight:900;letter-spacing:2px" data-slot="galera.hashtag">${esc(g.hashtag||'#SupercopaAFC')}</div>
-        <span class="eyebrow">Galeria do evento</span></div>
+      <div class="glass cta rv" ${D(.15)}><div class="top"><div class="qr imgbox ct" data-slot="galera.qrcode">${img(g.qrcode,'qr','QR CODE')}</div>
+        <div><span class="eyebrow">Apareça no telão</span><div class="H" style="margin-top:10px" data-slot="galera.chamada">${esc(g.chamada||'')}</div></div></div>
+        <div class="hash gt" data-slot="galera.hashtag">${esc(g.hashtag||'')}</div><p data-slot="galera.instrucao">${esc(g.instrucao||'')}</p></div>
       <div class="th"><div class="imgbox rv" ${D(.25)} data-slot="galera.fotos[i+1].url">${img(t(1).url,'photo','')}</div><div class="imgbox rv" ${D(.3)} data-slot="galera.fotos[i+2].url">${img(t(2).url,'photo','')}</div></div>
     </div>
   </div>`);
@@ -1411,7 +1175,7 @@ function proximoAlerta(){
 }
 
 const RENDER = { contagem:renderContagem, boasvindas:renderBoasVindas, equipes:renderEquipes, aovivo:renderAoVivo, proximo:renderProximo,
-  classificacao:renderClassificacao, publicidade:renderPublicidade, quiz:renderQuiz, destaque:renderDestaque, galera:renderGalera, resultado:renderResultado,
+  classificacao:renderClassificacao, publicidade:renderPublicidade, quiz:renderQuiz, galera:renderGalera, resultado:renderResultado,
   podio:renderPodio, campeao:renderCampeao, premiacao:renderPremiacao, agradecimento:renderAgradecimento, video:renderVideo };
 
 /* =============================================================================
