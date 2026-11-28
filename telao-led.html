@@ -178,7 +178,8 @@
   .ftr .run-wrap{flex:1;overflow:hidden;height:100%;-webkit-mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
   .ftr .run{display:flex;align-items:center;gap:22px;height:100%;width:max-content;animation:run 50s linear infinite}
   @keyframes run{to{transform:translateX(-50%)}}
-  .ftr .lgx{width:150px;height:58px;border-radius:14px;background:#f4f6fb;overflow:hidden;flex:none;box-shadow:0 2px 8px rgba(10,18,56,.06)}
+  .ftr .lgx{width:190px;height:72px;border-radius:14px;background:#f4f6fb;overflow:hidden;flex:none;box-shadow:0 2px 8px rgba(10,18,56,.06)}
+  .ftr .imgbox.ct>img{padding:5px 10px}
   .ftr .div{width:1px;height:50px;background:rgba(0,0,0,.12);flex:none}
   #stage.dark .ftr .div{background:rgba(255,255,255,.35)}
   .ftr .real{display:flex;gap:10px;flex:none}
@@ -739,9 +740,15 @@ async function carregarDados(){
     const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?painel=1',{cache:'no-store'});
     if(!r.ok) throw new Error(r.status);
     const d = await r.json();
-    if(!d || !d.evento) throw new Error('resposta sem dados do evento');
-    return d;
-  }catch(e){ console.warn('[Painel] API sem dados completos, usando mock',e); return PAINEL_DATA_MOCK; }
+    if(!d || d.fonte!=='banco') throw new Error('resposta sem dados do banco');
+    // banco: classificação, ao vivo, próximos, equipes, quiz e fotos · telão: evento, patrocinadores, vídeos, encerramento
+    const M = PAINEL_DATA_MOCK, out = { ...M, jogosAoVivo:d.jogosAoVivo||[], proximosJogos:d.proximosJogos||[] };
+    if(d.grupos && d.grupos.length) out.grupos = d.grupos;
+    if(d.equipes && d.equipes.length) out.equipes = d.equipes;
+    if(d.quiz) out.quiz = { ...M.quiz, ...d.quiz };
+    if(d.galera) out.galera = { ...M.galera, ...d.galera };
+    return out;
+  }catch(e){ console.warn('[Painel] API indisponível, usando mock',e); return PAINEL_DATA_MOCK; }
 }
 
 /* =============================================================================
@@ -1373,7 +1380,7 @@ var PAINEL_DATA_MOCK = {
       'Baixe o app oficial e acompanhe a tabela e os resultados ao vivo.',
       'Participe do quiz e da promoção Destaque da Galera!',
     ],
-    logosRodape: [ { nome:'Prefeitura', logo:'' }, { nome:'Sec. Esportes', logo:'' }, { nome:'ICM', logo:'' } ],
+    logosRodape: [],
   },
 
   equipes: [ // apresentação — um time por vez
@@ -1432,10 +1439,10 @@ var PAINEL_DATA_MOCK = {
   ],
 
   patrocinadores: [ // cota: 'master' | 'ouro' | 'prata' | 'apoio'
-    { nome:'Sicredi',                       cota:'master', logo:'https://www.supercopaafc.com.br/novo/parceiros/sicredi.png' },
+    { nome:'Instituto Coroa',               cota:'master', logo:'https://www.supercopaafc.com.br/novo/parceiros/coroa-instituto.png' },
+    { nome:'Sicredi',                       cota:'ouro',   logo:'https://www.supercopaafc.com.br/novo/parceiros/sicredi.png' },
     { nome:'Planet Sports',                 cota:'ouro',   logo:'https://www.supercopaafc.com.br/novo/parceiros/planet-sports.png' },
     { nome:'IZI Internet',                  cota:'ouro',   logo:'https://www.supercopaafc.com.br/novo/parceiros/izi-internet.png' },
-    { nome:'Coroa Instituto',               cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/coroa-instituto.png' },
     { nome:'Casa Homem do Campo',           cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/casa-homem-do-campo.png' },
     { nome:'Elite Suplementos',             cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/elite-suplementos.png' },
     { nome:'Laboratório CDA',               cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/laboratorio-cda.png' },

@@ -1434,6 +1434,68 @@ async function telaoFotos() {
   const v: Any = (data && data.valor) || {};
   return { ok: true, ids: Array.isArray(v.ids) ? v.ids : null };   // null = passam todas as fotos
 }
+// ════════ Telão LED: dados do banco no formato do PAINEL_DATA (o telão mescla por cima do mock) ════════
+const slugEscudo = (n: string) => n.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const escudoSite = (n: string) => n ? "https://www.supercopaafc.com.br/novo/escudos/" + slugEscudo(n) + ".png" : "";
+const ROTULO_FASE: Record<string, string> = { quartas: "Quartas de final", semifinal: "Semifinal", final: "Grande final" };
+const faseTexto = (j: Any) => (j.fase === "grupos" ? "Grupo " + (j.grupo || "") : ROTULO_FASE[j.fase] || j.fase || "") + " · Masculino";
+async function painelTelao() {
+  const [t, { data: parts }, { data: insc }, quiz, fotosCfg] = await Promise.all([
+    montarTorneio(MODALIDADE_PADRAO),
+    sb.from("partidas").select("id,status,equipe_casa,equipe_visitante,estado").in("status", ["em_andamento", "sets_completos"]),
+    sb.from("inscricoes").select("nome_equipe,cidade").ilike("modalidade", "v%lei"),
+    rankingQuiz(),
+    telaoFotos(),
+  ]);
+  const cidade: Record<string, string> = {};
+  (insc || []).forEach((r: Any) => { if (r.cidade) cidade[chaveEq(r.nome_equipe)] = String(r.cidade).trim(); });
+  Object.keys(CASA_DEFAULT).forEach((k) => { cidade[k] = cidade[k] || CASA_DEFAULT[k].cidade; });
+  const time = (nome: string, definida = true) => (definida && nome ? { nome, logo: escudoSite(nome) } : { nome: "A definir", logo: "" });
+  const jogoPorId: Record<string, Any> = {}; t.jogos.forEach((j: Any) => (jogoPorId[j.id] = j));
+
+  const jogosAoVivo = (parts || []).filter((p: Any) => !ehTeste(p.id)).map((p: Any) => {
+    const e = p.estado || {}, j = jogoPorId[p.id] || {};
+    const set = e.setAtual || 1;
+    return {
+      id: p.id, quadra: j.quadra || "Quadra", fase: j.fase ? faseTexto(j) : "", setAtual: set, saque: e.sacando === "B" ? "B" : "A",
+      timeA: time(p.equipe_casa || j.casa), timeB: time(p.equipe_visitante || j.visitante),
+      setsA: e.setsCasa || 0, setsB: e.setsVisitante || 0, pontosA: e.pontosCasa || 0, pontosB: e.pontosVisitante || 0,
+      parciais: (e.historicoSets || []).map((s: Any) => [Number(s.a) || 0, Number(s.b) || 0]),
+      ultimosPontos: (e.historicoPontos || []).filter((h: Any) => h.set === set).map((h: Any) => h.equipe).slice(-40),
+    };
+  }).sort((a: Any, b: Any) => String(a.quadra).localeCompare(String(b.quadra))).slice(0, 2);
+  const idsAoVivo = new Set(jogosAoVivo.map((j: Any) => j.id));
+
+  const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
+  const proximosJogos = t.jogos
+    .filter((j: Any) => j.status === "agendado" && !idsAoVivo.has(j.id) && (!j.data || j.data >= hoje))
+    .sort((a: Any, b: Any) => String(a.data || "9").localeCompare(String(b.data || "9")) || String(a.hora || "99").localeCompare(String(b.hora || "99")) || (a.ordem || 0) - (b.ordem || 0))
+    .slice(0, 6)
+    .map((j: Any) => ({
+      id: j.id, data: !j.data || j.data === hoje ? "Hoje" : j.data.slice(8, 10) + "/" + j.data.slice(5, 7), hora: j.hora || "", quadra: j.quadra || "", fase: faseTexto(j),
+      timeA: j.casaDefinida ? time(j.casa) : { nome: j.rotuloCasa || "A definir", logo: "" },
+      timeB: j.visitanteDefinida ? time(j.visitante) : { nome: j.rotuloVisitante || "A definir", logo: "" },
+    }));
+
+  const gruposAoVivo = new Set(t.jogos.filter((j: Any) => j.fase === "grupos" && (j.status === "ao_vivo" || idsAoVivo.has(j.id))).map((j: Any) => j.grupo));
+  const grupos = t.grupos.map((g: Any) => ({
+    letra: g.grupo, jogosRealizados: g.jogosFeitos, jogosTotal: g.jogosTotal || 3, classificam: 2, aoVivo: gruposAoVivo.has(g.grupo),
+    times: g.tabela.map((l: Any) => ({ nome: l.equipe, logo: escudoSite(l.equipe), pontos: l.pontos, v: l.vitorias, d: l.derrotas, saldoSets: l.saldoSets })),
+  }));
+
+  const equipes = t.equipes.filter((e: Any) => e.grupo).sort((a: Any, b: Any) => String(a.grupo).localeCompare(String(b.grupo)) || (a.ordem || 0) - (b.ordem || 0))
+    .map((e: Any) => ({ nome: e.nome, cidade: cidade[chaveEq(e.nome)] || "", grupo: e.grupo, naipe: "Masculino", tecnico: "", escudo: escudoSite(e.nome), atletas: [] }));
+
+  const out: Any = { ok: true, fonte: "banco", geradoEm: t.geradoEm, jogosAoVivo, proximosJogos, grupos, equipes };
+  const rk = (quiz.ranking || []) as Any[];
+  if (rk.length) out.quiz = { totalParticipantes: rk.length, atualizadoEm: "agora", ranking: rk.slice(0, 10).map((r: Any) => ({ nome: r.nome, pontos: Math.round((parseFloat(r.pct) || 0) * 10), acertos: r.acertos, tempo: r.tempo || "" })) };
+  const { data: fotos } = await sb.from("galeria_fotos").select("id,f,legenda").order("criado_em", { ascending: false }).limit(60);
+  const ok = fotosCfg.ids ? new Set(fotosCfg.ids) : null;
+  const sel = (fotos || []).filter((f: Any) => !ok || ok.has(f.id)).slice(0, 30).map((f: Any) => ({ url: galUrl(f.f), nome: "", legenda: f.legenda || "" }));
+  if (sel.length) out.galera = { fotos: sel };
+  if (t.campeao) out.campeao = t.campeao;
+  return out;
+}
 async function telaoFotosSalvar(d: Any) {
   const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
   const ids = Array.isArray(d.ids) ? d.ids.map((x: Any) => String(x).slice(0, 40)).slice(0, 500) : null;
@@ -1899,6 +1961,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
       case "timesPublicos": return await timesPublicos();
       case "noticias": return { ok: true, noticias: await listarNoticias() };
       case "torneio": case "classificacao": return await montarTorneio(modOf(d));
+      case "painel": return await painelTelao();
       case "jogo": { const r = await jogoDaTabela(d); if (r) return r; break; }
       case "verificarSenhaAdmin": return { ok: await senhaAdminOk(d.senha) };
       case "avisos": return { ok: true, avisos: await listarAvisos() };
@@ -1950,7 +2013,7 @@ Deno.serve(async (req) => {
   try {
     if (req.method === "GET") {
       const q = Object.fromEntries(url.searchParams);
-      const r = await rotear(q.action || "", q, true);
+      const r = await rotear(q.action || (q.painel === "1" ? "painel" : ""), q, true);
       if (r) return json(r);
       const p = await fetch(APPS_SCRIPT + url.search);   // repasse
       return new Response(await p.text(), { headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" } });
