@@ -8490,6 +8490,9 @@ try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) na
     tlRenderFases();
     tlRenderTelas();
     tlRenderAgenda();
+    // sincroniza playlist das telas marcadas com o telão ao abrir o painel
+    var telasAtivasSync = Object.keys(TELAS_ATIVAS).filter(function(k){ return TELAS_ATIVAS[k]!==false; });
+    tlEnviar({type:'playlist', telas:telasAtivasSync});
     tlEnviar({type:'ping'});
   };
 })();
