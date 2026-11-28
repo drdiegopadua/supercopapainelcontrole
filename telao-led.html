@@ -170,15 +170,17 @@
 
   /* =================== RODAPÉ: faixa de logos =================== */
   .ftr{position:absolute;left:56px;right:56px;bottom:26px;height:84px;display:flex;align-items:center;gap:18px;z-index:6;
-    background:linear-gradient(120deg,rgba(91,140,255,.92),rgba(35,64,232,.95));border:1px solid rgba(255,255,255,.4);border-radius:28px;box-shadow:var(--shadow);padding:0 14px 0 26px;overflow:hidden;
-    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);transition:background 1s,border-color 1s}
+    background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:28px;box-shadow:0 4px 24px rgba(10,18,56,.12);padding:0 14px 0 26px;overflow:hidden;
+    transition:background 1s,border-color 1s}
   #stage.dark .ftr{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
-  .ftr .cap{font-size:10px;font-weight:800;letter-spacing:3px;color:rgba(255,255,255,.85);text-transform:uppercase;flex:none;line-height:1.4;width:96px}
+  .ftr .cap{font-size:10px;font-weight:800;letter-spacing:3px;color:#0b1633;text-transform:uppercase;flex:none;line-height:1.4;width:96px}
+  #stage.dark .ftr .cap{color:rgba(255,255,255,.85)}
   .ftr .run-wrap{flex:1;overflow:hidden;height:100%;-webkit-mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
   .ftr .run{display:flex;align-items:center;gap:22px;height:100%;width:max-content;animation:run 50s linear infinite}
   @keyframes run{to{transform:translateX(-50%)}}
-  .ftr .lgx{width:150px;height:58px;border-radius:14px;background:#fff;overflow:hidden;flex:none;box-shadow:0 4px 14px rgba(10,18,56,.06)}
-  .ftr .div{width:1px;height:50px;background:rgba(255,255,255,.35);flex:none}
+  .ftr .lgx{width:150px;height:58px;border-radius:14px;background:#f4f6fb;overflow:hidden;flex:none;box-shadow:0 2px 8px rgba(10,18,56,.06)}
+  .ftr .div{width:1px;height:50px;background:rgba(0,0,0,.12);flex:none}
+  #stage.dark .ftr .div{background:rgba(255,255,255,.35)}
   .ftr .real{display:flex;gap:10px;flex:none}
   .ftr .real .lgx{width:130px}
   .prog{position:absolute;left:56px;right:56px;bottom:118px;height:3px;border-radius:3px;background:rgba(47,91,255,.1);z-index:6;overflow:hidden}
@@ -739,8 +741,10 @@ async function carregarDados(){
   try{
     const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?painel=1',{cache:'no-store'});
     if(!r.ok) throw new Error(r.status);
-    return await r.json();
-  }catch(e){ console.warn('[Painel] API indisponível, usando mock',e); return PAINEL_DATA_MOCK; }
+    const d = await r.json();
+    if(!d || !d.evento) throw new Error('resposta sem dados do evento');
+    return d;
+  }catch(e){ console.warn('[Painel] API sem dados completos, usando mock',e); return PAINEL_DATA_MOCK; }
 }
 
 /* =============================================================================
