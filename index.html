@@ -2103,22 +2103,16 @@ body.dark .btn-secondary:hover { color: #fff; }
         </div>
       </div>
 
-      <!-- NAVEGAÇÃO -->
+      <!-- NAVEGAÇÃO + TELAS -->
       <div class="card" style="margin-bottom:16px">
         <div class="card-title"><i class='bx bx-slideshow'></i> Navegar telas</div>
-        <p style="font-size:13px;color:var(--dark-grey);margin:6px 0 14px">Avança ou volta uma tela dentro da fase atual. Pausar congela a rotação automática.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
           <button class="btn btn-secondary" onclick="tlEnviar({type:'voltar'})"><i class='bx bx-chevron-left'></i> Anterior</button>
           <button class="btn btn-primary" onclick="tlEnviar({type:'avancar'})">Próxima <i class='bx bx-chevron-right'></i></button>
           <button class="btn btn-secondary" id="tl-btn-pause" onclick="tlTogglePause()"><i class='bx bx-pause'></i> Pausar</button>
         </div>
-      </div>
-
-      <!-- DURAÇÃO POR TELA -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title"><i class='bx bx-time'></i> Duração por tela</div>
-        <p style="font-size:13px;color:var(--dark-grey);margin:6px 0 14px">Ajuste quantos segundos cada tela fica no ar. Aplica imediatamente.</p>
-        <div id="tl-duracoes" style="display:flex;flex-direction:column;gap:10px">
+        <p style="font-size:12px;color:var(--dark-grey);margin:0 0 10px">Clique no nome da tela para ir direto. Marque/desmarque para incluir na rotação. Arraste o slider para ajustar a duração.</p>
+        <div id="tl-telas-lista" style="display:flex;flex-direction:column;gap:6px">
           <!-- gerado por JS -->
         </div>
       </div>
@@ -8346,6 +8340,10 @@ try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) na
     premiacao:{n:'Premiação',dur:22}, agradecimento:{n:'Obrigado',dur:18}, video:{n:'Vídeo',dur:30},
   };
   var DURACOES = {}; Object.keys(TELAS_INFO).forEach(function(k){DURACOES[k]=TELAS_INFO[k].dur;});
+  var TELAS_ATIVAS = (function(){
+    try{ var s=localStorage.getItem('sc-telas-ativas'); if(s) return JSON.parse(s); }catch(e){}
+    var d={}; Object.keys(TELAS_INFO).forEach(function(k){d[k]=true;}); return d;
+  })();
   var tlBc = null, tlPausado = false, tlFaseAtiva = null, tlDetected = false;
   var tlAgenda = JSON.parse(localStorage.getItem('sc-telao-agenda')||'[]');
 
@@ -8409,17 +8407,32 @@ try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) na
     }).join('');
   }
 
-  function tlRenderDuracoes(){
-    var c = document.getElementById('tl-duracoes'); if(!c) return;
+  function tlRenderTelas(){
+    var c = document.getElementById('tl-telas-lista'); if(!c) return;
     c.innerHTML = Object.keys(TELAS_INFO).map(function(k){
-      var ti = TELAS_INFO[k], dur = DURACOES[k]||ti.dur;
-      return '<div style="display:flex;align-items:center;gap:12px">'
-        +'<span style="min-width:120px;font-size:13px;color:var(--dark-grey)">'+ti.n+'</span>'
+      var ti = TELAS_INFO[k], dur = DURACOES[k]||ti.dur, on = TELAS_ATIVAS[k]!==false;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;background:var(--grey)">'
+        +'<input type="checkbox" id="tl-cb-'+k+'" '+(on?'checked':'')+' style="width:16px;height:16px;cursor:pointer;accent-color:var(--blue)" onchange="tlToggleTela(\''+k+'\',this.checked)">'
+        +'<button onclick="tlIrPara(\''+k+'\')" style="flex:0 0 auto;min-width:110px;text-align:left;background:'+(on?'var(--blue)':'var(--stroke)')+';color:'+(on?'#fff':'var(--dark-grey)')+';border:none;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;cursor:pointer" id="tl-btn-tela-'+k+'">'+ti.n+'</button>'
         +'<input type="range" min="5" max="120" step="1" value="'+dur+'" style="flex:1;accent-color:var(--blue)" oninput="tlSetDur(\''+k+'\',+this.value)">'
-        +'<span id="tl-dur-'+k+'" style="min-width:36px;text-align:right;font-size:13px;font-weight:600">'+dur+'s</span>'
+        +'<span id="tl-dur-'+k+'" style="min-width:34px;text-align:right;font-size:12px;font-weight:600;color:var(--dark-grey)">'+dur+'s</span>'
         +'</div>';
     }).join('');
   }
+
+  window.tlIrPara = function(tela){
+    tlEnviar({type:'tela',tela:tela});
+    if(typeof showToast==='function') showToast('Telão: '+(TELAS_INFO[tela]||{n:tela}).n);
+  };
+
+  window.tlToggleTela = function(tela, ativo){
+    TELAS_ATIVAS[tela] = ativo;
+    try{ localStorage.setItem('sc-telas-ativas', JSON.stringify(TELAS_ATIVAS)); }catch(e){}
+    var btn = document.getElementById('tl-btn-tela-'+tela);
+    if(btn){ btn.style.background = ativo?'var(--blue)':'var(--stroke)'; btn.style.color = ativo?'#fff':'var(--dark-grey)'; }
+    var telas = Object.keys(TELAS_ATIVAS).filter(function(k){ return TELAS_ATIVAS[k]!==false; });
+    tlEnviar({type:'playlist', telas:telas});
+  };
 
   window.tlSetDur = function(tela, seg){
     DURACOES[tela] = seg;
@@ -8475,7 +8488,7 @@ try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) na
     }
     tlFaseAtiva = (function(){try{return localStorage.getItem('sc-telao-fase');}catch(e){return null;}})() || 'jogos';
     tlRenderFases();
-    tlRenderDuracoes();
+    tlRenderTelas();
     tlRenderAgenda();
     tlEnviar({type:'ping'});
   };

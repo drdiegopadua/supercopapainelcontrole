@@ -1193,10 +1193,14 @@ try{
     const d = e.data || {};
     if(d.type==='fase'){ faseForcada = d.fase; try{localStorage.setItem('sc-telao-fase',d.fase);}catch(_){} setFase(faseAtual()); buildOp(); }
     else if(d.type==='tela'){ const k=playlist().indexOf(d.tela); if(k>=0) show(k); }
-    else if(d.type==='prev') show(cur-1,-1);
-    else if(d.type==='next') show(cur+1);
-    else if(d.type==='pausa'){ paused=!paused; t0=performance.now(); buildOp(); }
-    _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur]});
+    else if(d.type==='voltar'||d.type==='prev') show(cur-1,-1);
+    else if(d.type==='avancar'||d.type==='next') show(cur+1);
+    else if(d.type==='pausa'){ paused = d.val!==undefined ? d.val : !paused; t0=performance.now(); buildOp(); }
+    else if(d.type==='duracao' && d.tela && d.seg){ TELAS[d.tela] && (TELAS[d.tela].dur = +d.seg); }
+    else if(d.type==='playlist' && Array.isArray(d.telas)){
+      const f = faseAtual(); if(FASES[f]) FASES[f].telas = d.telas; show(0);
+    }
+    _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur],pausado:paused});
   };
 }catch(_){}
 if(params.get('slots')==='0') CONFIG.mostrarSlots = false;
