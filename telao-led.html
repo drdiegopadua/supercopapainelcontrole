@@ -1185,7 +1185,8 @@ function renderPremiacao(d){
 }
 let thxPage = 0, thxVisto = false;
 function renderAgradecimento(d){
-  const all = d.patrocinadores||[], per = 12, pages = Math.max(1,Math.ceil(all.length/per)), pg = thxPage % pages, sl = all.length ? Array.from({length:per},(_,k)=>all[(pg*per+k)%all.length]) : Array(per).fill({});   // sem caixa vazia: completa repetindo logos
+  // realização (Prefeitura) entra só aqui, não no rodapé
+  const all = [{ nome:'Prefeitura de Afonso Cláudio', logo:'https://www.supercopaafc.com.br/novo/parceiros/prefeitura-afonso-claudio.png' }, ...(d.patrocinadores||[])], per = 12, pages = Math.max(1,Math.ceil(all.length/per)), pg = thxPage % pages, sl = all.length ? Array.from({length:per},(_,k)=>all[(pg*per+k)%all.length]) : Array(per).fill({});   // sem caixa vazia: completa repetindo logos
   setTela('agradecimento', `
   <div class="ty"><div class="H">${kin('Obrigado',.1,'gt')}</div>
     <div class="k rv" ${D(.1)} data-slot="encerramento.agradecimento">${esc((d.encerramento||{}).agradecimento||'')}</div>
