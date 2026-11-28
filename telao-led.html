@@ -1093,7 +1093,8 @@ function renderAgradecimento(d){
    videos: [{ url, titulo, tipo:'patrocinador'|'melhores'|'institucional', patrocinador:{nome,logo}, telaCheia, fases:[...] }]
    ============================================================================= */
 let videoIdx = 0, videoVisto = false, durOverride = null;
-const videosDaFase = d => (d.videos||[]).filter(v=>!v.fases || v.fases.includes(fase));
+// quando globalPlaylist ativo, aceita todos os vídeos independente de fase
+const videosDaFase = d => (d.videos||[]).filter(v=>!v.fases || globalPlaylist || v.fases.includes(fase));
 const TIPO_VIDEO = { patrocinador:'Patrocinador', melhores:'Melhores momentos', institucional:'Supercopa TV' };
 function renderVideo(d){
   const vs = videosDaFase(d), full = $('#vfull');
@@ -1375,64 +1376,76 @@ var PAINEL_DATA_MOCK = {
     logosRodape: [ { nome:'Prefeitura', logo:'' }, { nome:'Sec. Esportes', logo:'' }, { nome:'ICM', logo:'' } ],
   },
 
-  equipes: [ // apresentação — um time por vez (dados reais do banco)
-    { nome:'ES VÔLEI',       cidade:'Vitória - ES',                 grupo:'A', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1qGjUZkQGr5j1YqYdqULeihekyItPaOrj=w320', atletas:[] },
-    { nome:'Ctv Aravôlei',   cidade:'Aracruz - ES',                 grupo:'A', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1NvTmCeyDc__the4nOmEb21Z4JscoAHTC=w320', atletas:[] },
-    { nome:'União vôlei',    cidade:'Linhares - ES',                grupo:'A', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1Fet7JFjqCWeE3_SqhxuvxPKPJPuYF2Mo=w320', atletas:[] },
-    { nome:'Equipe UVI',     cidade:'Itaperuna - RJ',               grupo:'B', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1nGFF0sNK2Bir6hw1FKN4JKTbBDQxGf3n=w320', atletas:[] },
-    { nome:'CTVA Voleibol',  cidade:'Colatina - ES',                grupo:'B', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1kNWUUJdBlHolmB6nFt239nQAAbu8pPEq=w320', atletas:[] },
-    { nome:'Tiger volley',   cidade:'Cachoeiro de Itapemirim - ES', grupo:'B', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1YHx4yi6cGRkTUHiTqLMA2MNmUV6WOaR2=w320', atletas:[] },
-    { nome:'CT das Montanhas',cidade:'Afonso Cláudio - ES',         grupo:'C', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png', atletas:[] },
-    { nome:'Supra Vôlei',    cidade:'Vitória - ES',                 grupo:'C', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1Lc53u9ZNPOnIqIT80Ayg3KzHhf2Ope4r=w320', atletas:[] },
-    { nome:'MS Vôlei',       cidade:'Serra - ES',                   grupo:'C', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1gHcVcpRSnaeK6X2v6E45Mpz9kp7rSy-j=w320', atletas:[] },
-    { nome:'RPB Volei',      cidade:'Cachoeiro de Itapemirim - ES', grupo:'D', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1bZstg5xhJnUFr-vTMqckEjD_xbiH9lox=w320', atletas:[] },
-    { nome:'Alpha Vôlei',    cidade:'Baixo Guandú - ES',            grupo:'D', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1VB6McN-MVHM8W5tuGRKFCxFddOBOHE6V=w320', atletas:[] },
-    { nome:'Super Vôlei',    cidade:'São Paulo - SP',               grupo:'D', naipe:'Masculino', tecnico:'', escudo:'https://lh3.googleusercontent.com/d/1dp2YSvAK06BHNGKAK2vMabjCair-PiGv=w320', atletas:[] },
+  equipes: [ // apresentação — um time por vez
+    { nome:'ES VÔLEI',        cidade:'Vitória - ES',                 grupo:'A', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/es-volei.png',       atletas:[] },
+    { nome:'Ctv Aravôlei',    cidade:'Aracruz - ES',                 grupo:'A', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/ctv-aravolei.png',   atletas:[] },
+    { nome:'União vôlei',     cidade:'Linhares - ES',                grupo:'A', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/uniao-volei.png',    atletas:[] },
+    { nome:'Equipe UVI',      cidade:'Itaperuna - RJ',               grupo:'B', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/equipe-uvi.png',     atletas:[] },
+    { nome:'CTVA Voleibol',   cidade:'Colatina - ES',                grupo:'B', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/ctva-voleibol.png',  atletas:[] },
+    { nome:'Tiger volley',    cidade:'Cachoeiro de Itapemirim - ES', grupo:'B', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/tiger-volley.png',   atletas:[] },
+    { nome:'CT das Montanhas',cidade:'Afonso Cláudio - ES',          grupo:'C', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png',atletas:[] },
+    { nome:'Supra Vôlei',     cidade:'Vitória - ES',                 grupo:'C', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/supra-volei.png',    atletas:[] },
+    { nome:'MS Vôlei',        cidade:'Serra - ES',                   grupo:'C', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/ms-volei.png',       atletas:[] },
+    { nome:'RPB Volei',       cidade:'Cachoeiro de Itapemirim - ES', grupo:'D', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/rpb-volei.png',      atletas:[] },
+    { nome:'Alpha Vôlei',     cidade:'Baixo Guandú - ES',            grupo:'D', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/alpha-volei.png',    atletas:[] },
+    { nome:'Super Vôlei',     cidade:'São Paulo - SP',               grupo:'D', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/super-volei.png',    atletas:[] },
   ],
 
   jogosAoVivo: [ // 0, 1 ou 2 jogos (uma por quadra) — atualizar a cada ponto
     { quadra:'Quadra principal - Eurico Vieira', fase:'Grupo A · Masculino', setAtual:1, saque:'A',
-      timeA:{ nome:'ES VÔLEI', logo:'https://lh3.googleusercontent.com/d/1qGjUZkQGr5j1YqYdqULeihekyItPaOrj=w320' }, timeB:{ nome:'Ctv Aravôlei', logo:'https://lh3.googleusercontent.com/d/1NvTmCeyDc__the4nOmEb21Z4JscoAHTC=w320' },
+      timeA:{ nome:'ES VÔLEI', logo:'https://www.supercopaafc.com.br/novo/escudos/es-volei.png' }, timeB:{ nome:'Ctv Aravôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ctv-aravolei.png' },
       setsA:0, setsB:0, pontosA:0, pontosB:0, parciais:[],
       ultimosPontos:[] },
     { quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo C · Masculino', setAtual:1, saque:'A',
-      timeA:{ nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png' }, timeB:{ nome:'Supra Vôlei', logo:'https://lh3.googleusercontent.com/d/1Lc53u9ZNPOnIqIT80Ayg3KzHhf2Ope4r=w320' },
+      timeA:{ nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png' }, timeB:{ nome:'Supra Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/supra-volei.png' },
       setsA:0, setsB:0, pontosA:0, pontosB:0, parciais:[],
       ultimosPontos:[] },
   ],
   proximosJogos: [
-    { data:'Hoje', hora:'14:15', quadra:'Quadra principal - Eurico Vieira',      fase:'Grupo B · Masculino', timeA:{ nome:'Equipe UVI',    logo:'https://lh3.googleusercontent.com/d/1nGFF0sNK2Bir6hw1FKN4JKTbBDQxGf3n=w320' }, timeB:{ nome:'CTVA Voleibol', logo:'https://lh3.googleusercontent.com/d/1kNWUUJdBlHolmB6nFt239nQAAbu8pPEq=w320' } },
-    { data:'Hoje', hora:'14:15', quadra:'Quadra alternativa - Anadir Barone',    fase:'Grupo D · Masculino', timeA:{ nome:'RPB Volei',    logo:'https://lh3.googleusercontent.com/d/1bZstg5xhJnUFr-vTMqckEjD_xbiH9lox=w320' }, timeB:{ nome:'Alpha Vôlei',  logo:'https://lh3.googleusercontent.com/d/1VB6McN-MVHM8W5tuGRKFCxFddOBOHE6V=w320' } },
-    { data:'Hoje', hora:'15:30', quadra:'Quadra principal - Eurico Vieira',      fase:'Grupo C · Masculino', timeA:{ nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png' }, timeB:{ nome:'MS Vôlei',    logo:'https://lh3.googleusercontent.com/d/1gHcVcpRSnaeK6X2v6E45Mpz9kp7rSy-j=w320' } },
-    { data:'Hoje', hora:'15:30', quadra:'Quadra alternativa - Anadir Barone',    fase:'Grupo A · Masculino', timeA:{ nome:'Ctv Aravôlei', logo:'https://lh3.googleusercontent.com/d/1NvTmCeyDc__the4nOmEb21Z4JscoAHTC=w320' }, timeB:{ nome:'União vôlei', logo:'https://lh3.googleusercontent.com/d/1Fet7JFjqCWeE3_SqhxuvxPKPJPuYF2Mo=w320' } },
-    { data:'Hoje', hora:'16:45', quadra:'Quadra principal - Eurico Vieira',      fase:'Grupo B · Masculino', timeA:{ nome:'CTVA Voleibol', logo:'https://lh3.googleusercontent.com/d/1kNWUUJdBlHolmB6nFt239nQAAbu8pPEq=w320' }, timeB:{ nome:'Tiger volley', logo:'https://lh3.googleusercontent.com/d/1YHx4yi6cGRkTUHiTqLMA2MNmUV6WOaR2=w320' } },
+    { data:'Hoje', hora:'14:15', quadra:'Quadra principal - Eurico Vieira',   fase:'Grupo B · Masculino', timeA:{ nome:'Equipe UVI',    logo:'https://www.supercopaafc.com.br/novo/escudos/equipe-uvi.png' },    timeB:{ nome:'CTVA Voleibol', logo:'https://www.supercopaafc.com.br/novo/escudos/ctva-voleibol.png' } },
+    { data:'Hoje', hora:'14:15', quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo D · Masculino', timeA:{ nome:'RPB Volei',    logo:'https://www.supercopaafc.com.br/novo/escudos/rpb-volei.png' },    timeB:{ nome:'Alpha Vôlei',  logo:'https://www.supercopaafc.com.br/novo/escudos/alpha-volei.png' } },
+    { data:'Hoje', hora:'15:30', quadra:'Quadra principal - Eurico Vieira',   fase:'Grupo C · Masculino', timeA:{ nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png' }, timeB:{ nome:'MS Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ms-volei.png' } },
+    { data:'Hoje', hora:'15:30', quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo A · Masculino', timeA:{ nome:'Ctv Aravôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ctv-aravolei.png' }, timeB:{ nome:'União vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/uniao-volei.png' } },
+    { data:'Hoje', hora:'16:45', quadra:'Quadra principal - Eurico Vieira',   fase:'Grupo B · Masculino', timeA:{ nome:'CTVA Voleibol', logo:'https://www.supercopaafc.com.br/novo/escudos/ctva-voleibol.png' }, timeB:{ nome:'Tiger volley', logo:'https://www.supercopaafc.com.br/novo/escudos/tiger-volley.png' } },
   ],
   grupos: [
     { letra:'A', jogosRealizados:0, jogosTotal:3, classificam:2, aoVivo:false, times:[
-      { nome:'ES VÔLEI',     logo:'https://lh3.googleusercontent.com/d/1qGjUZkQGr5j1YqYdqULeihekyItPaOrj=w320', pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'Ctv Aravôlei', logo:'https://lh3.googleusercontent.com/d/1NvTmCeyDc__the4nOmEb21Z4JscoAHTC=w320',  pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'União vôlei',  logo:'https://lh3.googleusercontent.com/d/1Fet7JFjqCWeE3_SqhxuvxPKPJPuYF2Mo=w320',  pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'ES VÔLEI',     logo:'https://www.supercopaafc.com.br/novo/escudos/es-volei.png',     pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'Ctv Aravôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ctv-aravolei.png', pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'União vôlei',  logo:'https://www.supercopaafc.com.br/novo/escudos/uniao-volei.png',  pontos:0, v:0, d:0, saldoSets:0 },
     ]},
     { letra:'B', jogosRealizados:0, jogosTotal:3, classificam:2, aoVivo:false, times:[
-      { nome:'Equipe UVI',    logo:'https://lh3.googleusercontent.com/d/1nGFF0sNK2Bir6hw1FKN4JKTbBDQxGf3n=w320', pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'CTVA Voleibol', logo:'https://lh3.googleusercontent.com/d/1kNWUUJdBlHolmB6nFt239nQAAbu8pPEq=w320', pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'Tiger volley',  logo:'https://lh3.googleusercontent.com/d/1YHx4yi6cGRkTUHiTqLMA2MNmUV6WOaR2=w320', pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'Equipe UVI',    logo:'https://www.supercopaafc.com.br/novo/escudos/equipe-uvi.png',    pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'CTVA Voleibol', logo:'https://www.supercopaafc.com.br/novo/escudos/ctva-voleibol.png', pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'Tiger volley',  logo:'https://www.supercopaafc.com.br/novo/escudos/tiger-volley.png',  pontos:0, v:0, d:0, saldoSets:0 },
     ]},
     { letra:'C', jogosRealizados:0, jogosTotal:3, classificam:2, aoVivo:false, times:[
-      { nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png',         pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'Supra Vôlei',      logo:'https://lh3.googleusercontent.com/d/1Lc53u9ZNPOnIqIT80Ayg3KzHhf2Ope4r=w320', pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'MS Vôlei',         logo:'https://lh3.googleusercontent.com/d/1gHcVcpRSnaeK6X2v6E45Mpz9kp7rSy-j=w320', pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png', pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'Supra Vôlei',      logo:'https://www.supercopaafc.com.br/novo/escudos/supra-volei.png',      pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'MS Vôlei',         logo:'https://www.supercopaafc.com.br/novo/escudos/ms-volei.png',         pontos:0, v:0, d:0, saldoSets:0 },
     ]},
     { letra:'D', jogosRealizados:0, jogosTotal:3, classificam:2, aoVivo:false, times:[
-      { nome:'RPB Volei',   logo:'https://lh3.googleusercontent.com/d/1bZstg5xhJnUFr-vTMqckEjD_xbiH9lox=w320', pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'Alpha Vôlei', logo:'https://lh3.googleusercontent.com/d/1VB6McN-MVHM8W5tuGRKFCxFddOBOHE6V=w320', pontos:0, v:0, d:0, saldoSets:0 },
-      { nome:'Super Vôlei', logo:'https://lh3.googleusercontent.com/d/1dp2YSvAK06BHNGKAK2vMabjCair-PiGv=w320', pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'RPB Volei',   logo:'https://www.supercopaafc.com.br/novo/escudos/rpb-volei.png',   pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'Alpha Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/alpha-volei.png', pontos:0, v:0, d:0, saldoSets:0 },
+      { nome:'Super Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/super-volei.png', pontos:0, v:0, d:0, saldoSets:0 },
     ]},
   ],
 
   patrocinadores: [ // cota: 'master' | 'ouro' | 'prata' | 'apoio'
-    { nome:'Patrocinador Master', cota:'master', logo:'' },
-    ...Array.from({length:13},(_,k)=>({ nome:'Patrocinador '+(k+1), cota:k<3?'ouro':k<7?'prata':'apoio', logo:'' })),
+    { nome:'Sicredi',                       cota:'master', logo:'https://www.supercopaafc.com.br/novo/parceiros/sicredi.png' },
+    { nome:'Planet Sports',                 cota:'ouro',   logo:'https://www.supercopaafc.com.br/novo/parceiros/planet-sports.png' },
+    { nome:'IZI Internet',                  cota:'ouro',   logo:'https://www.supercopaafc.com.br/novo/parceiros/izi-internet.png' },
+    { nome:'Coroa Instituto',               cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/coroa-instituto.png' },
+    { nome:'Casa Homem do Campo',           cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/casa-homem-do-campo.png' },
+    { nome:'Elite Suplementos',             cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/elite-suplementos.png' },
+    { nome:'Laboratório CDA',               cota:'prata',  logo:'https://www.supercopaafc.com.br/novo/parceiros/laboratorio-cda.png' },
+    { nome:'Açaí do Diego',                 cota:'apoio',  logo:'https://www.supercopaafc.com.br/novo/parceiros/acai-do-diego.png' },
+    { nome:'Express Pizzas e Lanches',      cota:'apoio',  logo:'https://www.supercopaafc.com.br/novo/parceiros/express-pizzas-e-lanches.png' },
+    { nome:'Prato Fino',                    cota:'apoio',  logo:'https://www.supercopaafc.com.br/novo/parceiros/prato-fino.png' },
+    { nome:'Restaurante do Marcão',         cota:'apoio',  logo:'https://www.supercopaafc.com.br/novo/parceiros/restaurante-do-marcao.png' },
+    { nome:'Jacaré Fotografia',             cota:'apoio',  logo:'https://www.supercopaafc.com.br/novo/parceiros/jacare-fotografia.png' },
+    { nome:'Basquetebol das Montanhas',     cota:'apoio',  logo:'https://www.supercopaafc.com.br/novo/parceiros/basquetebol-das-montanhas.png' },
+    { nome:'Instituto Cultural das Montanhas', cota:'apoio', logo:'https://www.supercopaafc.com.br/novo/parceiros/instituto-cultural-das-montanhas.png' },
   ],
 
   quiz: {
@@ -1457,8 +1470,8 @@ var PAINEL_DATA_MOCK = {
 
   encerramento: {
     edicao: '2026',
-    final: { fase:'Grande final · Feminino', data:'06/12', quadra:'Quadra Principal', duracao:'1h48', timeA:{ nome:'Time A1', logo:'' }, timeB:{ nome:'Time C1', logo:'' }, setsA:3, setsB:1, parciais:[[25,21],[23,25],[25,19],[25,22]] },
-    podio: [ { posicao:1, nome:'Time A1', cidade:'Afonso Cláudio', logo:'' }, { posicao:2, nome:'Time C1', cidade:'Domingos Martins', logo:'' }, { posicao:3, nome:'Time B1', cidade:'Itarana', logo:'' } ],
+    final: { fase:'Grande final · Masculino', data:'28/11', quadra:'Quadra principal - Eurico Vieira', duracao:'', timeA:{ nome:'', logo:'' }, timeB:{ nome:'', logo:'' }, setsA:0, setsB:0, parciais:[] },
+    podio: [ { posicao:1, nome:'', cidade:'', logo:'' }, { posicao:2, nome:'', cidade:'', logo:'' }, { posicao:3, nome:'', cidade:'', logo:'' } ],
     campeao: { nome:'Time A1', cidade:'Afonso Cláudio', logo:'', fotoTime:'' },
     premiacao: [
       { categoria:'MVP da Supercopa', nome:'Nome da Atleta', time:'Time A1', timeLogo:'', foto:'', destaque:'' },
