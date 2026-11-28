@@ -1194,13 +1194,28 @@ try{
   _bc.onmessage = e => {
     const d = e.data || {};
     if(d.type==='fase'){ faseForcada = d.fase; try{localStorage.setItem('sc-telao-fase',d.fase);}catch(_){} setFase(faseAtual()); buildOp(); }
-    else if(d.type==='tela'){ const k=playlist().indexOf(d.tela); if(k>=0) show(k); }
+    else if(d.type==='tela'){
+      // busca a tela na fase atual primeiro, senão procura em todas as fases
+      let k = playlist().indexOf(d.tela);
+      if(k < 0){
+        const faseAlvo = Object.keys(FASES).find(f => FASES[f].telas.includes(d.tela));
+        if(faseAlvo){ faseForcada = faseAlvo; try{localStorage.setItem('sc-telao-fase',faseAlvo);}catch(_){} setFase(faseAlvo); k = playlist().indexOf(d.tela); }
+      }
+      if(k >= 0) show(k);
+    }
     else if(d.type==='voltar'||d.type==='prev') show(cur-1,-1);
     else if(d.type==='avancar'||d.type==='next') show(cur+1);
     else if(d.type==='pausa'){ paused = d.val!==undefined ? d.val : !paused; t0=performance.now(); buildOp(); }
     else if(d.type==='duracao' && d.tela && d.seg){ TELAS[d.tela] && (TELAS[d.tela].dur = +d.seg); }
     else if(d.type==='playlist' && Array.isArray(d.telas)){
-      const f = faseAtual(); if(FASES[f]) FASES[f].telas = d.telas; show(0);
+      // salva a lista de telas ativas; aplica como filtro na fase atual sem travar a navegação
+      try{ localStorage.setItem('sc-telas-ativas', JSON.stringify(d.telas)); }catch(_){}
+      const f = faseAtual();
+      if(FASES[f]){
+        const ativas = new Set(d.telas);
+        const filtradas = FASES[f].telas.filter(t => ativas.has(t));
+        if(filtradas.length) FASES[f].telas = filtradas;
+      }
     }
     _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur],pausado:paused});
   };
@@ -1347,7 +1362,7 @@ var PAINEL_DATA_MOCK = {
     complemento: 'à Supercopa de Voleibol',  // linha abaixo de "Bem-vindos"
     fotosHeroi: ['', '', ''],              // OUTDOOR: [0] rosto/retrato de fundo (vira duotone azul) · [1] e [2] atletas em ação, PNG sem fundo
     status: 'Ginásio Municipal · Afonso Cláudio',
-    logo: '', appQrcode: '',
+    logo: '', appQrcode: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=4&data=https://supercopa-app.vercel.app',
     inicio: '2026-11-28T13:00:00-03:00',
     inicioTexto: 'Abertura 28/11 · 13h',
     dataTexto: '28/11', local: 'Ginásio Municipal', aberturaTexto: '13h00',
