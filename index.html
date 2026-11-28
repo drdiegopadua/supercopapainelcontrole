@@ -8368,8 +8368,15 @@ try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) na
     }catch(e){}
   }
 
+  // canal local (mesmo navegador) + banco (telão em outro aparelho); o telão ignora o repetido pelo cid
+  var TL_REMOTO = ['fase','tela','avancar','voltar','pausa','modo'];
   window.tlEnviar = function(msg){
+    msg = Object.assign({ cid: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }, msg);
     try{ if(!tlBc) tlConectar(); tlBc.postMessage(msg); } catch(e){}
+    if(TL_REMOTO.indexOf(msg.type) >= 0){
+      fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api', { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ acao:'telaoCmd', auth: authApi_(), cmd: msg }) })
+        .then(function(r){ return r.json(); }).then(function(j){ if(!j.ok && typeof showToast==='function') showToast('Telão remoto: ' + (j.erro || 'falhou')); }).catch(function(){});
+    }
   };
 
   window.tlSetFase = function(f){

@@ -1446,6 +1446,29 @@ async function telaoAvisoSalvar(d: Any) {
   await sb.from("config").upsert({ chave: "telao_aviso", valor: { texto, ativo: !!d.ativo && !!texto, ate }, atualizado_em: new Date().toISOString() });
   return { ok: true, ...(await telaoAviso()) };
 }
+// ════════ Controle remoto do telão: o app grava o comando, o telão consulta a cada poucos segundos ════════
+const TELAO_CMD_TIPOS = ["fase", "tela", "avancar", "voltar", "pausa", "modo"];
+async function telaoCmd(d: Any) {
+  const c: Any = await papel(d.auth, ["admin", "organizacao"]); if (c.erro) return { ok: false, erro: c.erro };
+  const m: Any = d.cmd || {};
+  if (!TELAO_CMD_TIPOS.includes(m.type)) return { ok: false, erro: "Comando inválido." };
+  const cmd: Any = { type: m.type, cid: String(m.cid || crypto.randomUUID()).slice(0, 40) };
+  if (m.fase !== undefined) cmd.fase = String(m.fase).slice(0, 30);
+  if (m.tela !== undefined) cmd.tela = String(m.tela).slice(0, 30);
+  if (m.val !== undefined) cmd.val = !!m.val;
+  if (m.fixo !== undefined) cmd.fixo = !!m.fixo;
+  const { data } = await sb.from("config").select("valor").eq("chave", "telao_cmd").maybeSingle();
+  const v: Any = (data && data.valor) || {};
+  const seq = (Number(v.seq) || 0) + 1;
+  const cmds = [...(Array.isArray(v.cmds) ? v.cmds : []), { ...cmd, seq, em: new Date().toISOString() }].slice(-30);
+  const { error } = await sb.from("config").upsert({ chave: "telao_cmd", valor: { seq, cmds }, atualizado_em: new Date().toISOString() });
+  return error ? { ok: false, erro: error.message } : { ok: true, seq };
+}
+async function telaoCmds(d: Any) {
+  const [{ data }, aviso] = await Promise.all([sb.from("config").select("valor").eq("chave", "telao_cmd").maybeSingle(), telaoAviso()]);
+  const v: Any = (data && data.valor) || {}, desde = Number(d.desde) || 0;
+  return { ok: true, seq: Number(v.seq) || 0, cmds: (v.cmds || []).filter((c: Any) => c.seq > desde), aviso };
+}
 async function telaoFotos() {
   const { data } = await sb.from("config").select("valor").eq("chave", "telao_fotos").maybeSingle();
   const v: Any = (data && data.valor) || {};
@@ -1890,6 +1913,8 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "voucherComissao": return await voucherComissao(d);
     case "voucherPainel": return await voucherPainel(d);
     case "telaoAviso": return await telaoAviso();
+    case "telaoCmd": return await telaoCmd(d);
+    case "telaoCmds": return await telaoCmds(d);
     case "telaoAvisoSalvar": return await telaoAvisoSalvar(d);
     case "telaoFotosSalvar": return await telaoFotosSalvar(d);
     case "galeriaEnviar": return await galeriaEnviar(d);

@@ -575,6 +575,11 @@
   .vprog{position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(255,255,255,.2);z-index:2}
   .vprog i{display:block;height:100%;width:0;background:var(--grad)}
   #vfull{position:absolute;inset:0;z-index:30;background:#000;display:none}
+  #avisoFaixa{position:absolute;left:56px;right:56px;top:210px;z-index:40;display:none;align-items:center;gap:26px;padding:26px 40px;border-radius:26px;background:linear-gradient(90deg,#d11a2a,#ff3b3b);color:#fff;box-shadow:0 14px 44px rgba(209,26,42,.45)}
+  #avisoFaixa.on{display:flex;animation:avIn .5s ease-out}
+  #avisoFaixa b{flex:none;font-size:15px;font-weight:800;letter-spacing:4px;text-transform:uppercase;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.2)}
+  #avisoFaixa span{font-family:var(--F);font-weight:800;font-size:46px;line-height:1.05;text-transform:uppercase}
+  @keyframes avIn{from{opacity:0;transform:translateY(-16px)}}
   #vfull.on{display:block}
   #vfull .corner{position:absolute;right:36px;top:28px;width:170px;height:76px;border-radius:16px;background:#fff;z-index:2}
 
@@ -710,6 +715,7 @@
   </footer>
 
   <div id="vfull"></div>
+  <div id="avisoFaixa"><b>Aviso</b><span></span></div>
   <div id="alerta"></div>
   <div id="op"></div>
 </div>
@@ -1289,11 +1295,13 @@ let _lsAtivas = null; try{ const s=localStorage.getItem('sc-telao-playlist'); if
 let globalPlaylist = (_lsAtivas && _lsAtivas.length) ? _lsAtivas : null;
 // modo tela fixa: fica na tela escolhida no painel, sem avançar sozinho
 let fixo = false; try{ fixo = localStorage.getItem('sc-telao-fixo')==='1'; }catch(_){}
-/* BroadcastChannel — recebe comandos do admin (fase, tela, pausa, prev, next) */
-try{
-  const _bc = new BroadcastChannel('supercopa-telao');
-  _bc.onmessage = e => {
-    const d = e.data || {};
+/* comandos do painel: chegam pelo canal local (mesmo navegador) e pelo banco (celular/outro aparelho) */
+const CMD_FEITOS = new Set();
+let _bc = null; try{ _bc = new BroadcastChannel('supercopa-telao'); }catch(_){}
+function comando(d){
+    d = d || {};
+    if(!fase) return;   // ainda carregando
+    if(d.cid){ if(CMD_FEITOS.has(d.cid)) return; CMD_FEITOS.add(d.cid); if(CMD_FEITOS.size>300) CMD_FEITOS.delete(CMD_FEITOS.values().next().value); }
     if(d.type==='fase'){ faseForcada = d.fase; try{localStorage.setItem('sc-telao-fase',d.fase);}catch(_){} setFase(faseAtual()); buildOp(); }
     else if(d.type==='tela'){
       // busca a tela na fase atual primeiro, senão procura em todas as fases
@@ -1319,9 +1327,26 @@ try{
       // se a tela atual não está na nova playlist, vai pra primeira
       if(globalPlaylist && !globalPlaylist.includes(playlist()[cur])) show(0);
     }
-    _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur],pausado:paused,fixo});
-  };
-}catch(_){}
+    try{ _bc && _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur],pausado:paused,fixo}); }catch(_){}
+}
+if(_bc) _bc.onmessage = e => comando(e.data);
+let cmdSeq = null;
+async function buscarComandos(){
+  try{
+    const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?action=telaoCmds&desde='+(cmdSeq??0),{cache:'no-store'});
+    const j = await r.json(); if(!j.ok || typeof j.seq!=='number') return;   // função antiga ainda sem comandos
+    if(cmdSeq===null){ cmdSeq = j.seq; } else { (j.cmds||[]).forEach(c=>{ if(Date.now()-Date.parse(c.em) < 120000) comando(c); }); cmdSeq = Math.max(cmdSeq, j.seq); }
+    avisoTelao(j.aviso);
+  }catch(_){}
+}
+function avisoTelao(a){
+  const el = $('#avisoFaixa'); if(!el) return;
+  const on = !!(a && a.ativo && a.texto);
+  if(on) el.querySelector('span').textContent = a.texto;
+  el.classList.toggle('on', on);
+}
+setInterval(buscarComandos, 3000);
+buscarComandos();
 if(params.get('slots')==='0') CONFIG.mostrarSlots = false;
 document.body.classList.toggle('slots', CONFIG.mostrarSlots);
 const faseAtual = () => { const f = faseForcada || (DATA && DATA.painel && DATA.painel.fase) || 'pre'; return FASES[f] ? f : 'pre'; };
