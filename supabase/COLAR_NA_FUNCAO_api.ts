@@ -1200,8 +1200,25 @@ async function registrarPatrocinio(d: Any) {
   return error ? { ok: false, erro: error.message } : { ok: true };
 }
 async function statsPatrocinio() {
-  const { data, error } = await sb.rpc("patrocinio_resumo");
-  return error ? { ok: false, erro: error.message } : { ok: true, ...data };
+  const [{ data, error }, { data: tl }] = await Promise.all([sb.rpc("patrocinio_resumo"), sb.from("patrocinio_diario").select("local,patrocinador,n").eq("plataforma", "telao")]);
+  if (error) return { ok: false, erro: error.message };
+  const por: Record<string, number> = {}, loc: Record<string, number> = {};
+  (tl || []).forEach((r: Any) => { por[r.patrocinador] = (por[r.patrocinador] || 0) + Number(r.n); loc[r.local] = (loc[r.local] || 0) + Number(r.n); });
+  const telao = { total: Object.values(por).reduce((a, b) => a + b, 0), porPatrocinador: Object.entries(por).map(([patrocinador, n]) => ({ patrocinador, n })).sort((a, b) => b.n - a.n), porLocal: loc };
+  return { ok: true, ...data, telao };
+}
+// Telão de LED: manda lotes { local, contagem: { slug: n } } (só conta a partir de 28/11/2026 13h, regra do próprio telão)
+async function registrarTelaoPatrocinio(d: Any) {
+  const local = (d.local || "").toString();
+  if (!["telao-rodape", "telao-tela"].includes(local) || !d.contagem || typeof d.contagem !== "object") return { ok: false, erro: "dados inválidos" };
+  const dia = new Date().toLocaleDateString("sv-SE", { timeZone: TZ });
+  const itens = Object.entries(d.contagem).filter(([k, v]) => /^[a-z0-9-]{2,60}$/.test(k) && Number.isInteger(v) && (v as number) > 0 && (v as number) <= 2000).slice(0, 40) as [string, number][];
+  for (const [slug, n] of itens) {
+    const { data: ex } = await sb.from("patrocinio_diario").select("n").eq("dia", dia).eq("plataforma", "telao").eq("local", local).eq("patrocinador", slug).maybeSingle();
+    const { error } = await sb.from("patrocinio_diario").upsert({ dia, plataforma: "telao", local, patrocinador: slug, n: Number(ex?.n || 0) + n });
+    if (error) return { ok: false, erro: error.message };
+  }
+  return { ok: true, registrados: itens.length };
 }
 const INSCRICOES_ENCERRADAS = true; // mude para false para reabrir as inscrições
 async function inscrever(d: Any) {
@@ -1488,7 +1505,8 @@ async function painelTelao() {
 
   const equipes = t.equipes.filter((e: Any) => e.grupo).sort((a: Any, b: Any) => String(a.grupo).localeCompare(String(b.grupo)) || (a.ordem || 0) - (b.ordem || 0))
     .map((e: Any) => {
-      const el = elenco[chaveEq(e.nome)] || [];
+      // equipe gravada com acento corrompido (U+FFFD), ex.: "Super V�lei" → casa com "Super Vôlei"
+      const el = elenco[chaveEq(e.nome)] || Object.keys(elenco).filter((k) => k.includes("�") && new RegExp("^" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/�/g, ".") + "$").test(chaveEq(e.nome))).flatMap((k) => elenco[k]);
       const tec = el.find((a: Any) => normalizarTipo(a.tipo) === "Técnico");
       const atletas = el.filter((a: Any) => !ehComissao(normalizarTipo(a.tipo)))
         .sort((a: Any, b: Any) => (parseInt(a.numero) || 999) - (parseInt(b.numero) || 999))
@@ -1889,6 +1907,7 @@ async function rotear(acao: string, d: Any, ehGet: boolean): Promise<Any | null>
     case "tipo:app_acesso": return await registrarVisita("app", d.deviceId);
     case "tipo:site_acesso": return await registrarVisita("site", d.deviceId);
     case "tipo:patrocinio_view": return await registrarPatrocinio(d);
+    case "patrocinio_telao": return await registrarTelaoPatrocinio(d);
     case "patrocinio_stats": return await statsPatrocinio();
     case "tipo:push_subscribe": case "tipo:push_unsubscribe": case "tipo:push_limpar": return { ok: true };   // push usa servidor próprio (Render)
     case "feedback": return ehGet ? await listarFeedback() : await registrarFeedback(d);

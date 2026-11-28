@@ -739,6 +739,34 @@ const ESCURAS = ['campeao'];   // telas em modo escuro
 // o telão fica na quadra principal: ao vivo e próximos jogos só dela
 const QUADRA_TELAO = /eurico/i;
 const daQuadra = d => ({ ...d, jogosAoVivo:(d.jogosAoVivo||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')), proximosJogos:(d.proximosJogos||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')), jogosFinalizados:(d.jogosFinalizados||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')) });
+/* contagem de exibições de logos de patrocinadores no telão (vai para o relatório final) */
+const PATROC_INICIO = Date.parse('2026-11-28T13:00:00-03:00'), CONT_LOGOS = {};
+function contaLogos(local, urls){
+  if(Date.now() < PATROC_INICIO || document.hidden) return;
+  urls.forEach(u=>{ const m = /parceiros\/([a-z0-9-]+)\.(png|jpe?g|webp|svg)/i.exec(u||''); if(!m) return;
+    const c = CONT_LOGOS[local] = CONT_LOGOS[local]||{}, k = m[1].toLowerCase(); c[k] = (c[k]||0)+1; });
+}
+function contarTela(id){
+  const el = document.getElementById('tela-'+id), vf = $('#vfull');
+  const imgs = [...(el?el.querySelectorAll('img'):[]), ...(vf.classList.contains('on')?vf.querySelectorAll('img'):[])];
+  contaLogos('telao-tela', [...new Set(imgs.map(i=>i.getAttribute('src')))]);
+}
+function contarRodape(){
+  if(!DATA || $('#vfull').classList.contains('on')) return;   // vídeo em tela cheia cobre o rodapé
+  contaLogos('telao-rodape', (DATA.patrocinadores||[]).map(p=>p.logo));
+}
+async function enviarContagem(){
+  for(const local of Object.keys(CONT_LOGOS)){
+    const contagem = CONT_LOGOS[local]; if(!Object.keys(contagem).length) continue;
+    delete CONT_LOGOS[local];
+    try{
+      const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'patrocinio_telao',local,contagem})});
+      const j = await r.json(); if(!j.ok) throw new Error(j.erro||'falhou');
+    }catch(e){ const c = CONT_LOGOS[local] = CONT_LOGOS[local]||{}; Object.keys(contagem).forEach(k=>c[k]=(c[k]||0)+contagem[k]); }   // devolve e tenta no próximo envio
+  }
+}
+setInterval(enviarContagem, 60000);
+addEventListener('pagehide', ()=>{ for(const local of Object.keys(CONT_LOGOS)){ try{ navigator.sendBeacon('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api', JSON.stringify({acao:'patrocinio_telao',local,contagem:CONT_LOGOS[local]})); }catch(_){} } });
 async function carregarDados(){
   try{
     const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?painel=1',{cache:'no-store'});
@@ -1112,7 +1140,7 @@ function renderPremiacao(d){
 }
 let thxPage = 0, thxVisto = false;
 function renderAgradecimento(d){
-  const all = d.patrocinadores||[], per = 12, pages = Math.max(1,Math.ceil(all.length/per)), pg = thxPage % pages, sl = all.slice(pg*per,pg*per+per); while(sl.length<per) sl.push({});
+  const all = d.patrocinadores||[], per = 12, pages = Math.max(1,Math.ceil(all.length/per)), pg = thxPage % pages, sl = all.length ? Array.from({length:per},(_,k)=>all[(pg*per+k)%all.length]) : Array(per).fill({});   // sem caixa vazia: completa repetindo logos
   setTela('agradecimento', `
   <div class="ty"><div class="H">${kin('Obrigado',.1,'gt')}</div>
     <div class="k rv" ${D(.1)} data-slot="encerramento.agradecimento">${esc((d.encerramento||{}).agradecimento||'')}</div>
@@ -1285,6 +1313,7 @@ function show(i, passo=1){
   if(id==='video'){ if(videoVisto) videoIdx++; videoVisto = true; }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   if(DATA && RENDER[id]) RENDER[id](DATA);
+  contarTela(id);
   const el = document.getElementById('tela-'+id); void el.offsetWidth; el.classList.add('active');
   const sw = $('#sweep'); sw.classList.remove('go'); void sw.offsetWidth; sw.classList.add('go');
   countUp(el);
@@ -1349,7 +1378,7 @@ addEventListener('keydown', e=>{
   ({s:'setpoint',x:'matchpoint',e:'fimset',j:'fimjogo',t:'tempo',d:'desafio'})[k] && demoAlerta(({s:'setpoint',x:'matchpoint',e:'fimset',j:'fimjogo',t:'tempo',d:'desafio'})[k]);
 });
 let mt; addEventListener('mousemove',()=>{ document.body.classList.add('cursor'); clearTimeout(mt); mt=setTimeout(()=>document.body.classList.remove('cursor'),3500); });
-function every(sec, tela, fn){ setInterval(()=>{ if(DATA && playlist()[cur]===tela && !alertaOn){ fn(); RENDER[tela](DATA); } }, sec*1000); }
+function every(sec, tela, fn){ setInterval(()=>{ if(DATA && playlist()[cur]===tela && !alertaOn){ fn(); RENDER[tela](DATA); contarTela(tela); } }, sec*1000); }
 async function atualizar(){
   try{
     DATA = await carregarDados(); renderFixos(DATA);
@@ -1372,6 +1401,7 @@ window.addEventListener('load', async ()=>{
   every(CONFIG.patrocinadorTrocaACada,'contagem',()=>{ sponsRotIdx++; msgIdx++; });
   every(CONFIG.mensagemTrocaACada,'boasvindas',()=>msgIdx++);
   every(CONFIG.fotoTrocaACada,'galera',()=>fanIdx++);
+  $('#logoRun').addEventListener('animationiteration', contarRodape);   // cada volta da faixa = cada logo passou 1 vez
   requestAnimationFrame(tick);
 });
 
