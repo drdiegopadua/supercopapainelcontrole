@@ -1448,9 +1448,9 @@ var PAINEL_DATA_MOCK = {
   ],
 
   quiz: {
-    atualizadoEm:'há 1 min', totalParticipantes:128, chamada:'Jogue o quiz e entre no ranking!', link:'supercopaafc.com.br/quiz',
+    atualizadoEm:'', totalParticipantes:0, chamada:'Jogue o quiz e entre no ranking!', link:'supercopaafc.com.br/quiz',
     premio:'Prêmio para o 1º lugar no encerramento', qrcode:'',
-    ranking: [980,940,910,860,820,790,740,700,650,610].map((p,k)=>({ nome:'Participante '+(k+1), pontos:p, acertos:10-Math.floor(k/2), tempo:k<3?['1m12s','1m30s','1m05s'][k]:'' })),
+    ranking: [],   // vem do banco (quiz_respostas) via ?painel=1
   },
   galera: {
     chamada:'Mande sua foto!', hashtag:'#SupercopaAFC', qrcode:'',
