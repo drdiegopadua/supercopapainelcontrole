@@ -1519,6 +1519,9 @@ async function painelTelao() {
   const ok = fotosCfg.ids ? new Set(fotosCfg.ids) : null;
   const sel = (fotos || []).filter((f: Any) => !ok || ok.has(f.id)).slice(0, 30).map((f: Any) => ({ url: galUrl(f.f), nome: "", legenda: f.legenda || "" }));
   if (sel.length) out.galera = { fotos: sel };
+  const dst: Any = await rankingDestaque({});
+  out.destaque = { totalVotos: dst.totalVotos, aberta: dst.aberta, antes: dst.antes, abreEm: dst.abreEm, encerraEm: dst.encerraEm,
+    ranking: (dst.ranking || []).slice(0, 10).map((r: Any) => ({ nome: r.nome, time: r.equipe, numero: r.numero || "", votos: r.votos, pct: r.pct })) };
   if (t.campeao) out.campeao = t.campeao;
   return out;
 }

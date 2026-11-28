@@ -680,6 +680,7 @@
     <section class="screen" id="tela-classificacao"></section>
     <section class="screen" id="tela-publicidade"></section>
     <section class="screen" id="tela-quiz"></section>
+    <section class="screen" id="tela-destaque"></section>
     <section class="screen" id="tela-galera"></section>
     <section class="screen" id="tela-resultado"></section>
     <section class="screen" id="tela-podio"></section>
@@ -718,7 +719,7 @@ const CONFIG = {
 };
 const TELAS = {
   contagem:{n:'Contagem',dur:20}, boasvindas:{n:'Boas-vindas',dur:20}, equipes:{n:'Equipes',dur:60}, aovivo:{n:'Ao vivo',dur:30},
-  proximo:{n:'Próximo jogo',dur:15}, classificacao:{n:'Classificação',dur:20}, publicidade:{n:'Patrocinadores',dur:15}, quiz:{n:'Quiz',dur:20},
+  proximo:{n:'Próximo jogo',dur:15}, classificacao:{n:'Classificação',dur:20}, publicidade:{n:'Patrocinadores',dur:15}, quiz:{n:'Quiz',dur:20}, destaque:{n:'Destaque da Galera',dur:20},
   galera:{n:'Galera',dur:25}, resultado:{n:'Resultado',dur:18}, podio:{n:'Pódio',dur:18}, campeao:{n:'Campeão',dur:25},
   premiacao:{n:'Premiação',dur:22}, agradecimento:{n:'Obrigado',dur:18}, video:{n:'Vídeo',dur:30},
 };
@@ -727,7 +728,7 @@ const FASES = {
   apresentacao:   { nome:'Equipes',      telas:['equipes','publicidade'] },
   jogos:          { nome:'Jogos',        telas:['aovivo','proximo','aovivo','classificacao','video','publicidade'] },
   publicidade:    { nome:'Publicidade',  telas:['publicidade','video'] },
-  entretenimento: { nome:'Diversão',     telas:['quiz','galera','video','publicidade'] },
+  entretenimento: { nome:'Diversão',     telas:['quiz','destaque','galera','video','publicidade'] },
   encerramento:   { nome:'Encerramento', telas:['resultado','podio','campeao','premiacao','agradecimento'] },
 };
 const ESCURAS = ['campeao'];   // telas em modo escuro
@@ -750,6 +751,7 @@ async function carregarDados(){
     if(d.equipes && d.equipes.length) out.equipes = d.equipes;
     if(d.quiz) out.quiz = { ...M.quiz, ...d.quiz };
     if(d.galera) out.galera = { ...M.galera, ...d.galera };
+    if(d.destaque) out.destaque = { ...M.destaque, ...d.destaque };
     return daQuadra(out);
   }catch(e){ console.warn('[Painel] API indisponível, usando mock',e); return daQuadra(PAINEL_DATA_MOCK); }
 }
@@ -1000,6 +1002,25 @@ function renderPublicidade(d){
 /* =============================================================================
    05 ENTRETENIMENTO
    ============================================================================= */
+function renderDestaque(d){
+  const q = d.destaque||{}, rk = q.ranking||[], max = Math.max(1,...rk.map(r=>r.votos||0));
+  const st = q.aberta ? 'Votação aberta' : q.antes ? 'Abre '+(q.abreEm?new Date(q.abreEm).toLocaleString('pt-BR',{weekday:'short',hour:'2-digit',minute:'2-digit'}):'em breve') : (rk.length?'Votação encerrada':'');
+  const pd = i => { const r = rk[i]||{nome:'—',votos:0,time:''};
+    return `<div class="pd p${i+1} rv" ${D(i===0?.1:.2)}>${gauge((r.votos||0)/max, `<div class="pos">${i+1}º</div><div class="v gt num" data-to="${r.votos||0}">${r.votos||0}</div><div class="u">VOTOS</div>`)}
+      <div class="w">${esc(r.nome)}</div><div class="u">${esc(r.time||'')}${r.numero?' · Nº '+esc(r.numero):''}</div></div>`; };
+  setTela('destaque', `
+  <div class="qz">
+    <div class="glass pod rv"><div style="display:flex;justify-content:space-between"><span class="eyebrow">Destaque da galera</span><span class="eyebrow m">${esc(st)}</span></div>
+      <div class="row">${pd(1)}${pd(0)}${pd(2)}</div></div>
+    <div class="glass ls rv" ${D(.1)}><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="eyebrow">Ranking</span><span class="eyebrow m">${q.totalVotos??0} votos</span></div>
+      ${rk.slice(3,10).map((r,i)=>{ const p=Math.max(4,(r.votos||0)/max*100); return `<div class="li"><div class="n">${pad(i+4)}</div>
+        <div><div class="w">${esc(r.nome)} <span class="eyebrow m" style="font-size:11px">${esc(r.time||'')}</span></div><div class="slider"><i style="width:${p}%"></i><b style="left:${p}%"></b></div></div>
+        <div class="v num" data-to="${r.votos||0}">${r.votos||0}</div></div>`; }).join('')}</div>
+    <div class="glass cta rv" ${D(.2)}><span class="eyebrow">Vote agora</span><div class="H">${esc(q.chamada||'')}</div>
+      <div class="qr imgbox ct">${img(q.qrcode,'qr','QR CODE')}</div>
+      <div class="url">${esc(q.link||'')}</div><p>Escolha o atleta que mais brilhou na quadra.</p><div class="btn">Votar</div></div>
+  </div>`);
+}
 function renderQuiz(d){
   const q = d.quiz||{}, rk = q.ranking||[], max = Math.max(1,...rk.map(r=>r.pontos||0));
   const pd = i => { const r = rk[i]||{nome:'—',pontos:0};
@@ -1189,7 +1210,7 @@ function proximoAlerta(){
   setTimeout(proximoAlerta, CONFIG.alertaDuracao*1000);
 }
 
-const RENDER = { contagem:renderContagem, boasvindas:renderBoasVindas, equipes:renderEquipes, aovivo:renderAoVivo, proximo:renderProximo,
+const RENDER = { destaque:renderDestaque, contagem:renderContagem, boasvindas:renderBoasVindas, equipes:renderEquipes, aovivo:renderAoVivo, proximo:renderProximo,
   classificacao:renderClassificacao, publicidade:renderPublicidade, quiz:renderQuiz, galera:renderGalera, resultado:renderResultado,
   podio:renderPodio, campeao:renderCampeao, premiacao:renderPremiacao, agradecimento:renderAgradecimento, video:renderVideo };
 
@@ -1335,7 +1356,7 @@ async function atualizar(){
     analisarJogos(DATA.jogosAoVivo, faseAtual()==='jogos'); alertaManual(DATA);
     const f = faseAtual();
     if(f!==fase) setFase(f);
-    else { const id = playlist()[cur]; if(['aovivo','classificacao','quiz'].includes(id)) RENDER[id](DATA); }   // atualiza só telas "ao vivo" (sem reiniciar animações das outras)
+    else { const id = playlist()[cur]; if(['aovivo','classificacao','quiz','destaque'].includes(id)) RENDER[id](DATA); }   // atualiza só telas "ao vivo" (sem reiniciar animações das outras)
   }catch(err){ console.error('[Painel] falha ao carregar dados', err); }
 }
 window.addEventListener('load', async ()=>{
@@ -1456,6 +1477,7 @@ var PAINEL_DATA_MOCK = {
     premio:'Prêmio para o 1º lugar no encerramento', qrcode:'',
     ranking: [],   // vem do banco (quiz_respostas) via ?painel=1
   },
+  destaque: { chamada:'Vote no destaque da galera!', link:'supercopaafc.com.br/#destaque', qrcode:'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=4&data=https://www.supercopaafc.com.br/%23destaque', totalVotos:0, ranking:[] },
   galera: {
     chamada:'Mande sua foto!', hashtag:'#SupercopaAFC', qrcode:'',
     instrucao:'Poste com a hashtag ou envie pelo app. As melhores aparecem aqui no telão.',
