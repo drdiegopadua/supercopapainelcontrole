@@ -164,14 +164,16 @@
   /* ======================================================
      01. BEM-VINDOS
   ====================================================== */
-  .bb{position:relative;width:100%;height:100%;background:var(--navy);overflow:hidden}
+  .bb{position:relative;width:100%;height:100%;overflow:hidden;
+    background:linear-gradient(135deg,var(--navy) 0%,#152369 100%)}
+  /* Orange diagonal stripe — always visible */
+  .bb::after{content:'';position:absolute;top:0;left:calc(50% - 4px);width:9px;height:100%;
+    background:var(--orange);transform:skewX(-3.5deg);z-index:5;pointer-events:none}
   /* RIGHT PANEL — hero photo */
-  .bb .face{position:absolute;right:0;top:0;bottom:0;width:50%;overflow:hidden;z-index:0}
+  .bb .face{position:absolute;right:0;top:0;bottom:0;width:50%;overflow:hidden;z-index:1}
   .bb .face img{width:100%;height:100%;object-fit:cover;object-position:top center}
   /* Gradient blend on left edge of photo */
-  .bb .face::after{content:'';position:absolute;top:0;left:0;bottom:0;width:140px;background:linear-gradient(to right,var(--navy),transparent);z-index:1;pointer-events:none}
-  /* Orange diagonal stripe */
-  .bb .face::before{content:'';position:absolute;top:0;left:-5px;bottom:0;width:9px;background:var(--orange);transform:skewX(-3.5deg);z-index:2;pointer-events:none}
+  .bb .face::after{content:'';position:absolute;top:0;left:0;bottom:0;width:140px;background:linear-gradient(to right,var(--navy),transparent);z-index:2;pointer-events:none}
   /* Athlete cutouts */
   .bb .ath{position:absolute;bottom:0;object-fit:contain;object-position:bottom;z-index:3}
   .bb .ath.empty{display:none}
