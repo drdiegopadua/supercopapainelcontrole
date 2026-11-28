@@ -816,7 +816,7 @@ async function carregarDados(){
       logo:'', appQrcode:qr(APP), inicio:'2026-11-28T08:00:00', inicioTexto:'28 de novembro de 2026',
       dataTexto:'28 e 29 de novembro de 2026', local:'Afonso Cláudio · ES', aberturaTexto:'Sábado às 13h',
       mensagens:['Bem-vindo à Supercopa AFC!','12 equipes, 2 dias de vôlei!','Baixe o app da Supercopa!'],
-      fotosHeroi:['','',''], logosRodape },
+      fotosHeroi:['hero.jpg','',''], logosRodape },
     equipes, jogosAoVivo, proximosJogos, grupos, patrocinadores, quiz, destaque, galera,
     alerta: alerta||undefined,
     videos: (tv&&tv.videos&&tv.videos.length) ? tv.videos : [
@@ -1448,7 +1448,7 @@ var PAINEL_DATA_MOCK = {
   evento: {
     nome: 'Supercopa AFC', edicao: '6ª edição · 2026',
     complemento: 'à Supercopa de Voleibol',  // linha abaixo de "Bem-vindos"
-    fotosHeroi: ['', '', ''],              // OUTDOOR: [0] rosto/retrato de fundo (vira duotone azul) · [1] e [2] atletas em ação, PNG sem fundo
+    fotosHeroi: ['hero.jpg', '', ''],              // OUTDOOR: [0] rosto/retrato de fundo (vira duotone azul) · [1] e [2] atletas em ação, PNG sem fundo
     status: 'Ginásio Municipal · Afonso Cláudio',
     logo: '', appQrcode: '',
     inicio: new Date(Date.now() + ((2*24+5)*3600 + 42*60 + 18)*1000).toISOString(), // ISO da abertura (ex: '2026-12-05T08:00:00-03:00')
