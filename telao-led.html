@@ -1398,22 +1398,14 @@ var PAINEL_DATA_MOCK = {
     { nome:'Super Vôlei',     cidade:'São Paulo - SP',               grupo:'D', naipe:'Masculino', tecnico:'', escudo:'https://www.supercopaafc.com.br/novo/escudos/super-volei.png',    atletas:[] },
   ],
 
-  jogosAoVivo: [ // 0, 1 ou 2 jogos (uma por quadra) — atualizar a cada ponto
-    { quadra:'Quadra principal - Eurico Vieira', fase:'Grupo A · Masculino', setAtual:1, saque:'A',
-      timeA:{ nome:'ES VÔLEI', logo:'https://www.supercopaafc.com.br/novo/escudos/es-volei.png' }, timeB:{ nome:'Ctv Aravôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ctv-aravolei.png' },
-      setsA:0, setsB:0, pontosA:0, pontosB:0, parciais:[],
-      ultimosPontos:[] },
-    { quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo C · Masculino', setAtual:1, saque:'A',
-      timeA:{ nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png' }, timeB:{ nome:'Supra Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/supra-volei.png' },
-      setsA:0, setsB:0, pontosA:0, pontosB:0, parciais:[],
-      ultimosPontos:[] },
-  ],
+  jogosAoVivo: [], // vem do placar manual (banco) — o exemplo não inventa jogo ao vivo
   proximosJogos: [
-    { data:'Hoje', hora:'14:15', quadra:'Quadra principal - Eurico Vieira',   fase:'Grupo B · Masculino', timeA:{ nome:'Equipe UVI',    logo:'https://www.supercopaafc.com.br/novo/escudos/equipe-uvi.png' },    timeB:{ nome:'CTVA Voleibol', logo:'https://www.supercopaafc.com.br/novo/escudos/ctva-voleibol.png' } },
-    { data:'Hoje', hora:'14:15', quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo D · Masculino', timeA:{ nome:'RPB Volei',    logo:'https://www.supercopaafc.com.br/novo/escudos/rpb-volei.png' },    timeB:{ nome:'Alpha Vôlei',  logo:'https://www.supercopaafc.com.br/novo/escudos/alpha-volei.png' } },
-    { data:'Hoje', hora:'15:30', quadra:'Quadra principal - Eurico Vieira',   fase:'Grupo C · Masculino', timeA:{ nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png' }, timeB:{ nome:'MS Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ms-volei.png' } },
+    { data:'Hoje', hora:'13:00', quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo A · Masculino', timeA:{ nome:'ES VÔLEI', logo:'https://www.supercopaafc.com.br/novo/escudos/es-volei.png' }, timeB:{ nome:'Ctv Aravôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ctv-aravolei.png' } },
+    { data:'Hoje', hora:'13:00', quadra:'Quadra principal - Eurico Vieira', fase:'Grupo C · Masculino', timeA:{ nome:'Supra Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/supra-volei.png' }, timeB:{ nome:'MS Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ms-volei.png' } },
+    { data:'Hoje', hora:'14:15', quadra:'Quadra principal - Eurico Vieira', fase:'Grupo B · Masculino', timeA:{ nome:'Equipe UVI', logo:'https://www.supercopaafc.com.br/novo/escudos/equipe-uvi.png' }, timeB:{ nome:'CTVA Voleibol', logo:'https://www.supercopaafc.com.br/novo/escudos/ctva-voleibol.png' } },
+    { data:'Hoje', hora:'14:15', quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo D · Masculino', timeA:{ nome:'RPB Volei', logo:'https://www.supercopaafc.com.br/novo/escudos/rpb-volei.png' }, timeB:{ nome:'Alpha Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/alpha-volei.png' } },
     { data:'Hoje', hora:'15:30', quadra:'Quadra alternativa - Anadir Barone', fase:'Grupo A · Masculino', timeA:{ nome:'Ctv Aravôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ctv-aravolei.png' }, timeB:{ nome:'União vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/uniao-volei.png' } },
-    { data:'Hoje', hora:'16:45', quadra:'Quadra principal - Eurico Vieira',   fase:'Grupo B · Masculino', timeA:{ nome:'CTVA Voleibol', logo:'https://www.supercopaafc.com.br/novo/escudos/ctva-voleibol.png' }, timeB:{ nome:'Tiger volley', logo:'https://www.supercopaafc.com.br/novo/escudos/tiger-volley.png' } },
+    { data:'Hoje', hora:'15:30', quadra:'Quadra principal - Eurico Vieira', fase:'Grupo C · Masculino', timeA:{ nome:'CT das Montanhas', logo:'https://www.supercopaafc.com.br/novo/escudos/ct-das-montanhas.png' }, timeB:{ nome:'MS Vôlei', logo:'https://www.supercopaafc.com.br/novo/escudos/ms-volei.png' } },
   ],
   grupos: [
     { letra:'A', jogosRealizados:0, jogosTotal:3, classificam:2, aoVivo:false, times:[
