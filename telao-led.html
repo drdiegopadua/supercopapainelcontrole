@@ -1197,7 +1197,7 @@ const params = new URLSearchParams(location.search);
 let _lsFase = null; try{ _lsFase = localStorage.getItem('sc-telao-fase'); }catch(e){}
 let faseForcada = params.get('fase') || _lsFase || null, fase = null, cur = 0, t0 = performance.now(), paused = params.get('pausa')==='1';
 // playlist global: persiste entre reloads via localStorage
-let _lsAtivas = null; try{ const s=localStorage.getItem('sc-telas-ativas'); if(s){ const arr=JSON.parse(s); _lsAtivas=arr.filter(t=>TELAS[t]); } }catch(_){}
+let _lsAtivas = null; try{ const s=localStorage.getItem('sc-telao-playlist'); if(s){ const arr=JSON.parse(s); _lsAtivas=arr.filter(t=>TELAS[t]); } }catch(_){}
 let globalPlaylist = (_lsAtivas && _lsAtivas.length) ? _lsAtivas : null;
 /* BroadcastChannel — recebe comandos do admin (fase, tela, pausa, prev, next) */
 try{
@@ -1220,7 +1220,7 @@ try{
     else if(d.type==='duracao' && d.tela && d.seg){ TELAS[d.tela] && (TELAS[d.tela].dur = +d.seg); }
     else if(d.type==='playlist' && Array.isArray(d.telas)){
       // playlist global: substitui a rotação por fase pelas telas marcadas no admin
-      try{ localStorage.setItem('sc-telas-ativas', JSON.stringify(d.telas)); }catch(_){}
+      try{ localStorage.setItem('sc-telao-playlist', JSON.stringify(d.telas)); }catch(_){}
       const validas = d.telas.filter(t => TELAS[t]);
       globalPlaylist = validas.length ? validas : null;
       // se a tela atual não está na nova playlist, vai pra primeira

@@ -8341,8 +8341,9 @@ try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) na
   };
   var DURACOES = {}; Object.keys(TELAS_INFO).forEach(function(k){DURACOES[k]=TELAS_INFO[k].dur;});
   var TELAS_ATIVAS = (function(){
-    try{ var s=localStorage.getItem('sc-telas-ativas'); if(s) return JSON.parse(s); }catch(e){}
-    var d={}; Object.keys(TELAS_INFO).forEach(function(k){d[k]=true;}); return d;
+    var d={}; Object.keys(TELAS_INFO).forEach(function(k){d[k]=true;});
+    try{ var s=JSON.parse(localStorage.getItem('sc-telas-ativas')||'null'); if(s && !Array.isArray(s)) Object.keys(d).forEach(function(k){ if(s[k]===false) d[k]=false; }); }catch(e){}
+    return d;
   })();
   var tlBc = null, tlPausado = false, tlFaseAtiva = null, tlDetected = false;
   var tlAgenda = JSON.parse(localStorage.getItem('sc-telao-agenda')||'[]');
