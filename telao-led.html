@@ -736,10 +736,11 @@ const ESCURAS = ['campeao'];   // telas em modo escuro
    FONTE DE DADOS  ← CLAUDE CODE: SUBSTITUIR AQUI
    ============================================================================= */
 async function carregarDados(){
-  // TODO (Claude Code): ex.
-  // const r = await fetch('https://script.google.com/macros/s/XXXX/exec?painel=1', {cache:'no-store'});
-  // return await r.json();
-  return PAINEL_DATA_MOCK;
+  try{
+    const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?painel=1',{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    return await r.json();
+  }catch(e){ console.warn('[Painel] API indisponível, usando mock',e); return PAINEL_DATA_MOCK; }
 }
 
 /* =============================================================================
@@ -1182,7 +1183,22 @@ const RENDER = { contagem:renderContagem, boasvindas:renderBoasVindas, equipes:r
    FASES, RODÍZIO E OPERADOR
    ============================================================================= */
 const params = new URLSearchParams(location.search);
-let faseForcada = params.get('fase') || null, fase = null, cur = 0, t0 = performance.now(), paused = params.get('pausa')==='1';
+/* lê fase salva pelo admin no localStorage (mesmo domínio via BroadcastChannel) */
+let _lsFase = null; try{ _lsFase = localStorage.getItem('sc-telao-fase'); }catch(e){}
+let faseForcada = params.get('fase') || _lsFase || null, fase = null, cur = 0, t0 = performance.now(), paused = params.get('pausa')==='1';
+/* BroadcastChannel — recebe comandos do admin (fase, tela, pausa, prev, next) */
+try{
+  const _bc = new BroadcastChannel('supercopa-telao');
+  _bc.onmessage = e => {
+    const d = e.data || {};
+    if(d.type==='fase'){ faseForcada = d.fase; try{localStorage.setItem('sc-telao-fase',d.fase);}catch(_){} setFase(faseAtual()); buildOp(); }
+    else if(d.type==='tela'){ const k=playlist().indexOf(d.tela); if(k>=0) show(k); }
+    else if(d.type==='prev') show(cur-1,-1);
+    else if(d.type==='next') show(cur+1);
+    else if(d.type==='pausa'){ paused=!paused; t0=performance.now(); buildOp(); }
+    _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur]});
+  };
+}catch(_){}
 if(params.get('slots')==='0') CONFIG.mostrarSlots = false;
 document.body.classList.toggle('slots', CONFIG.mostrarSlots);
 const faseAtual = () => { const f = faseForcada || (DATA && DATA.painel && DATA.painel.fase) || 'pre'; return FASES[f] ? f : 'pre'; };
