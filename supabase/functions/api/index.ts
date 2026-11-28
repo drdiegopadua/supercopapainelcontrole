@@ -1447,6 +1447,9 @@ async function painelTelao() {
     rankingQuiz(),
     telaoFotos(),
   ]);
+  const { data: atl } = await sb.from("atletas").select("equipe,numero,nome,tipo,id").order("id");
+  const elenco: Record<string, Any[]> = {};
+  (atl || []).filter((a: Any) => a.nome).forEach((a: Any) => { (elenco[chaveEq(a.equipe)] ||= []).push(a); });
   const cidade: Record<string, string> = {};
   (insc || []).forEach((r: Any) => { if (r.cidade) cidade[chaveEq(r.nome_equipe)] = String(r.cidade).trim(); });
   Object.keys(CASA_DEFAULT).forEach((k) => { cidade[k] = cidade[k] || CASA_DEFAULT[k].cidade; });
@@ -1484,7 +1487,14 @@ async function painelTelao() {
   }));
 
   const equipes = t.equipes.filter((e: Any) => e.grupo).sort((a: Any, b: Any) => String(a.grupo).localeCompare(String(b.grupo)) || (a.ordem || 0) - (b.ordem || 0))
-    .map((e: Any) => ({ nome: e.nome, cidade: cidade[chaveEq(e.nome)] || "", grupo: e.grupo, naipe: "Masculino", tecnico: "", escudo: escudoSite(e.nome), atletas: [] }));
+    .map((e: Any) => {
+      const el = elenco[chaveEq(e.nome)] || [];
+      const tec = el.find((a: Any) => normalizarTipo(a.tipo) === "Técnico");
+      const atletas = el.filter((a: Any) => !ehComissao(normalizarTipo(a.tipo)))
+        .sort((a: Any, b: Any) => (parseInt(a.numero) || 999) - (parseInt(b.numero) || 999))
+        .map((a: Any) => ({ numero: (a.numero || "").toString().trim(), nome: String(a.nome).trim(), posicao: "", foto: "" }));
+      return { nome: e.nome, cidade: cidade[chaveEq(e.nome)] || "", grupo: e.grupo, naipe: "Masculino", tecnico: tec ? String(tec.nome).trim() : "", escudo: escudoSite(e.nome), atletas };
+    });
 
   const out: Any = { ok: true, fonte: "banco", geradoEm: t.geradoEm, jogosAoVivo, proximosJogos, grupos, equipes };
   const rk = (quiz.ranking || []) as Any[];
