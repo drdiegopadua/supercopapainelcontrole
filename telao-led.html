@@ -737,7 +737,7 @@ const ESCURAS = ['campeao'];   // telas em modo escuro
    ============================================================================= */
 // o telão fica na quadra principal: ao vivo e próximos jogos só dela
 const QUADRA_TELAO = /eurico/i;
-const daQuadra = d => ({ ...d, jogosAoVivo:(d.jogosAoVivo||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')), proximosJogos:(d.proximosJogos||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')) });
+const daQuadra = d => ({ ...d, jogosAoVivo:(d.jogosAoVivo||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')), proximosJogos:(d.proximosJogos||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')), jogosFinalizados:(d.jogosFinalizados||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')) });
 async function carregarDados(){
   try{
     const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?painel=1',{cache:'no-store'});
@@ -745,7 +745,7 @@ async function carregarDados(){
     const d = await r.json();
     if(!d || d.fonte!=='banco') throw new Error('resposta sem dados do banco');
     // banco: classificação, ao vivo, próximos, equipes, quiz e fotos · telão: evento, patrocinadores, vídeos, encerramento
-    const M = PAINEL_DATA_MOCK, out = { ...M, jogosAoVivo:d.jogosAoVivo||[], proximosJogos:d.proximosJogos||[] };
+    const M = PAINEL_DATA_MOCK, out = { ...M, jogosAoVivo:d.jogosAoVivo||[], proximosJogos:d.proximosJogos||[], jogosFinalizados:d.jogosFinalizados||[] };
     if(d.grupos && d.grupos.length) out.grupos = d.grupos;
     if(d.equipes && d.equipes.length) out.equipes = d.equipes;
     if(d.quiz) out.quiz = { ...M.quiz, ...d.quiz };
@@ -1039,8 +1039,9 @@ function renderGalera(d){
    06 ENCERRAMENTO
    ============================================================================= */
 function renderResultado(d){
-  const f = (d.encerramento||{}).final||{}, A=f.timeA||{}, B=f.timeB||{}, sa=f.setsA??0, sb=f.setsB??0;
-  const side = (t,s,o,k,dd) => `<div class="side ${s<o?'lose':''} rv" ${D(dd)}>${s>o?'<span class="pill g">Vencedor</span>':'<span class="pill o">Vice</span>'}
+  // último jogo finalizado na quadra do telão (vem do banco)
+  const f = (d.jogosFinalizados||[])[0]||{}, A=f.timeA||{}, B=f.timeB||{}, sa=f.setsA??0, sb=f.setsB??0, ehFinal=/grande final/i.test(f.fase||'');
+  const side = (t,s,o,k,dd) => `<div class="side ${s<o?'lose':''} rv" ${D(dd)}>${s>o?'<span class="pill g">Vencedor</span>':ehFinal?'<span class="pill o">Vice</span>':''}
     ${circ(t.logo,'shield','',`encerramento.final.time${k}.logo`)}<div class="nm" data-slot="encerramento.final.time${k}.nome">${esc(t.nome||'')}</div></div>`;
   setTela('resultado', `
   <div class="rs">
@@ -1236,7 +1237,7 @@ if(params.get('slots')==='0') CONFIG.mostrarSlots = false;
 document.body.classList.toggle('slots', CONFIG.mostrarSlots);
 const faseAtual = () => { const f = faseForcada || (DATA && DATA.painel && DATA.painel.fase) || 'pre'; return FASES[f] ? f : 'pre'; };
 const playlist = () => (globalPlaylist && globalPlaylist.length) ? globalPlaylist : FASES[fase].telas;
-const disponivel = id => id!=='video' || (DATA && videosDaFase(DATA).length>0);
+const disponivel = id => id==='resultado' ? !!(DATA && (DATA.jogosFinalizados||[]).length) : (id!=='video' || (DATA && videosDaFase(DATA).length>0));
 
 function buildOp(){
   const pl = playlist();

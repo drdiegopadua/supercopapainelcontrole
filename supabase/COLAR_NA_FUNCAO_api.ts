@@ -1496,7 +1496,23 @@ async function painelTelao() {
       return { nome: e.nome, cidade: cidade[chaveEq(e.nome)] || "", grupo: e.grupo, naipe: "Masculino", tecnico: tec ? String(tec.nome).trim() : "", escudo: escudoSite(e.nome), atletas };
     });
 
-  const out: Any = { ok: true, fonte: "banco", geradoEm: t.geradoEm, jogosAoVivo, proximosJogos, grupos, equipes };
+  const { data: fins } = await sb.from("partidas").select("id,estado").eq("status", "finalizada");
+  const brData = (x: string) => { const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/.exec(x || ""); return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]).getTime() : NaN; };
+  const duracao: Record<string, string> = {};
+  (fins || []).forEach((p: Any) => {
+    const e = p.estado || {}, min = Math.round((brData(e.atualizadoEm) - brData(e.criadoEm)) / 60000);
+    if (min > 0 && min < 600) duracao[p.id] = (min >= 60 ? Math.floor(min / 60) + "h" + String(min % 60).padStart(2, "0") : min + " min");
+  });
+  const jogosFinalizados = t.jogos
+    .filter((j: Any) => (j.status === "finalizado" || j.status === "wo") && j.casaDefinida && j.visitanteDefinida)
+    .sort((a: Any, b: Any) => String(b.atualizadoEm || "").localeCompare(String(a.atualizadoEm || "")))
+    .slice(0, 20)
+    .map((j: Any) => ({
+      id: j.id, quadra: j.quadra || "", fase: faseTexto(j), data: j.data ? j.data.slice(8, 10) + "/" + j.data.slice(5, 7) : "", hora: j.hora || "",
+      timeA: time(j.casa), timeB: time(j.visitante), setsA: j.setsCasa || 0, setsB: j.setsVisitante || 0,
+      parciais: (j.parciais || []).map((s: Any) => [Number(s.a) || 0, Number(s.b) || 0]), wo: j.wo || null, duracao: duracao[j.id] || "",
+    }));
+  const out: Any = { ok: true, fonte: "banco", geradoEm: t.geradoEm, jogosAoVivo, proximosJogos, jogosFinalizados, grupos, equipes };
   const rk = (quiz.ranking || []) as Any[];
   if (rk.length) out.quiz = { totalParticipantes: rk.length, atualizadoEm: "agora", ranking: rk.slice(0, 10).map((r: Any) => ({ nome: r.nome, pontos: Math.round((parseFloat(r.pct) || 0) * 10), acertos: r.acertos, tempo: r.tempo || "" })) };
   const { data: fotos } = await sb.from("galeria_fotos").select("id,f,legenda").order("criado_em", { ascending: false }).limit(60);
