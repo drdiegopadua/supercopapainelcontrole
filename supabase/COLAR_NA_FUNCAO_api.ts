@@ -1473,7 +1473,7 @@ async function painelTelao() {
   const proximosJogos = t.jogos
     .filter((j: Any) => j.status === "agendado" && !idsAoVivo.has(j.id) && (!j.data || j.data >= hoje))
     .sort((a: Any, b: Any) => String(a.data || "9").localeCompare(String(b.data || "9")) || String(a.hora || "99").localeCompare(String(b.hora || "99")) || (a.ordem || 0) - (b.ordem || 0))
-    .slice(0, 6)
+    .slice(0, 12)
     .map((j: Any) => ({
       id: j.id, data: !j.data || j.data === hoje ? "Hoje" : j.data.slice(8, 10) + "/" + j.data.slice(5, 7), hora: j.hora || "", quadra: j.quadra || "", fase: faseTexto(j),
       timeA: j.casaDefinida ? time(j.casa) : { nome: j.rotuloCasa || "A definir", logo: "" },

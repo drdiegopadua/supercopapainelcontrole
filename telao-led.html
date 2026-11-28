@@ -735,6 +735,9 @@ const ESCURAS = ['campeao'];   // telas em modo escuro
 /* =============================================================================
    FONTE DE DADOS  ← CLAUDE CODE: SUBSTITUIR AQUI
    ============================================================================= */
+// o telão fica na quadra principal: ao vivo e próximos jogos só dela
+const QUADRA_TELAO = /eurico/i;
+const daQuadra = d => ({ ...d, jogosAoVivo:(d.jogosAoVivo||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')), proximosJogos:(d.proximosJogos||[]).filter(j=>QUADRA_TELAO.test(j.quadra||'')) });
 async function carregarDados(){
   try{
     const r = await fetch('https://hngwasixgyvnvfanpuax.supabase.co/functions/v1/api?painel=1',{cache:'no-store'});
@@ -747,8 +750,8 @@ async function carregarDados(){
     if(d.equipes && d.equipes.length) out.equipes = d.equipes;
     if(d.quiz) out.quiz = { ...M.quiz, ...d.quiz };
     if(d.galera) out.galera = { ...M.galera, ...d.galera };
-    return out;
-  }catch(e){ console.warn('[Painel] API indisponível, usando mock',e); return PAINEL_DATA_MOCK; }
+    return daQuadra(out);
+  }catch(e){ console.warn('[Painel] API indisponível, usando mock',e); return daQuadra(PAINEL_DATA_MOCK); }
 }
 
 /* =============================================================================
