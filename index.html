@@ -2111,6 +2111,12 @@ body.dark .btn-secondary:hover { color: #fff; }
           <button class="btn btn-primary" onclick="tlEnviar({type:'avancar'})">Próxima <i class='bx bx-chevron-right'></i></button>
           <button class="btn btn-secondary" id="tl-btn-pause" onclick="tlTogglePause()"><i class='bx bx-pause'></i> Pausar</button>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <span style="font-size:12px;font-weight:700;color:var(--dark-grey)">Modo:</span>
+          <button type="button" class="btn" id="tl-modo-loop" onclick="tlSetModo(false)"><i class='bx bx-revision'></i> Loop</button>
+          <button type="button" class="btn" id="tl-modo-fixo" onclick="tlSetModo(true)"><i class='bx bx-pin'></i> Tela fixa</button>
+          <span id="tl-modo-txt" style="font-size:12px;color:var(--dark-grey)"></span>
+        </div>
         <p style="font-size:12px;color:var(--dark-grey);margin:0 0 10px">Clique no nome da tela para ir direto. Marque/desmarque para incluir na rotação. Arraste o slider para ajustar a duração.</p>
         <div id="tl-telas-lista" style="display:flex;flex-direction:column;gap:6px">
           <!-- gerado por JS -->
@@ -8421,6 +8427,21 @@ try { if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) na
     }).join('');
   }
 
+  var tlFixo = (function(){ try{ return localStorage.getItem('sc-telao-fixo')==='1'; }catch(e){ return false; } })();
+  function tlPintarModo(){
+    var l=document.getElementById('tl-modo-loop'), f=document.getElementById('tl-modo-fixo'), t=document.getElementById('tl-modo-txt');
+    if(l) l.className = 'btn ' + (tlFixo ? 'btn-secondary' : 'btn-primary');
+    if(f) f.className = 'btn ' + (tlFixo ? 'btn-primary' : 'btn-secondary');
+    if(t) t.textContent = tlFixo ? 'O telão fica parado na tela que você clicar.' : 'As telas marcadas passam em sequência.';
+  }
+  window.tlSetModo = function(fixo){
+    tlFixo = !!fixo;
+    try{ localStorage.setItem('sc-telao-fixo', tlFixo?'1':'0'); }catch(e){}
+    tlEnviar({type:'modo', fixo:tlFixo});
+    tlPintarModo();
+    if(typeof showToast==='function') showToast(tlFixo ? 'Telão: tela fixa' : 'Telão: loop');
+  };
+  setTimeout(tlPintarModo, 0);
   window.tlIrPara = function(tela){
     tlEnviar({type:'tela',tela:tela});
     if(typeof showToast==='function') showToast('Telão: '+(TELAS_INFO[tela]||{n:tela}).n);

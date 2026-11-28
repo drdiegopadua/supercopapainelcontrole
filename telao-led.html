@@ -1211,7 +1211,7 @@ function renderVideo(d){
   if(!el){ durOverride = CONFIG.videoSemArquivo*1000; return; }
   el.onloadedmetadata = ()=>{ durOverride = Math.min(el.duration||CONFIG.videoDuracaoMax, CONFIG.videoDuracaoMax)*1000+300; t0 = performance.now(); };
   el.ontimeupdate = ()=>{ const b=document.getElementById('vprog'); if(b && el.duration) b.style.width=(el.currentTime/Math.min(el.duration,CONFIG.videoDuracaoMax)*100)+'%'; };
-  el.onended = ()=>{ if(playlist()[cur]==='video') show(cur+1); };
+  el.onended = ()=>{ if(playlist()[cur]!=='video') return; if(fixo){ el.currentTime=0; el.play().catch(()=>{}); } else show(cur+1); };
   el.onerror = ()=>{ durOverride = 3000; t0 = performance.now(); };
   const pr = el.play(); if(pr) pr.catch(()=>{});
 }
@@ -1287,6 +1287,8 @@ let faseForcada = params.get('fase') || _lsFase || null, fase = null, cur = 0, t
 // playlist global: persiste entre reloads via localStorage
 let _lsAtivas = null; try{ const s=localStorage.getItem('sc-telao-playlist'); if(s){ const arr=JSON.parse(s); _lsAtivas=arr.filter(t=>TELAS[t]); } }catch(_){}
 let globalPlaylist = (_lsAtivas && _lsAtivas.length) ? _lsAtivas : null;
+// modo tela fixa: fica na tela escolhida no painel, sem avançar sozinho
+let fixo = false; try{ fixo = localStorage.getItem('sc-telao-fixo')==='1'; }catch(_){}
 /* BroadcastChannel — recebe comandos do admin (fase, tela, pausa, prev, next) */
 try{
   const _bc = new BroadcastChannel('supercopa-telao');
@@ -1306,6 +1308,7 @@ try{
     }
     else if(d.type==='voltar'||d.type==='prev') show(cur-1,-1);
     else if(d.type==='avancar'||d.type==='next') show(cur+1);
+    else if(d.type==='modo'){ fixo = !!d.fixo; try{localStorage.setItem('sc-telao-fixo', fixo?'1':'0');}catch(_){} t0=performance.now(); }
     else if(d.type==='pausa'){ paused = d.val!==undefined ? d.val : !paused; t0=performance.now(); buildOp(); }
     else if(d.type==='duracao' && d.tela && d.seg){ TELAS[d.tela] && (TELAS[d.tela].dur = +d.seg); }
     else if(d.type==='playlist' && Array.isArray(d.telas)){
@@ -1316,7 +1319,7 @@ try{
       // se a tela atual não está na nova playlist, vai pra primeira
       if(globalPlaylist && !globalPlaylist.includes(playlist()[cur])) show(0);
     }
-    _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur],pausado:paused});
+    _bc.postMessage({type:'estado',fase:faseAtual(),tela:playlist()[cur],pausado:paused,fixo});
   };
 }catch(_){}
 if(params.get('slots')==='0') CONFIG.mostrarSlots = false;
@@ -1363,8 +1366,8 @@ function show(i, passo=1){
 function tick(now){
   const dur = durOverride ?? TELAS[playlist()[cur]].dur*1000;
   const el = paused ? 0 : (alertaOn ? alertaIni - t0 : now - t0);
-  $('#progBar').style.width = (paused?0:Math.min(100, el/dur*100))+'%';
-  if(!paused && !alertaOn && el >= dur) show(cur+1);
+  $('#progBar').style.width = (paused||fixo?0:Math.min(100, el/dur*100))+'%';
+  if(!paused && !fixo && !alertaOn && el >= dur) show(cur+1);
   requestAnimationFrame(tick);
 }
 function demoAlerta(k){
